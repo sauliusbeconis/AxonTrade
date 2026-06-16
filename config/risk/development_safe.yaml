@@ -1,0 +1,14 @@
+schema_version: 1
+profile_id: development_safe
+maximum_open_positions: 1
+maximum_trades_per_session: 3
+maximum_losing_trades_per_session: 2
+personal_daily_stop_usd: 150
+cooldown_after_loss_minutes: 15
+averaging_down_allowed: false
+major_news_blackout_enabled: true
+minimum_preferred_holding_time_seconds: 30
+target_typical_holding_time: minutes
+notes:
+  - Internal limits are intentionally stricter than the initial LucidFlex profile.
+  - Protective exits always have priority over holding-time preference.

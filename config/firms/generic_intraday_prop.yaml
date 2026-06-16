@@ -1,0 +1,17 @@
+schema_version: 1
+profile_id: generic_intraday_prop
+firm_name: Generic Intraday Prop Firm
+account_type: simulation_research
+account_stage: research
+drawdown_type: configurable
+mandatory_flat_time: null
+disable_new_entries_after: null
+automated_strategies_allowed: false
+high_frequency_trading_allowed: false
+microscalping_allowed: false
+live_automated_entries_enabled: false
+one_click_approved_entries_enabled: false
+simulation_only: true
+notes:
+  - Template profile for research comparisons only.
+  - Replace with verified official rules before use.

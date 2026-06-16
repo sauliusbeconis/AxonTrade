@@ -1,0 +1,33 @@
+schema_version: 1
+profile_id: lucidflex_25k_evaluation
+firm_name: Lucid Trading
+account_type: LucidFlex
+account_size_usd: 25000
+account_stage: evaluation
+profit_target_usd: 1250
+max_loss_limit_usd: 1000
+drawdown_type: end_of_day_trailing
+firm_daily_loss_limit_usd: null
+consistency_max_percentage: 50
+max_position_minis: 2
+max_position_micros: 20
+mandatory_flat_time: "16:45 America/New_York"
+internal_forced_flatten_time: "16:40 America/New_York"
+disable_new_entries_after: "16:35 America/New_York"
+automated_strategies_allowed: true
+high_frequency_trading_allowed: false
+microscalping_allowed: false
+live_automated_entries_enabled: false
+one_click_approved_entries_enabled: false
+simulation_only: true
+source_status: requires_manual_official_verification
+notes:
+  - Phase-0 research configuration only.
+  - Verify official Lucid Trading rules before any funded or live trading decision.
+sources:
+  - name: Lucid Trading public site
+    url: https://lucidtrading.com/
+    retrieved_on: "2026-06-16"
+  - name: LucidFlex consistency percentage help article
+    url: https://support.lucidtrading.com/en/articles/12945805-lucidflex-consistency-percentage
+    retrieved_on: "2026-06-16"

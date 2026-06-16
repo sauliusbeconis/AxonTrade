@@ -1,0 +1,58 @@
+# AxonTrade
+
+AxonTrade is a professional-grade futures trading research and execution laboratory focused first on intraday ES/MES and NQ/MNQ research.
+
+It is not a get-rich-quick trading bot, signal service, black-box system, martingale engine, grid recovery tool, HFT system, or microscalping project.
+
+## Current Phase
+
+Phase 0 is foundation and simulation-safe research tooling.
+
+Live order routing is disabled by policy and is not implemented in this repository.
+
+## Platform Stack
+
+- Sierra Chart for charting, replay, and platform-side studies.
+- ACSIL C++ for Sierra Chart indicators, visual tools, and simulation-safe event logging.
+- Python for offline research, configuration validation, analytics, and reports.
+- YAML for prop-firm profiles, instrument settings, costs, and internal risk limits.
+- Pop!_OS Linux with Sierra Chart running through Wine as the target development workstation.
+
+## Why Sierra Chart And ACSIL
+
+Sierra Chart gives direct access to futures market data, replay, chart studies, and platform-native ACSIL extensions. ACSIL is used for platform-side study logic because it can draw on charts, read bar and study state, and integrate with Sierra Chart replay while keeping this phase indicator-only.
+
+## Why Python
+
+Python is used away from the trading platform for reproducible research: loading configs, validating assumptions, analyzing exported CSV events, producing reports, and eventually running chronological walk-forward tests.
+
+## Local Setup
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+python -m pytest
+bash scripts/check_repo.sh
+```
+
+On Windows, use PowerShell with the same Python commands. The shell scripts are intended for Pop!_OS or another Linux environment with Bash.
+
+## Pop!_OS And Wine Notes
+
+The target workstation runs Sierra Chart under Wine. See [docs/popos-wine-setup.md](docs/popos-wine-setup.md) for setup notes and [docs/sierra-chart-development.md](docs/sierra-chart-development.md) for ACSIL workflow notes.
+
+## Sync ACSIL Files Into Sierra Chart
+
+Set `WINEPREFIX` if your Sierra Chart prefix is not the default:
+
+```bash
+export WINEPREFIX="$HOME/wineprefixes/sierrachart"
+bash scripts/sync_to_sierra.sh
+```
+
+The sync script copies `src/acsil/*.cpp` into Sierra Chart's `ACS_Source` directory. It does not compile, launch Sierra Chart, or place orders.
+
+## Safety Status
+
+This repository currently contains no live order-routing implementation. All strategy material is hypothesis documentation until it passes the documented research, replay, forward-simulation, and safety-review gates.

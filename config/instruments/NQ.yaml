@@ -1,0 +1,14 @@
+schema_version: 1
+symbol: NQ
+name: E-mini Nasdaq-100 Futures
+exchange: CME
+asset_class: equity_index_futures
+contract_size: mini
+paired_micro: MNQ
+tick_size: 0.25
+tick_value_usd: 5.00
+point_value_usd: 20.00
+default_commission_per_side_usd: 1.75
+research_session_timezone: America/New_York
+notes:
+  - Evaluate separately from ES because volatility and behavior differ.

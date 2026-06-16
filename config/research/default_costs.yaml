@@ -1,0 +1,17 @@
+schema_version: 1
+profile_id: default_costs
+commissions:
+  ES:
+    commission_per_side_usd: 1.75
+  NQ:
+    commission_per_side_usd: 1.75
+  MES:
+    commission_per_side_usd: 0.50
+  MNQ:
+    commission_per_side_usd: 0.50
+slippage:
+  default_ticks_per_side: 1
+  stress_ticks_per_side: 2
+assumptions:
+  - Costs are research assumptions and must be reviewed against actual brokerage and data fees.
+  - Slippage must be stress-tested in reports.
