@@ -52,6 +52,10 @@ to check whether selected parameters survive later dates.
 Use
 [docs/price-only-walk-forward-sweep.md](docs/price-only-walk-forward-sweep.md)
 to repeat that selection across rolling chronological windows.
+Then run
+[docs/acceptance-gates.md](docs/acceptance-gates.md)
+to check whether the current research sample passes the configured evidence
+gates.
 
 ## Pop!_OS And Wine Notes
 

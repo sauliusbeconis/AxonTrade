@@ -1,0 +1,10 @@
+schema_version: 1
+profile_id: price_only_acceptance_gates_v1
+description: Conservative acceptance gates for price-only ES research samples.
+gates:
+  minimum_total_outcome_trades: 100
+  minimum_trade_days: 20
+  minimum_walk_forward_holdout_trades: 30
+  require_positive_walk_forward_holdout_net: true
+  minimum_selected_train_holdout_trades: 10
+  maximum_worst_day_loss_share: 0.40
