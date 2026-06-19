@@ -8,9 +8,13 @@
 - Python config and risk skeleton.
 - ACSIL indicator-only smoke test.
 - Manual Sierra Chart replay verification.
+- Minimal Sierra Chart bot harness: correct futures symbol, simulation mode,
+  VWAP/levels, and repeatable chartbook. Heatmap is optional.
 
 ## Phase 1: Offline Research
 
+- Data contract for bars, levels, candidate signals, rejected signals, and replay
+  events.
 - Data import and validation.
 - Price-only baseline.
 - Chronological walk-forward tests.
@@ -20,6 +24,7 @@
 ## Phase 2: Simulation And Replay
 
 - Sierra Chart replay studies.
+- Indicator-only signal overlay.
 - Signal logging with rejected-signal tracking.
 - Forward simulation with no live routing.
 - Safety review of risk-governor behavior.

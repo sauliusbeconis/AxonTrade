@@ -44,6 +44,11 @@ simulation mode only.
 Exact click-by-click Sierra Chart instructions are in
 `docs/sierra-chart-exact-build-guide.md`.
 
+The workspace is only a harness for bot development. The first bot pipeline
+should depend on the correct futures symbol, simulation mode, VWAP/session
+levels, signal overlays, and deterministic logging. TPO, footprint, DOM, and
+heatmap are optional review tools and must not block signal-engine work.
+
 ## Chartbook Names
 
 Use separate chartbooks per instrument family:

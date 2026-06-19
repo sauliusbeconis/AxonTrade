@@ -22,6 +22,23 @@ AxonTrade separates research, visualization, logging, risk controls, and future 
 3. Python tools load configs and analyze exported event data.
 4. Reports compare hypotheses against baselines and acceptance gates.
 
+## Bot Boundary
+
+The current bot boundary is signal research, signal visualization, logging,
+replay verification, and offline evaluation. The Sierra Chart workspace is a
+harness for those tasks, not the product itself.
+
+Minimum Sierra dependencies for the bot pipeline:
+
+- correct futures symbol;
+- simulation mode;
+- VWAP and session levels;
+- an AxonTrade chart for signal overlays;
+- deterministic CSV output.
+
+TPO, footprint, DOM, and heatmap views are useful diagnostics, but the first bot
+pipeline must not depend on them.
+
 ## Execution Boundary
 
 Execution is intentionally absent in phase 0. Any future execution subsystem must be introduced only after explicit authorization, documented safety review, and passing acceptance gates.

@@ -7,6 +7,11 @@ This guide is the click-by-click build plan for the first AxonTrade chartbook:
 Build ES first. After it is stable, duplicate it for MES, then later NQ/MNQ.
 Use simulation mode only.
 
+This chartbook is a bot-development harness, not the final product. For the bot
+pipeline, the minimum useful setup is the correct ES/MES futures symbol,
+simulation mode, VWAP/session levels, and a chart where AxonTrade can later draw
+and log signals. TPO, footprint, DOM, and heatmap are optional review tools.
+
 ## Default Rules
 
 Use these defaults unless the data service or Sierra Chart symbol settings force
@@ -230,7 +235,11 @@ Do not connect this chartbook to a live account workflow.
 
 ## Chart 4: Liquidity Heatmap
 
-Goal: lower-left liquidity map.
+Goal: optional lower-left liquidity map.
+
+Skip this section when the priority is bot development. Heatmap is useful for
+discretionary review and later diagnostics, but the first signal engine and CSV
+logger should not depend on it.
 
 ### Enable Market Depth Recording
 
@@ -321,7 +330,8 @@ Goal: clean secondary context chart.
 ## Arrange The Workspace
 
 1. Put `TPO Context` top-left.
-2. Put `Liquidity Heatmap` bottom-left.
+2. If built, put `Liquidity Heatmap` bottom-left. Otherwise leave that space for
+   notes, logs, or the AxonTrade signal chart.
 3. Put `Footprint Execution` large on the right.
 4. Put the DOM at the far right of the footprint chart.
 5. Put `Simple Context / VWAP Levels` in a secondary tab, smaller window, or
@@ -339,7 +349,7 @@ Goal: clean secondary context chart.
 - `[Sim]` is visible in the title bar.
 - TPO uses RTH only.
 - Footprint uses RTH only.
-- Heatmap has market depth recording enabled.
+- If heatmap is built, market depth recording is enabled.
 - VWAP and levels use the intended session.
 - No live order-routing study or ACSIL order function is attached.
 - Chartbook saves and reopens cleanly.

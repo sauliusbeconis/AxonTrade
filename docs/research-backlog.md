@@ -22,6 +22,15 @@ Every research source should be documented with a link and retrieval date.
 - Research walk-forward validation practices for intraday time series.
 - Research realistic trade-count thresholds for intraday strategy evaluation.
 
+## Bot Pipeline
+
+- Define the first signal log schema.
+- Define rejected-signal reason codes.
+- Define Sierra Chart export fields for bars and levels.
+- Build Python loaders for Sierra-exported CSV files.
+- Build the first price-only VWAP/opening-range baseline.
+- Add an indicator-only ACSIL signal overlay and CSV logger.
+
 ## Reporting
 
 - Define the first price-only baseline report.
