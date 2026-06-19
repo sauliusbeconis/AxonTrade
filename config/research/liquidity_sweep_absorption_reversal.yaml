@@ -1,0 +1,71 @@
+schema_version: 1
+profile_id: liquidity_sweep_absorption_reversal_v1
+strategy_id: liquidity_sweep_absorption_reversal
+description: >
+  First order-flow filter for the liquidity sweep reversal thesis. It requires
+  a price sweep back inside the opening range plus sweep-side bid/ask aggression
+  that fails to close the bar in the aggressor's favor.
+
+default_trade_mode: research
+allowed_session_phases:
+  - rth
+
+required_bar_fields:
+  - timestamp
+  - symbol
+  - chart_number
+  - bar_index
+  - open
+  - high
+  - low
+  - close
+  - vwap
+  - opening_range_high
+  - opening_range_low
+  - bid_volume
+  - ask_volume
+  - session_phase
+
+optional_bar_fields:
+  - delta
+  - volume
+
+rules:
+  opening_range_end_time: "09:59:59"
+  setup_start_time: "10:30:00"
+  setup_end_time: "15:15:00"
+  minimum_opening_range_width_points: 1.0
+  minimum_sweep_points: 1.0
+  close_back_inside_points: 0.25
+  stop_buffer_points: 0.25
+  maximum_risk_points: 20.0
+  target_level: opening_range_midpoint
+  one_signal_per_side_per_day: true
+  minimum_total_volume: 0
+  minimum_aggressive_delta: 0
+  minimum_aggression_ratio: 1.25
+  short_max_close_location: 0.45
+  long_min_close_location: 0.55
+  confidence: 0.55
+
+outputs:
+  candidate_event_type: candidate_signal
+  rejected_event_type: rejected_signal
+  no_setup_rejection_reason: no_setup
+  no_absorption_rejection_reason: no_absorption
+  insufficient_context_rejection_reason: insufficient_context
+  outside_session_rejection_reason: outside_session
+  duplicate_signal_rejection_reason: duplicate_signal
+  risk_limit_rejection_reason: risk_limit
+  ambiguous_setup_rejection_reason: manual_review_required
+
+notes:
+  - >
+    Short absorption proxy: ask_volume dominates bid_volume, delta is positive,
+    and the bar still closes in the lower 45% of its range.
+  - >
+    Long absorption proxy: bid_volume dominates ask_volume, delta is negative,
+    and the bar still closes in the upper 55% of its range.
+  - This is a bar-level absorption proxy, not level-specific volume-at-price
+    absorption yet.
+  - It never submits, modifies, cancels, flattens, or routes orders.

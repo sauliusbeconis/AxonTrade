@@ -50,6 +50,15 @@ Current first implementation:
 This implementation is price-only. It is the control sample for later
 footprint/volume-at-price absorption filters.
 
+First order-flow layer:
+
+- `config/research/liquidity_sweep_absorption_reversal.yaml`
+- `config/research/sierra_orderflow_bar_export.yaml`
+- `scripts/run_liquidity_sweep_absorption.py`
+- `docs/liquidity-sweep-absorption.md`
+
+This layer requires bid/ask volume export fields from Sierra Chart.
+
 ## C. Price-Only Baseline
 
 Thesis: a transparent control strategy is needed before evaluating order-flow complexity.

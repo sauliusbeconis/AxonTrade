@@ -64,6 +64,7 @@ rejection_reasons:
   - news_blackout
   - duplicate_signal
   - manual_review_required
+  - no_absorption
   - other
 
 common_required_fields:

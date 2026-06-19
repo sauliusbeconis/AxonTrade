@@ -60,6 +60,8 @@ gates.
 The first concrete setup-family branch is the price-only liquidity sweep
 reversal proxy documented in
 [docs/price-only-liquidity-sweep.md](docs/price-only-liquidity-sweep.md).
+The first bid/ask-volume absorption layer is documented in
+[docs/liquidity-sweep-absorption.md](docs/liquidity-sweep-absorption.md).
 
 ## Pop!_OS And Wine Notes
 

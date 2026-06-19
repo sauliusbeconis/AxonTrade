@@ -51,6 +51,14 @@ def test_sierra_export_config_is_valid() -> None:
     validate_sierra_export_config(load_sierra_export_config())
 
 
+def test_orderflow_export_config_is_valid() -> None:
+    config = load_sierra_export_config("config/research/sierra_orderflow_bar_export.yaml")
+
+    validate_sierra_export_config(config)
+    assert "bid_volume" in config["normalized_fields"]
+    assert "delta" in config["optional_fields"]
+
+
 def test_normalizes_sierra_export_rows_for_baseline() -> None:
     rows = normalize_sierra_bar_study_rows(_sierra_export_rows(), symbol="ESU26-CME")
 
@@ -124,6 +132,33 @@ def test_computes_opening_range_from_exported_bars(tmp_path) -> None:
     assert signal_rows[1]["rejection_reason"] == "insufficient_context"
     assert signal_rows[2]["event_type"] == "candidate_signal"
     assert signal_rows[2]["direction"] == "long"
+
+
+def test_normalizes_optional_orderflow_fields() -> None:
+    config = load_sierra_export_config("config/research/sierra_orderflow_bar_export.yaml")
+    rows = normalize_sierra_bar_study_rows(
+        [
+            {
+                "Date Time": "2026-06-19 10:30:00",
+                "Open": "100",
+                "High": "101",
+                "Low": "99",
+                "Last": "100.5",
+                "VWAP": "100",
+                "OR High": "101",
+                "OR Low": "99",
+                "Bid Volume": "80",
+                "Ask Volume": "120",
+            },
+        ],
+        symbol="ESU26-CME",
+        config=config,
+    )
+
+    assert rows[0]["bid_volume"] == "80"
+    assert rows[0]["ask_volume"] == "120"
+    assert rows[0]["delta"] == ""
+    assert rows[0]["volume"] == ""
 
 
 def test_normalizes_actual_sierra_duplicate_headers(tmp_path) -> None:

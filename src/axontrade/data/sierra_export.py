@@ -57,13 +57,20 @@ def validate_sierra_export_config(config: dict[str, Any]) -> dict[str, Any]:
 
     if not isinstance(config["normalized_fields"], list):
         raise SierraExportError("normalized_fields must be a list")
+    if "optional_fields" in config and not isinstance(config["optional_fields"], list):
+        raise SierraExportError("optional_fields must be a list")
     if not isinstance(config["required_cli_values"], list):
         raise SierraExportError("required_cli_values must be a list")
     if not isinstance(config["column_aliases"], dict):
         raise SierraExportError("column_aliases must be a mapping")
 
+    optional_fields = set(config.get("optional_fields", []))
     for field_name in config["normalized_fields"]:
-        if field_name not in config["column_aliases"] and field_name not in config["defaults"]:
+        if (
+            field_name not in config["column_aliases"]
+            and field_name not in config["defaults"]
+            and field_name not in optional_fields
+        ):
             raise SierraExportError(
                 f"normalized field has no aliases or default: {field_name}",
             )
@@ -202,6 +209,7 @@ def _build_header_mapping(
     normalized_to_original = {_normalize_header(header): header for header in header_list}
     mapping: dict[str, str] = {}
     computed_fields = computed_fields or set()
+    optional_fields = set(config.get("optional_fields", []))
 
     for field_name, aliases in config["column_aliases"].items():
         if field_name in computed_fields:
@@ -213,7 +221,7 @@ def _build_header_mapping(
         if field_name in {"symbol", "chart_number", "bar_index", "session_phase"}:
             optional = True
         else:
-            optional = False
+            optional = field_name in optional_fields
 
         matched_header = _match_header(field_name, aliases, header_list, normalized_to_original)
         if matched_header is None:
@@ -266,6 +274,10 @@ def _resolve_field_value(
     session_phase: str | None,
     generated_index: int,
 ) -> Any:
+    optional_fields = set(config.get("optional_fields", []))
+    if field_name in optional_fields and field_name not in header_mapping:
+        return ""
+
     if field_name == "symbol":
         return _value_or_default(row, header_mapping, field_name, symbol)
     if field_name == "chart_number":
@@ -287,6 +299,8 @@ def _resolve_field_value(
     source_header = header_mapping[field_name]
     value = row.get(source_header)
     if value is None or str(value).strip() == "":
+        if field_name in optional_fields:
+            return ""
         raise SierraExportError(f"Blank Sierra export value for {field_name}")
     return value
 
