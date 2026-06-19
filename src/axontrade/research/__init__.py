@@ -20,6 +20,7 @@ from axontrade.research.price_only_experiments import (
     PriceOnlyExperimentError,
     run_price_only_parameter_sweep,
     run_price_only_train_holdout_sweep,
+    run_price_only_walk_forward_sweep,
 )
 from axontrade.research.trade_outcomes import (
     TRADE_OUTCOME_CSV_HEADER,
@@ -50,6 +51,7 @@ __all__ = [
     "summarize_trade_outcomes",
     "run_price_only_parameter_sweep",
     "run_price_only_train_holdout_sweep",
+    "run_price_only_walk_forward_sweep",
     "validate_signal_log_row",
     "validate_signal_log_rows",
     "validate_signal_log_schema",

@@ -49,6 +49,9 @@ to compare simple stop/target variants.
 Use
 [docs/price-only-train-holdout-sweep.md](docs/price-only-train-holdout-sweep.md)
 to check whether selected parameters survive later dates.
+Use
+[docs/price-only-walk-forward-sweep.md](docs/price-only-walk-forward-sweep.md)
+to repeat that selection across rolling chronological windows.
 
 ## Pop!_OS And Wine Notes
 

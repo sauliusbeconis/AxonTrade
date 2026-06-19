@@ -202,6 +202,87 @@ def run_price_only_train_holdout_sweep(
     ]
 
 
+def run_price_only_walk_forward_sweep(
+    normalized_rows: Iterable[dict[str, Any]],
+    *,
+    train_date_count: int,
+    holdout_date_count: int,
+    target_r_multiples: Iterable[float],
+    stop_buffer_points: Iterable[float],
+    minimum_opening_range_width_points: Iterable[float],
+    direction_filters: Iterable[str] = ("all",),
+    instrument_root: str | None = None,
+    slippage_ticks_per_side: int | None = None,
+    base_config: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Run rolling chronological train/holdout windows by trade date."""
+
+    rows = list(normalized_rows)
+    dates = _sorted_trade_dates(rows)
+    if train_date_count <= 0:
+        raise PriceOnlyExperimentError("train_date_count must be positive")
+    if holdout_date_count <= 0:
+        raise PriceOnlyExperimentError("holdout_date_count must be positive")
+    if train_date_count + holdout_date_count > len(dates):
+        raise PriceOnlyExperimentError(
+            "train_date_count plus holdout_date_count must not exceed the number of trade dates",
+        )
+
+    sweep_kwargs = {
+        "target_r_multiples": target_r_multiples,
+        "stop_buffer_points": stop_buffer_points,
+        "minimum_opening_range_width_points": minimum_opening_range_width_points,
+        "direction_filters": direction_filters,
+        "instrument_root": instrument_root,
+        "slippage_ticks_per_side": slippage_ticks_per_side,
+        "base_config": base_config,
+    }
+
+    split_rows: list[dict[str, Any]] = []
+    max_start = len(dates) - train_date_count - holdout_date_count + 1
+    for window_index in range(max_start):
+        train_dates = dates[window_index:window_index + train_date_count]
+        holdout_dates = dates[
+            window_index + train_date_count:
+            window_index + train_date_count + holdout_date_count
+        ]
+        train_rows = _filter_rows_by_dates(rows, train_dates)
+        holdout_rows = _filter_rows_by_dates(rows, holdout_dates)
+
+        train_sweep = run_price_only_parameter_sweep(train_rows, **sweep_kwargs)
+        holdout_sweep = run_price_only_parameter_sweep(holdout_rows, **sweep_kwargs)
+        best_train = max(train_sweep, key=lambda row: float(row["net_usd"]))
+        matching_holdout = _find_experiment_row(holdout_sweep, str(best_train["experiment_id"]))
+        split_id = (
+            f"walk_forward_window={window_index + 1}:"
+            f"train_dates={len(train_dates)}:"
+            f"holdout_dates={len(holdout_dates)}"
+        )
+
+        split_rows.extend(
+            _tag_split_rows(
+                [best_train],
+                sample="train",
+                selected_experiment_id=str(best_train["experiment_id"]),
+                split_id=split_id,
+                trade_dates=train_dates,
+                bar_rows=len(train_rows),
+            ),
+        )
+        split_rows.extend(
+            _tag_split_rows(
+                [matching_holdout],
+                sample="holdout",
+                selected_experiment_id=str(best_train["experiment_id"]),
+                split_id=split_id,
+                trade_dates=holdout_dates,
+                bar_rows=len(holdout_rows),
+            ),
+        )
+
+    return split_rows
+
+
 def _experiment_row(
     config: dict[str, Any],
     signal_rows: list[dict[str, Any]],
@@ -270,6 +351,13 @@ def _tag_split_rows(
         tagged_row.update({key: row[key] for key in PRICE_ONLY_PARAMETER_SWEEP_HEADER if key != "schema_version"})
         tagged_rows.append(tagged_row)
     return tagged_rows
+
+
+def _find_experiment_row(rows: list[dict[str, Any]], experiment_id: str) -> dict[str, Any]:
+    for row in rows:
+        if str(row["experiment_id"]) == experiment_id:
+            return row
+    raise PriceOnlyExperimentError(f"Missing matching holdout experiment row: {experiment_id}")
 
 
 def _sorted_trade_dates(rows: list[dict[str, Any]]) -> list[str]:

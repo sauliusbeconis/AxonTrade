@@ -8,6 +8,7 @@ from axontrade.research import (
     PriceOnlyExperimentError,
     run_price_only_parameter_sweep,
     run_price_only_train_holdout_sweep,
+    run_price_only_walk_forward_sweep,
 )
 
 
@@ -152,6 +153,52 @@ def test_rejects_invalid_train_holdout_split() -> None:
         run_price_only_train_holdout_sweep(
             rows,
             train_date_count=1,
+            target_r_multiples=[1],
+            stop_buffer_points=[0.25],
+            minimum_opening_range_width_points=[1],
+        )
+
+
+def test_runs_walk_forward_parameter_sweep() -> None:
+    rows = [
+        _bar(0, close=99, vwap=100, trade_date="2026-06-19"),
+        _bar(1, close=101, vwap=100, trade_date="2026-06-19", high=101.5, low=99.5),
+        _bar(2, close=103, vwap=101, trade_date="2026-06-19", high=106, low=102),
+        _bar(3, close=99, vwap=100, trade_date="2026-06-20"),
+        _bar(4, close=101, vwap=100, trade_date="2026-06-20", high=101.5, low=99.5),
+        _bar(5, close=103, vwap=101, trade_date="2026-06-20", high=106, low=102),
+        _bar(6, close=99, vwap=100, trade_date="2026-06-21"),
+        _bar(7, close=101, vwap=100, trade_date="2026-06-21", high=101.5, low=99.5),
+        _bar(8, close=103, vwap=101, trade_date="2026-06-21", high=106, low=102),
+    ]
+
+    split_rows = run_price_only_walk_forward_sweep(
+        rows,
+        train_date_count=1,
+        holdout_date_count=1,
+        target_r_multiples=[1],
+        stop_buffer_points=[0.25],
+        minimum_opening_range_width_points=[1],
+        direction_filters=["all", "short"],
+    )
+
+    assert len(split_rows) == 4
+    assert [row["sample"] for row in split_rows] == ["train", "holdout", "train", "holdout"]
+    assert split_rows[0]["trade_dates"] == "2026-06-19"
+    assert split_rows[1]["trade_dates"] == "2026-06-20"
+    assert split_rows[2]["trade_dates"] == "2026-06-20"
+    assert split_rows[3]["trade_dates"] == "2026-06-21"
+    assert all(row["selected_on_train"] == "true" for row in split_rows)
+
+
+def test_rejects_invalid_walk_forward_window() -> None:
+    rows = [_bar(0, close=99, vwap=100)]
+
+    with pytest.raises(PriceOnlyExperimentError, match="must not exceed"):
+        run_price_only_walk_forward_sweep(
+            rows,
+            train_date_count=1,
+            holdout_date_count=1,
             target_r_multiples=[1],
             stop_buffer_points=[0.25],
             minimum_opening_range_width_points=[1],
