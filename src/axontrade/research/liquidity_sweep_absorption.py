@@ -33,6 +33,7 @@ _REQUIRED_CONFIG_FIELDS = (
     "rules.setup_end_time",
     "rules.minimum_opening_range_width_points",
     "rules.minimum_sweep_points",
+    "rules.maximum_reversal_bars",
     "rules.close_back_inside_points",
     "rules.stop_buffer_points",
     "rules.maximum_risk_points",
@@ -95,6 +96,18 @@ class AbsorptionBar:
         return (self.close - self.low) / bar_range
 
 
+@dataclass(frozen=True)
+class PendingSweep:
+    """Sweep-side aggression waiting for reversal confirmation."""
+
+    direction: str
+    bar_index: int
+    extreme_price: float
+    delta: float
+    aggression_ratio: float
+    close_location: float
+
+
 def load_liquidity_sweep_absorption_config(
     path: str | Path = DEFAULT_LIQUIDITY_SWEEP_ABSORPTION_CONFIG,
 ) -> dict[str, Any]:
@@ -125,6 +138,7 @@ def validate_liquidity_sweep_absorption_config(config: dict[str, Any]) -> dict[s
     for field_name in (
         "minimum_opening_range_width_points",
         "minimum_sweep_points",
+        "maximum_reversal_bars",
         "close_back_inside_points",
         "stop_buffer_points",
         "maximum_risk_points",
@@ -146,6 +160,8 @@ def validate_liquidity_sweep_absorption_config(config: dict[str, Any]) -> dict[s
         raise LiquiditySweepAbsorptionError("rules.setup_start_time must be before setup_end_time")
     if float(config["rules"]["minimum_sweep_points"]) <= 0:
         raise LiquiditySweepAbsorptionError("rules.minimum_sweep_points must be positive")
+    if int(config["rules"]["maximum_reversal_bars"]) <= 0:
+        raise LiquiditySweepAbsorptionError("rules.maximum_reversal_bars must be positive")
     if float(config["rules"]["minimum_aggression_ratio"]) < 1:
         raise LiquiditySweepAbsorptionError("rules.minimum_aggression_ratio must be at least 1")
     if config["rules"]["target_level"] != "opening_range_midpoint":
@@ -172,6 +188,7 @@ def evaluate_liquidity_sweep_absorption_reversal(
 
     signal_rows: list[dict[str, Any]] = []
     emitted_sides: set[tuple[str, str, str]] = set()
+    pending_sweeps: dict[tuple[str, str, str], list[PendingSweep]] = {}
     signal_schema = load_signal_log_schema()
 
     for source_row in rows:
@@ -181,6 +198,7 @@ def evaluate_liquidity_sweep_absorption_reversal(
             strategy_config,
             signal_schema,
             emitted_sides,
+            pending_sweeps,
         )
         signal_rows.append(signal_row)
         if emitted_side is not None:
@@ -194,6 +212,7 @@ def _evaluate_bar(
     config: dict[str, Any],
     signal_schema: dict[str, Any],
     emitted_sides: set[tuple[str, str, str]],
+    pending_sweeps: dict[tuple[str, str, str], list[PendingSweep]],
 ) -> tuple[dict[str, Any], tuple[str, str, str] | None]:
     if bar.session_phase not in set(config["allowed_session_phases"]):
         return _reject(bar, config, signal_schema, "outside_session", "bar is outside allowed session phase")
@@ -220,70 +239,83 @@ def _evaluate_bar(
             "opening range width is below configured minimum",
         )
 
-    direction = _sweep_direction(bar, config)
-    if direction == "ambiguous":
+    swept_directions = _swept_directions(bar, config)
+    if len(swept_directions) > 1:
         return _reject(bar, config, signal_schema, "ambiguous_setup", "bar swept both opening-range sides")
-    if direction is None:
-        return _reject(bar, config, signal_schema, "no_setup", "no liquidity sweep reversal setup")
 
-    emitted_key = (bar.symbol, _bar_date(bar), direction)
-    if config["rules"]["one_signal_per_side_per_day"] and emitted_key in emitted_sides:
+    for direction in swept_directions:
+        pending_key = (bar.symbol, _bar_date(bar), direction)
+        if config["rules"]["one_signal_per_side_per_day"] and pending_key in emitted_sides:
+            return _reject(
+                bar,
+                config,
+                signal_schema,
+                "duplicate_signal",
+                "liquidity sweep signal already emitted for this symbol/date/side",
+            )
+        sweep, sweep_notes = _pending_sweep_from_bar(bar, config, direction)
+        if sweep is not None:
+            pending_sweeps.setdefault(pending_key, []).append(sweep)
+        elif not _has_valid_pending_sweep(bar, config, pending_sweeps, pending_key):
+            return _reject(bar, config, signal_schema, "no_absorption", sweep_notes)
+
+    for direction in ("short", "long"):
+        emitted_key = (bar.symbol, _bar_date(bar), direction)
+        if config["rules"]["one_signal_per_side_per_day"] and emitted_key in emitted_sides:
+            continue
+        pending_sweep = _confirmed_pending_sweep(bar, config, pending_sweeps, emitted_key)
+        if pending_sweep is None:
+            continue
+
+        candidate = _candidate_signal_row(
+            bar,
+            config,
+            signal_schema,
+            pending_sweep,
+        )
+        if candidate["event_type"] == config["outputs"]["candidate_event_type"]:
+            return candidate, emitted_key
+        return candidate, None
+
+    if swept_directions:
         return _reject(
             bar,
             config,
             signal_schema,
-            "duplicate_signal",
-            "liquidity sweep signal already emitted for this symbol/date/side",
+            "no_setup",
+            "liquidity sweep observed; waiting for reversal confirmation",
         )
-
-    absorption_ok, absorption_notes = _has_absorption(bar, config, direction)
-    if not absorption_ok:
-        return _reject(bar, config, signal_schema, "no_absorption", absorption_notes)
-
-    candidate = _candidate_signal_row(bar, config, signal_schema, direction, absorption_notes)
-    if candidate["event_type"] == config["outputs"]["candidate_event_type"]:
-        return candidate, emitted_key
-    return candidate, None
+    return _reject(bar, config, signal_schema, "no_setup", "no liquidity sweep reversal setup")
 
 
-def _sweep_direction(bar: AbsorptionBar, config: dict[str, Any]) -> str | None:
+def _swept_directions(bar: AbsorptionBar, config: dict[str, Any]) -> list[str]:
     sweep_points = float(config["rules"]["minimum_sweep_points"])
-    inside_points = float(config["rules"]["close_back_inside_points"])
-    short_setup = (
-        bar.high >= bar.opening_range_high + sweep_points
-        and bar.close <= bar.opening_range_high - inside_points
-    )
-    long_setup = (
-        bar.low <= bar.opening_range_low - sweep_points
-        and bar.close >= bar.opening_range_low + inside_points
-    )
-    if short_setup and long_setup:
-        return "ambiguous"
-    if short_setup:
-        return "short"
-    if long_setup:
-        return "long"
-    return None
+    directions: list[str] = []
+    if bar.high >= bar.opening_range_high + sweep_points:
+        directions.append("short")
+    if bar.low <= bar.opening_range_low - sweep_points:
+        directions.append("long")
+    return directions
 
 
-def _has_absorption(
+def _pending_sweep_from_bar(
     bar: AbsorptionBar,
     config: dict[str, Any],
     direction: str,
-) -> tuple[bool, str]:
+) -> tuple[PendingSweep | None, str]:
     minimum_total_volume = float(config["rules"]["minimum_total_volume"])
     minimum_delta = float(config["rules"]["minimum_aggressive_delta"])
     minimum_ratio = float(config["rules"]["minimum_aggression_ratio"])
     if bar.total_volume < minimum_total_volume:
-        return False, f"total volume {bar.total_volume:.2f} below absorption minimum"
+        return None, f"total volume {bar.total_volume:.2f} below absorption minimum"
 
     if direction == "short":
         aggression_ratio = _safe_ratio(bar.ask_volume, bar.bid_volume)
         delta_ok = bar.delta > 0 and abs(bar.delta) >= minimum_delta
         ratio_ok = aggression_ratio >= minimum_ratio
-        close_ok = bar.close_location <= float(config["rules"]["short_max_close_location"])
+        extreme_price = bar.high
         notes = (
-            "short absorption proxy "
+            "short sweep aggression "
             f"delta={bar.delta:.2f}; ratio={aggression_ratio:.2f}; "
             f"close_location={bar.close_location:.2f}"
         )
@@ -291,41 +323,101 @@ def _has_absorption(
         aggression_ratio = _safe_ratio(bar.bid_volume, bar.ask_volume)
         delta_ok = bar.delta < 0 and abs(bar.delta) >= minimum_delta
         ratio_ok = aggression_ratio >= minimum_ratio
-        close_ok = bar.close_location >= float(config["rules"]["long_min_close_location"])
+        extreme_price = bar.low
         notes = (
-            "long absorption proxy "
+            "long sweep aggression "
             f"delta={bar.delta:.2f}; ratio={aggression_ratio:.2f}; "
             f"close_location={bar.close_location:.2f}"
         )
 
-    if delta_ok and ratio_ok and close_ok:
-        return True, notes
+    if delta_ok and ratio_ok:
+        return (
+            PendingSweep(
+                direction=direction,
+                bar_index=bar.bar_index,
+                extreme_price=extreme_price,
+                delta=bar.delta,
+                aggression_ratio=aggression_ratio,
+                close_location=bar.close_location,
+            ),
+            notes,
+        )
+
     failed = []
     if not delta_ok:
         failed.append("delta")
     if not ratio_ok:
         failed.append("aggression_ratio")
-    if not close_ok:
-        failed.append("close_location")
-    return False, notes + "; failed=" + ",".join(failed)
+    return None, notes + "; failed=" + ",".join(failed)
+
+
+def _confirmed_pending_sweep(
+    bar: AbsorptionBar,
+    config: dict[str, Any],
+    pending_sweeps: dict[tuple[str, str, str], list[PendingSweep]],
+    pending_key: tuple[str, str, str],
+) -> PendingSweep | None:
+    pending = _valid_pending_sweeps(bar, config, pending_sweeps, pending_key)
+    if not pending:
+        return None
+
+    direction = pending_key[2]
+    inside_points = float(config["rules"]["close_back_inside_points"])
+    if direction == "short":
+        confirmed = (
+            bar.close <= bar.opening_range_high - inside_points
+            and bar.close_location <= float(config["rules"]["short_max_close_location"])
+        )
+    else:
+        confirmed = (
+            bar.close >= bar.opening_range_low + inside_points
+            and bar.close_location >= float(config["rules"]["long_min_close_location"])
+        )
+    if not confirmed:
+        return None
+    return pending[-1]
+
+
+def _has_valid_pending_sweep(
+    bar: AbsorptionBar,
+    config: dict[str, Any],
+    pending_sweeps: dict[tuple[str, str, str], list[PendingSweep]],
+    pending_key: tuple[str, str, str],
+) -> bool:
+    return bool(_valid_pending_sweeps(bar, config, pending_sweeps, pending_key))
+
+
+def _valid_pending_sweeps(
+    bar: AbsorptionBar,
+    config: dict[str, Any],
+    pending_sweeps: dict[tuple[str, str, str], list[PendingSweep]],
+    pending_key: tuple[str, str, str],
+) -> list[PendingSweep]:
+    maximum_reversal_bars = int(config["rules"]["maximum_reversal_bars"])
+    pending = [
+        sweep
+        for sweep in pending_sweeps.get(pending_key, [])
+        if 0 <= bar.bar_index - sweep.bar_index <= maximum_reversal_bars
+    ]
+    pending_sweeps[pending_key] = pending
+    return pending
 
 
 def _candidate_signal_row(
     bar: AbsorptionBar,
     config: dict[str, Any],
     signal_schema: dict[str, Any],
-    direction: str,
-    notes: str,
+    pending_sweep: PendingSweep,
 ) -> dict[str, Any]:
     stop_buffer = float(config["rules"]["stop_buffer_points"])
     maximum_risk_points = float(config["rules"]["maximum_risk_points"])
     target_price = (bar.opening_range_high + bar.opening_range_low) / 2
-    if direction == "short":
-        stop_price = bar.high + stop_buffer
+    if pending_sweep.direction == "short":
+        stop_price = pending_sweep.extreme_price + stop_buffer
         risk_points = stop_price - bar.close
         target_is_valid = target_price < bar.close
     else:
-        stop_price = bar.low - stop_buffer
+        stop_price = pending_sweep.extreme_price - stop_buffer
         risk_points = bar.close - stop_price
         target_is_valid = target_price > bar.close
 
@@ -358,14 +450,20 @@ def _candidate_signal_row(
     row.update(
         {
             "event_type": config["outputs"]["candidate_event_type"],
-            "direction": direction,
+            "direction": pending_sweep.direction,
             "action": "candidate",
             "stop_price": _format_number(stop_price),
             "target_price": _format_number(target_price),
             "invalidation_price": _format_number(stop_price),
             "rejection_reason": "not_applicable",
             "confidence": float(config["rules"]["confidence"]),
-            "notes": notes,
+            "notes": (
+                f"{pending_sweep.direction} absorption reversal; "
+                f"sweep_bar_index={pending_sweep.bar_index}; "
+                f"sweep_delta={pending_sweep.delta:.2f}; "
+                f"sweep_ratio={pending_sweep.aggression_ratio:.2f}; "
+                f"confirmation_close_location={bar.close_location:.2f}"
+            ),
         },
     )
     row["event_key"] = _event_key(row)

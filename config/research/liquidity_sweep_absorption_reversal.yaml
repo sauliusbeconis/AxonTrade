@@ -36,6 +36,7 @@ rules:
   setup_end_time: "15:15:00"
   minimum_opening_range_width_points: 1.0
   minimum_sweep_points: 1.0
+  maximum_reversal_bars: 5
   close_back_inside_points: 0.25
   stop_buffer_points: 0.25
   maximum_risk_points: 20.0
@@ -61,11 +62,13 @@ outputs:
 
 notes:
   - >
-    Short absorption proxy: ask_volume dominates bid_volume, delta is positive,
-    and the bar still closes in the lower 45% of its range.
+    Short absorption proxy: ask_volume dominates bid_volume and delta is positive
+    on the sweep bar, then price closes back inside in the lower 45% of a
+    confirmation bar within maximum_reversal_bars.
   - >
-    Long absorption proxy: bid_volume dominates ask_volume, delta is negative,
-    and the bar still closes in the upper 55% of its range.
+    Long absorption proxy: bid_volume dominates ask_volume and delta is negative
+    on the sweep bar, then price closes back inside in the upper 55% of a
+    confirmation bar within maximum_reversal_bars.
   - This is a bar-level absorption proxy, not level-specific volume-at-price
     absorption yet.
   - It never submits, modifies, cancels, flattens, or routes orders.

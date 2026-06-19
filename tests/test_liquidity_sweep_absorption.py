@@ -71,7 +71,7 @@ def test_accepts_short_sweep_with_buying_absorbed() -> None:
     assert signals[0]["event_type"] == "candidate_signal"
     assert signals[0]["direction"] == "short"
     assert signals[0]["rejection_reason"] == "not_applicable"
-    assert "short absorption proxy" in signals[0]["notes"]
+    assert "short absorption reversal" in signals[0]["notes"]
 
 
 def test_accepts_long_sweep_with_selling_absorbed() -> None:
@@ -90,7 +90,23 @@ def test_accepts_long_sweep_with_selling_absorbed() -> None:
 
     assert signals[0]["event_type"] == "candidate_signal"
     assert signals[0]["direction"] == "long"
-    assert "long absorption proxy" in signals[0]["notes"]
+    assert "long absorption reversal" in signals[0]["notes"]
+
+
+def test_accepts_delayed_reversal_confirmation_after_absorbed_sweep() -> None:
+    signals = evaluate_liquidity_sweep_absorption_reversal(
+        [
+            _bar(0, close=101.0, high=101.25, low=100.5, bid_volume=80, ask_volume=120),
+            _bar(1, close=99.25, high=99.75, low=99.0, bid_volume=80, ask_volume=100),
+        ],
+    )
+
+    assert signals[0]["event_type"] == "rejected_signal"
+    assert signals[0]["rejection_reason"] == "no_setup"
+    assert signals[1]["event_type"] == "candidate_signal"
+    assert signals[1]["direction"] == "short"
+    assert signals[1]["stop_price"] == "101.5"
+    assert "sweep_bar_index=0" in signals[1]["notes"]
 
 
 def test_rejects_sweep_without_sweep_side_aggression() -> None:
@@ -127,8 +143,8 @@ def test_rejects_sweep_when_close_favors_aggressor() -> None:
     )
 
     assert signals[0]["event_type"] == "rejected_signal"
-    assert signals[0]["rejection_reason"] == "no_absorption"
-    assert "close_location" in signals[0]["notes"]
+    assert signals[0]["rejection_reason"] == "no_setup"
+    assert "waiting for reversal confirmation" in signals[0]["notes"]
 
 
 def test_rejects_duplicate_absorption_signal_per_side_per_day() -> None:

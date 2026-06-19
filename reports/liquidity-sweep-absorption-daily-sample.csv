@@ -1,0 +1,4 @@
+schema_version,trade_date,trades,target_hits,losses,other_exits,win_rate,gross_usd,net_usd,average_net_usd,long_trades,short_trades,average_holding_bars,cumulative_net_usd,peak_to_date_net_usd,drawdown_usd,notes
+1,2026-06-17,2,1,1,0,0.5,181.25,124.25,62.125,1,1,22.5,124.25,124.25,0,daily aggregate by entry date
+1,2026-06-18,2,1,1,0,0.5,137.5,80.5,40.25,1,1,15.5,204.75,204.75,0,daily aggregate by entry date
+1,2026-06-19,1,1,0,0,1,137.5,109,109,0,1,7,313.75,313.75,0,daily aggregate by entry date
