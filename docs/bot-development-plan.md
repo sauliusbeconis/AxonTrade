@@ -117,12 +117,18 @@ Use Sierra Chart replay to confirm:
 Only after baseline reports and safety checks are stable, consider a separate
 simulation-only assistant phase. This still does not authorize live automation.
 
+## Completed Foundation
+
+- `config/research/signal_log_schema.yaml` defines the first signal log contract.
+- Python validation checks schema consistency and signal/rejection rows.
+- `OrderFlowSignalSmokeTest.cpp` writes schema-compatible CSV rows and draws
+  indicator-only signal references.
+
 ## Next Concrete Task
 
-Implement the first data contract:
+Implement the first price-only baseline module:
 
-- `config/research/signal_log_schema.yaml`;
-- Python schema validator;
-- tests for required signal/rejection fields;
-- update ACSIL smoke test plan to match the future logger schema.
-
+- define a VWAP/opening-range reclaim hypothesis in config;
+- load exported bars and level rows;
+- produce candidate and rejected signal rows using the signal log schema;
+- add tests for chronological evaluation and rejection reasons.

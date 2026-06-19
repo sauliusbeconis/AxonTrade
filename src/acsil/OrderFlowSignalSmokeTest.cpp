@@ -10,6 +10,9 @@ namespace
 {
 const int kLineDrawingNumber = 7001001;
 const int kLabelDrawingNumber = 7001002;
+const int kStopDrawingNumber = 7001003;
+const int kTargetDrawingNumber = 7001004;
+const int kInvalidationDrawingNumber = 7001005;
 
 std::string ToStdString(const SCString& value)
 {
@@ -32,15 +35,45 @@ bool FileContainsEventKey(const std::string& file_path, const std::string& event
     return false;
 }
 
-void AppendCsvRowIfMissing(
+std::string EscapeCsv(const std::string& value)
+{
+    const bool needs_quotes = value.find_first_of(",\"\r\n") != std::string::npos;
+    if (!needs_quotes)
+        return value;
+
+    std::string escaped = "\"";
+    for (std::string::const_iterator character = value.begin(); character != value.end(); ++character)
+    {
+        if (*character == '"')
+            escaped += "\"\"";
+        else
+            escaped += *character;
+    }
+    escaped += "\"";
+    return escaped;
+}
+
+void AppendSignalLogRowIfMissing(
     const std::string& file_path,
     const std::string& event_key,
-    const std::string& timestamp,
+    const std::string& event_type,
+    const std::string& generated_at,
     const std::string& symbol,
     int chart_number,
     int bar_index,
-    double price,
-    const std::string& event_type)
+    const std::string& bar_start_time,
+    const std::string& trade_mode,
+    const std::string& strategy_id,
+    const std::string& signal_id,
+    const std::string& direction,
+    const std::string& action,
+    double signal_price,
+    double stop_price,
+    double target_price,
+    double invalidation_price,
+    const std::string& rejection_reason,
+    double confidence,
+    const std::string& notes)
 {
     if (FileContainsEventKey(file_path, event_key))
         return;
@@ -52,15 +85,58 @@ void AppendCsvRowIfMissing(
         return;
 
     if (!file_already_exists)
-        output << "event_key,timestamp,symbol,chart_number,bar_index,price,event_type\n";
+    {
+        output << "schema_version,event_key,event_type,generated_at,symbol,chart_number,"
+               << "bar_index,bar_start_time,trade_mode,strategy_id,signal_id,direction,"
+               << "action,signal_price,stop_price,target_price,invalidation_price,"
+               << "rejection_reason,confidence,notes\n";
+    }
 
-    output << event_key << ','
-           << timestamp << ','
-           << symbol << ','
+    output << 1 << ','
+           << EscapeCsv(event_key) << ','
+           << EscapeCsv(event_type) << ','
+           << EscapeCsv(generated_at) << ','
+           << EscapeCsv(symbol) << ','
            << chart_number << ','
            << bar_index << ','
-           << price << ','
-           << event_type << '\n';
+           << EscapeCsv(bar_start_time) << ','
+           << EscapeCsv(trade_mode) << ','
+           << EscapeCsv(strategy_id) << ','
+           << EscapeCsv(signal_id) << ','
+           << EscapeCsv(direction) << ','
+           << EscapeCsv(action) << ','
+           << signal_price << ','
+           << stop_price << ','
+           << target_price << ','
+           << invalidation_price << ','
+           << EscapeCsv(rejection_reason) << ','
+           << confidence << ','
+           << EscapeCsv(notes) << '\n';
+}
+
+bool IsShortDirection(const std::string& direction)
+{
+    return direction == "short" || direction == "Short" || direction == "SHORT";
+}
+
+void DrawHorizontalReference(
+    SCStudyInterfaceRef sc,
+    int drawing_number,
+    double price,
+    COLORREF color,
+    int line_width)
+{
+    s_UseTool tool;
+    tool.Clear();
+    tool.ChartNumber = sc.ChartNumber;
+    tool.DrawingType = DRAWING_HORIZONTALLINE;
+    tool.LineNumber = drawing_number;
+    tool.Region = 0;
+    tool.BeginValue = price;
+    tool.Color = color;
+    tool.LineWidth = line_width;
+    tool.AddMethod = UTAM_ADD_OR_ADJUST;
+    sc.UseTool(tool);
 }
 }
 
@@ -72,6 +148,16 @@ SCSFExport scsf_OrderFlowSignalSmokeTest(SCStudyInterfaceRef sc)
     SCInputRef CsvLogPath = sc.Input[3];
     SCInputRef LineColor = sc.Input[4];
     SCInputRef LineWidth = sc.Input[5];
+    SCInputRef Direction = sc.Input[6];
+    SCInputRef Action = sc.Input[7];
+    SCInputRef StrategyId = sc.Input[8];
+    SCInputRef SignalId = sc.Input[9];
+    SCInputRef TradeMode = sc.Input[10];
+    SCInputRef StopOffsetPoints = sc.Input[11];
+    SCInputRef TargetOffsetPoints = sc.Input[12];
+    SCInputRef RejectionReason = sc.Input[13];
+    SCInputRef Confidence = sc.Input[14];
+    SCInputRef Notes = sc.Input[15];
 
     if (sc.SetDefaults)
     {
@@ -88,7 +174,7 @@ SCSFExport scsf_OrderFlowSignalSmokeTest(SCStudyInterfaceRef sc)
         LabelText.SetString("AxonTrade smoke test");
 
         EventType.Name = "Event Type";
-        EventType.SetString("smoke_signal_created");
+        EventType.SetString("candidate_signal");
 
         CsvLogPath.Name = "CSV Log Path";
         CsvLogPath.SetString("AxonTrade_OrderFlowSignalSmokeTest.csv");
@@ -99,6 +185,36 @@ SCSFExport scsf_OrderFlowSignalSmokeTest(SCStudyInterfaceRef sc)
         LineWidth.Name = "Line Width";
         LineWidth.SetInt(2);
 
+        Direction.Name = "Direction";
+        Direction.SetString("long");
+
+        Action.Name = "Action";
+        Action.SetString("candidate");
+
+        StrategyId.Name = "Strategy ID";
+        StrategyId.SetString("manual_smoke_signal");
+
+        SignalId.Name = "Signal ID";
+        SignalId.SetString("manual_smoke_signal_001");
+
+        TradeMode.Name = "Trade Mode";
+        TradeMode.SetString("sim");
+
+        StopOffsetPoints.Name = "Stop Offset Points";
+        StopOffsetPoints.SetFloat(4.0f);
+
+        TargetOffsetPoints.Name = "Target Offset Points";
+        TargetOffsetPoints.SetFloat(8.0f);
+
+        RejectionReason.Name = "Rejection Reason";
+        RejectionReason.SetString("not_applicable");
+
+        Confidence.Name = "Research Confidence";
+        Confidence.SetFloat(0.5f);
+
+        Notes.Name = "Notes";
+        Notes.SetString("indicator-only schema smoke row");
+
         return;
     }
 
@@ -107,20 +223,20 @@ SCSFExport scsf_OrderFlowSignalSmokeTest(SCStudyInterfaceRef sc)
 
     const int latest_bar_index = sc.ArraySize - 1;
     const double line_price = LinePrice.GetFloat();
+    const std::string direction = ToStdString(Direction.GetString());
+    const bool short_direction = IsShortDirection(direction);
+    const double stop_offset = StopOffsetPoints.GetFloat();
+    const double target_offset = TargetOffsetPoints.GetFloat();
+    const double stop_price = short_direction ? line_price + stop_offset : line_price - stop_offset;
+    const double target_price = short_direction ? line_price - target_offset : line_price + target_offset;
+    const double invalidation_price = stop_price;
 
     // s_UseTool is Sierra Chart's drawing API. A stable LineNumber plus
     // UTAM_ADD_OR_ADJUST updates the same drawing during recalculation.
-    s_UseTool line_tool;
-    line_tool.Clear();
-    line_tool.ChartNumber = sc.ChartNumber;
-    line_tool.DrawingType = DRAWING_HORIZONTALLINE;
-    line_tool.LineNumber = kLineDrawingNumber;
-    line_tool.Region = 0;
-    line_tool.BeginValue = line_price;
-    line_tool.Color = LineColor.GetColor();
-    line_tool.LineWidth = LineWidth.GetInt();
-    line_tool.AddMethod = UTAM_ADD_OR_ADJUST;
-    sc.UseTool(line_tool);
+    DrawHorizontalReference(sc, kLineDrawingNumber, line_price, LineColor.GetColor(), LineWidth.GetInt());
+    DrawHorizontalReference(sc, kStopDrawingNumber, stop_price, RGB(220, 64, 64), 1);
+    DrawHorizontalReference(sc, kTargetDrawingNumber, target_price, RGB(64, 180, 255), 1);
+    DrawHorizontalReference(sc, kInvalidationDrawingNumber, invalidation_price, RGB(255, 180, 0), 1);
 
     s_UseTool label_tool;
     label_tool.Clear();
@@ -136,31 +252,46 @@ SCSFExport scsf_OrderFlowSignalSmokeTest(SCStudyInterfaceRef sc)
     label_tool.AddMethod = UTAM_ADD_OR_ADJUST;
     sc.UseTool(label_tool);
 
-    int& logged_this_session = sc.GetPersistentInt(1);
-    if (logged_this_session != 0)
-        return;
-
     const SCString timestamp = sc.FormatDateTime(sc.BaseDateTimeIn[latest_bar_index]);
     const std::string symbol = ToStdString(sc.Symbol);
     const std::string event_type = ToStdString(EventType.GetString());
     const std::string csv_log_path = ToStdString(CsvLogPath.GetString());
+    const std::string strategy_id = ToStdString(StrategyId.GetString());
+    const std::string signal_id = ToStdString(SignalId.GetString());
+    const std::string action = ToStdString(Action.GetString());
+    const std::string trade_mode = ToStdString(TradeMode.GetString());
+    const std::string rejection_reason = ToStdString(RejectionReason.GetString());
+    const std::string notes = ToStdString(Notes.GetString());
 
     std::ostringstream key_builder;
     key_builder << symbol << ':'
                 << sc.ChartNumber << ':'
                 << latest_bar_index << ':'
                 << line_price << ':'
+                << strategy_id << ':'
+                << signal_id << ':'
                 << event_type;
 
-    AppendCsvRowIfMissing(
+    AppendSignalLogRowIfMissing(
         csv_log_path,
         key_builder.str(),
+        event_type,
         ToStdString(timestamp),
         symbol,
         sc.ChartNumber,
         latest_bar_index,
+        ToStdString(timestamp),
+        trade_mode,
+        strategy_id,
+        signal_id,
+        direction,
+        action,
         line_price,
-        event_type);
+        stop_price,
+        target_price,
+        invalidation_price,
+        rejection_reason,
+        Confidence.GetFloat(),
+        notes);
 
-    logged_this_session = 1;
 }

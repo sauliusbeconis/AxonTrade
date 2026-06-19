@@ -1,0 +1,128 @@
+schema_version: 1
+profile_id: axon_signal_log_v1
+description: >
+  CSV contract for AxonTrade indicator-only signal, rejection, and replay
+  verification logs. This schema is research and simulation safe; it does not
+  authorize live order routing.
+
+csv:
+  file_name: AxonTrade_SignalLog.csv
+  delimiter: ","
+  header:
+    - schema_version
+    - event_key
+    - event_type
+    - generated_at
+    - symbol
+    - chart_number
+    - bar_index
+    - bar_start_time
+    - trade_mode
+    - strategy_id
+    - signal_id
+    - direction
+    - action
+    - signal_price
+    - stop_price
+    - target_price
+    - invalidation_price
+    - rejection_reason
+    - confidence
+    - notes
+
+event_types:
+  - candidate_signal
+  - rejected_signal
+  - replay_marker
+  - smoke_test
+
+directions:
+  - long
+  - short
+  - flat
+  - none
+
+actions:
+  - observe
+  - candidate
+  - reject
+  - annotate
+  - none
+
+trade_modes:
+  - sim
+  - replay
+  - research
+  - unknown
+
+rejection_reasons:
+  - not_applicable
+  - no_setup
+  - outside_session
+  - insufficient_context
+  - risk_limit
+  - news_blackout
+  - duplicate_signal
+  - manual_review_required
+  - other
+
+common_required_fields:
+  - schema_version
+  - event_key
+  - event_type
+  - generated_at
+  - symbol
+  - chart_number
+  - bar_index
+  - bar_start_time
+  - trade_mode
+  - strategy_id
+  - signal_id
+  - direction
+  - action
+  - signal_price
+
+event_type_required_fields:
+  candidate_signal:
+    - stop_price
+    - target_price
+    - invalidation_price
+  rejected_signal:
+    - rejection_reason
+  replay_marker: []
+  smoke_test: []
+
+field_types:
+  schema_version: integer
+  event_key: string
+  event_type: string
+  generated_at: string
+  symbol: string
+  chart_number: integer
+  bar_index: integer
+  bar_start_time: string
+  trade_mode: string
+  strategy_id: string
+  signal_id: string
+  direction: string
+  action: string
+  signal_price: number
+  stop_price: number
+  target_price: number
+  invalidation_price: number
+  rejection_reason: string
+  confidence: number
+  notes: string
+
+allowed_values:
+  event_type: event_types
+  direction: directions
+  action: actions
+  trade_mode: trade_modes
+  rejection_reason: rejection_reasons
+
+notes:
+  - Candidate and rejected signals must both be logged for research.
+  - Optional numeric fields may be blank when not applicable.
+  - Live order identifiers, broker account numbers, and credentials are not
+    allowed in this log.

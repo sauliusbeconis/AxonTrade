@@ -6,9 +6,14 @@ Phase 0 studies must be indicator-only. They may draw chart objects and write si
 
 ## Smoke Test
 
-`OrderFlowSignalSmokeTest.cpp` draws one configurable horizontal line, draws one configurable label, and writes one CSV event row for a deterministic event key.
+`OrderFlowSignalSmokeTest.cpp` draws a configurable signal line, stop, target,
+invalidation line, and label. It writes CSV rows using
+`config/research/signal_log_schema.yaml`.
 
-The study uses deterministic drawing identifiers and add-or-adjust behavior so repeated recalculation updates the same drawings instead of creating duplicates.
+The study uses deterministic drawing identifiers and add-or-adjust behavior so
+repeated recalculation updates the same drawings instead of creating duplicates.
+CSV rows use deterministic event keys so recalculation does not create duplicate
+rows for the same event.
 
 ## Build Workflow
 

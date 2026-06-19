@@ -12,7 +12,9 @@ AxonTrade uses ACSIL C++ for Sierra Chart studies. Phase 0 studies are indicator
 
 ## Smoke-Test Study
 
-`OrderFlowSignalSmokeTest.cpp` is a visual and logging smoke test. It draws one horizontal line, draws one label, and writes one CSV event row for a deterministic event key.
+`OrderFlowSignalSmokeTest.cpp` is a visual and logging smoke test. It draws an
+indicator-only signal line, stop, target, invalidation line, and label. It
+writes CSV rows matching `config/research/signal_log_schema.yaml`.
 
 The study must not submit, modify, cancel, flatten, or route orders.
 
