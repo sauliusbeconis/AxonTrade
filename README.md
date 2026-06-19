@@ -62,6 +62,8 @@ reversal proxy documented in
 [docs/price-only-liquidity-sweep.md](docs/price-only-liquidity-sweep.md).
 The first bid/ask-volume absorption layer is documented in
 [docs/liquidity-sweep-absorption.md](docs/liquidity-sweep-absorption.md).
+Use `scripts/check_orderflow_export.py` before running that layer to verify the
+Sierra export contains the required bid/ask volume fields.
 
 ## Pop!_OS And Wine Notes
 

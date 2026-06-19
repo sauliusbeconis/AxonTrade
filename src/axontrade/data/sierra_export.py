@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import re
+from dataclasses import dataclass
 from datetime import datetime, time
 from pathlib import Path
 from typing import Any, Iterable
@@ -24,6 +25,16 @@ _TIMESTAMP_FORMATS = (
 
 class SierraExportError(ValueError):
     """Raised when a Sierra export cannot be normalized."""
+
+
+@dataclass(frozen=True)
+class SierraExportFieldStatus:
+    """Column readiness status for one normalized export field."""
+
+    field_name: str
+    status: str
+    matched_header: str
+    required: bool
 
 
 SIERRA_EXPORT_REQUIRED_FIELDS = (
@@ -114,6 +125,123 @@ def load_sierra_bar_study_rows(path: str | Path) -> list[dict[str, str]]:
         rows.append(row)
 
     return rows
+
+
+def inspect_sierra_bar_study_file(
+    path: str | Path,
+    *,
+    config: dict[str, Any] | None = None,
+    compute_opening_range: bool = True,
+) -> dict[str, Any]:
+    """Inspect an export file and report which normalized fields are available."""
+
+    rows = load_sierra_bar_study_rows(path)
+    export_config = load_sierra_export_config() if config is None else config
+    validate_sierra_export_config(export_config)
+    headers = list(rows[0].keys()) if rows else []
+    field_statuses = inspect_sierra_bar_study_headers(
+        headers,
+        config=export_config,
+        compute_opening_range=compute_opening_range,
+    )
+    missing_required = [
+        status.field_name
+        for status in field_statuses
+        if status.required and status.status == "missing"
+    ]
+    missing_optional = [
+        status.field_name
+        for status in field_statuses
+        if not status.required and status.status == "missing"
+    ]
+    return {
+        "row_count": len(rows),
+        "headers": headers,
+        "fields": field_statuses,
+        "missing_required": missing_required,
+        "missing_optional": missing_optional,
+        "ready": len(rows) > 0 and not missing_required,
+    }
+
+
+def inspect_sierra_bar_study_headers(
+    headers: Iterable[str],
+    *,
+    config: dict[str, Any] | None = None,
+    compute_opening_range: bool = True,
+) -> list[SierraExportFieldStatus]:
+    """Inspect export headers without raising on missing normalized fields."""
+
+    export_config = load_sierra_export_config() if config is None else config
+    validate_sierra_export_config(export_config)
+    header_list = [header for header in headers if header is not None]
+    normalized_to_original = {_normalize_header(header): header for header in header_list}
+    computed_fields = _COMPUTED_OPENING_RANGE_FIELDS if compute_opening_range else set()
+    optional_fields = set(export_config.get("optional_fields", []))
+    defaulted_fields = {"symbol", "chart_number", "bar_index", "session_phase"}
+
+    statuses: list[SierraExportFieldStatus] = []
+    for field_name in export_config["normalized_fields"]:
+        if field_name in computed_fields:
+            statuses.append(
+                SierraExportFieldStatus(
+                    field_name=field_name,
+                    status="computed",
+                    matched_header="",
+                    required=False,
+                ),
+            )
+            continue
+
+        if (
+            field_name == "timestamp"
+            and "date" in normalized_to_original
+            and "time" in normalized_to_original
+        ):
+            statuses.append(
+                SierraExportFieldStatus(
+                    field_name=field_name,
+                    status="matched",
+                    matched_header="Date + Time",
+                    required=True,
+                ),
+            )
+            continue
+
+        aliases = export_config["column_aliases"].get(field_name, [])
+        matched_header = _match_header(field_name, aliases, header_list, normalized_to_original)
+        if matched_header is not None:
+            statuses.append(
+                SierraExportFieldStatus(
+                    field_name=field_name,
+                    status="matched",
+                    matched_header=matched_header,
+                    required=field_name not in optional_fields,
+                ),
+            )
+            continue
+
+        if field_name in defaulted_fields:
+            statuses.append(
+                SierraExportFieldStatus(
+                    field_name=field_name,
+                    status="defaulted",
+                    matched_header="",
+                    required=False,
+                ),
+            )
+            continue
+
+        statuses.append(
+            SierraExportFieldStatus(
+                field_name=field_name,
+                status="missing",
+                matched_header="",
+                required=field_name not in optional_fields,
+            ),
+        )
+
+    return statuses
 
 
 def normalize_sierra_bar_study_rows(

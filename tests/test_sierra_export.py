@@ -6,6 +6,8 @@ import pytest
 
 from axontrade.data import (
     SierraExportError,
+    inspect_sierra_bar_study_file,
+    inspect_sierra_bar_study_headers,
     load_sierra_bar_study_rows,
     load_sierra_export_config,
     normalize_sierra_bar_study_file,
@@ -159,6 +161,48 @@ def test_normalizes_optional_orderflow_fields() -> None:
     assert rows[0]["ask_volume"] == "120"
     assert rows[0]["delta"] == ""
     assert rows[0]["volume"] == ""
+
+
+def test_inspects_orderflow_export_headers() -> None:
+    config = load_sierra_export_config("config/research/sierra_orderflow_bar_export.yaml")
+    statuses = inspect_sierra_bar_study_headers(
+        [
+            "Date Time",
+            "Open",
+            "High",
+            "Low",
+            "Last",
+            "VWAP",
+            "Bid Volume",
+            "Ask Volume",
+        ],
+        config=config,
+    )
+    by_field = {status.field_name: status for status in statuses}
+
+    assert by_field["timestamp"].status == "matched"
+    assert by_field["opening_range_high"].status == "computed"
+    assert by_field["bid_volume"].matched_header == "Bid Volume"
+    assert by_field["ask_volume"].matched_header == "Ask Volume"
+    assert by_field["delta"].status == "missing"
+    assert by_field["delta"].required is False
+
+
+def test_inspects_missing_required_orderflow_export_fields(tmp_path) -> None:
+    export_path = tmp_path / "missing-orderflow.txt"
+    export_path.write_text(
+        "Date Time,Open,High,Low,Last,VWAP\n"
+        "2026-06-19 10:30:00,100,101,99,100.5,100\n",
+        encoding="utf-8",
+    )
+    config = load_sierra_export_config("config/research/sierra_orderflow_bar_export.yaml")
+
+    inspection = inspect_sierra_bar_study_file(export_path, config=config)
+
+    assert inspection["ready"] is False
+    assert inspection["row_count"] == 1
+    assert "bid_volume" in inspection["missing_required"]
+    assert "ask_volume" in inspection["missing_required"]
 
 
 def test_normalizes_actual_sierra_duplicate_headers(tmp_path) -> None:

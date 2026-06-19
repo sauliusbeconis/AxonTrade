@@ -67,6 +67,16 @@ If Sierra names the columns differently, update aliases in
 
 Manual help needed: **No after the export file exists**.
 
+First check whether the export has the required columns:
+
+```bash
+.venv/bin/python scripts/check_orderflow_export.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport.txt
+```
+
+If the check reports `manual_sierra_help_needed=yes`, fix the Sierra export
+columns before running the absorption evaluator.
+
 ```bash
 .venv/bin/python scripts/run_liquidity_sweep_absorption.py \
   /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport.txt \
