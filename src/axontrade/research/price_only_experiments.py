@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from copy import deepcopy
+from datetime import datetime
 from itertools import product
 from typing import Any, Iterable
 
@@ -40,6 +41,39 @@ PRICE_ONLY_PARAMETER_SWEEP_HEADER = [
     "short_trades",
     "notes",
 ]
+PRICE_ONLY_TRAIN_HOLDOUT_SWEEP_HEADER = [
+    "schema_version",
+    "split_id",
+    "sample",
+    "selected_on_train",
+    "trade_dates",
+    "bar_rows",
+    "experiment_id",
+    "strategy_id",
+    "direction_filter",
+    "target_r_multiple",
+    "stop_buffer_points",
+    "minimum_opening_range_width_points",
+    "signal_rows",
+    "candidate_signals",
+    "rejected_signals",
+    "evaluated_trades",
+    "target_hits",
+    "losses",
+    "other_exits",
+    "win_rate",
+    "gross_usd",
+    "net_usd",
+    "average_net_usd",
+    "long_trades",
+    "short_trades",
+    "notes",
+]
+_TIMESTAMP_FORMATS = (
+    "%Y-%m-%d %H:%M:%S.%f",
+    "%Y-%m-%d %H:%M:%S",
+    "%Y-%m-%d %H:%M",
+)
 
 
 class PriceOnlyExperimentError(ValueError):
@@ -107,6 +141,67 @@ def run_price_only_parameter_sweep(
     return experiment_rows
 
 
+def run_price_only_train_holdout_sweep(
+    normalized_rows: Iterable[dict[str, Any]],
+    *,
+    train_date_count: int,
+    target_r_multiples: Iterable[float],
+    stop_buffer_points: Iterable[float],
+    minimum_opening_range_width_points: Iterable[float],
+    direction_filters: Iterable[str] = ("all",),
+    instrument_root: str | None = None,
+    slippage_ticks_per_side: int | None = None,
+    base_config: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Run a chronological train/holdout parameter sweep by trade date."""
+
+    rows = list(normalized_rows)
+    dates = _sorted_trade_dates(rows)
+    if train_date_count <= 0 or train_date_count >= len(dates):
+        raise PriceOnlyExperimentError(
+            "train_date_count must be greater than zero and less than the number of trade dates",
+        )
+
+    train_dates = dates[:train_date_count]
+    holdout_dates = dates[train_date_count:]
+    train_rows = _filter_rows_by_dates(rows, train_dates)
+    holdout_rows = _filter_rows_by_dates(rows, holdout_dates)
+
+    sweep_kwargs = {
+        "target_r_multiples": target_r_multiples,
+        "stop_buffer_points": stop_buffer_points,
+        "minimum_opening_range_width_points": minimum_opening_range_width_points,
+        "direction_filters": direction_filters,
+        "instrument_root": instrument_root,
+        "slippage_ticks_per_side": slippage_ticks_per_side,
+        "base_config": base_config,
+    }
+    train_sweep = run_price_only_parameter_sweep(train_rows, **sweep_kwargs)
+    holdout_sweep = run_price_only_parameter_sweep(holdout_rows, **sweep_kwargs)
+    best_train = max(train_sweep, key=lambda row: float(row["net_usd"]), default=None)
+    selected_experiment_id = "" if best_train is None else str(best_train["experiment_id"])
+    split_id = f"chronological_train_dates={len(train_dates)}_holdout_dates={len(holdout_dates)}"
+
+    return [
+        *_tag_split_rows(
+            train_sweep,
+            sample="train",
+            selected_experiment_id=selected_experiment_id,
+            split_id=split_id,
+            trade_dates=train_dates,
+            bar_rows=len(train_rows),
+        ),
+        *_tag_split_rows(
+            holdout_sweep,
+            sample="holdout",
+            selected_experiment_id=selected_experiment_id,
+            split_id=split_id,
+            trade_dates=holdout_dates,
+            bar_rows=len(holdout_rows),
+        ),
+    ]
+
+
 def _experiment_row(
     config: dict[str, Any],
     signal_rows: list[dict[str, Any]],
@@ -151,6 +246,57 @@ def _experiment_row(
         "short_trades": direction_counts.get("short", 0),
         "notes": "price-only parameter sweep aggregate",
     }
+
+
+def _tag_split_rows(
+    rows: list[dict[str, Any]],
+    *,
+    sample: str,
+    selected_experiment_id: str,
+    split_id: str,
+    trade_dates: list[str],
+    bar_rows: int,
+) -> list[dict[str, Any]]:
+    tagged_rows: list[dict[str, Any]] = []
+    for row in rows:
+        tagged_row = {
+            "schema_version": 1,
+            "split_id": split_id,
+            "sample": sample,
+            "selected_on_train": str(row["experiment_id"] == selected_experiment_id).lower(),
+            "trade_dates": ";".join(trade_dates),
+            "bar_rows": bar_rows,
+        }
+        tagged_row.update({key: row[key] for key in PRICE_ONLY_PARAMETER_SWEEP_HEADER if key != "schema_version"})
+        tagged_rows.append(tagged_row)
+    return tagged_rows
+
+
+def _sorted_trade_dates(rows: list[dict[str, Any]]) -> list[str]:
+    dates = {
+        _parse_trade_date(row["timestamp"])
+        for row in rows
+    }
+    return sorted(dates)
+
+
+def _filter_rows_by_dates(rows: list[dict[str, Any]], dates: list[str]) -> list[dict[str, Any]]:
+    allowed_dates = set(dates)
+    return [
+        row
+        for row in rows
+        if _parse_trade_date(row["timestamp"]) in allowed_dates
+    ]
+
+
+def _parse_trade_date(value: Any) -> str:
+    timestamp_text = str(value).strip()
+    for timestamp_format in _TIMESTAMP_FORMATS:
+        try:
+            return datetime.strptime(timestamp_text, timestamp_format).date().isoformat()
+        except ValueError:
+            continue
+    raise PriceOnlyExperimentError(f"Invalid timestamp: {value!r}")
 
 
 def _normalize_positive_grid(values: Iterable[float], field_name: str) -> list[float]:

@@ -46,6 +46,9 @@ workflow documented in
 Then use
 [docs/price-only-parameter-sweep.md](docs/price-only-parameter-sweep.md)
 to compare simple stop/target variants.
+Use
+[docs/price-only-train-holdout-sweep.md](docs/price-only-train-holdout-sweep.md)
+to check whether selected parameters survive later dates.
 
 ## Pop!_OS And Wine Notes
 

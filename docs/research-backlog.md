@@ -21,6 +21,7 @@ Every research source should be documented with a link and retrieval date.
 - Research backtest overfitting.
 - Research walk-forward validation practices for intraday time series.
 - Research realistic trade-count thresholds for intraday strategy evaluation.
+- Add first chronological train/holdout parameter check. Done.
 
 ## Bot Pipeline
 
