@@ -1,0 +1,86 @@
+schema_version: 1
+profile_id: sierra_bar_study_export_v1
+description: >
+  Normalization contract for Sierra Chart bar and study exports used by the
+  first price-only baseline.
+
+normalized_fields:
+  - timestamp
+  - symbol
+  - chart_number
+  - bar_index
+  - open
+  - high
+  - low
+  - close
+  - vwap
+  - opening_range_high
+  - opening_range_low
+  - session_phase
+
+defaults:
+  chart_number: 1
+  session_phase: rth
+
+required_cli_values:
+  - symbol
+
+column_aliases:
+  timestamp:
+    - Date Time
+    - DateTime
+    - Date-Time
+    - Timestamp
+    - Date
+  symbol:
+    - Symbol
+  chart_number:
+    - Chart Number
+    - ChartNumber
+  bar_index:
+    - Bar Index
+    - BarIndex
+    - Index
+  open:
+    - Open
+    - O
+  high:
+    - High
+    - H
+  low:
+    - Low
+    - L
+  close:
+    - Last
+    - Close
+    - C
+  vwap:
+    - VWAP
+    - Volume Weighted Average Price
+    - Volume Weighted Average Price VWAP
+    - Volume Weighted Average Price - VWAP
+    - VWAP SG1
+  opening_range_high:
+    - Opening Range High
+    - OR High
+    - Open Range High
+    - High/Low for Time Period High
+    - High Low for Time Period High
+  opening_range_low:
+    - Opening Range Low
+    - OR Low
+    - Open Range Low
+    - High/Low for Time Period Low
+    - High Low for Time Period Low
+  session_phase:
+    - Session Phase
+    - Session
+
+notes:
+  - Sierra Chart's exported study column names can vary with study names and
+    subgraph labels. The adapter matches aliases after normalizing punctuation
+    and case.
+  - If a column is not found, rename the exported file's header row or update
+    this alias list.
+  - The first workflow uses RTH exports. ETH rows can be processed later when
+    session labeling is explicit.

@@ -125,12 +125,13 @@ simulation-only assistant phase. This still does not authorize live automation.
   indicator-only signal references.
 - `config/research/price_only_vwap_reclaim.yaml` and the price-only baseline
   module emit first-pass candidate/rejected signal rows from bar and level data.
+- `config/research/sierra_bar_export.yaml` and the Sierra export adapter map
+  chart/study exports into the baseline input contract.
 
 ## Next Concrete Task
 
-Connect Sierra-exported bar/level data to the baseline:
+Run the export loop on real replay data:
 
-- document the exact Sierra Chart export columns;
 - create a sample fixture from replay data;
 - run the baseline over the exported fixture;
 - compare generated candidate/rejected rows to the chart overlay output.

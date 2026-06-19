@@ -26,8 +26,8 @@ Every research source should be documented with a link and retrieval date.
 
 - Define the first signal log schema. Done.
 - Define rejected-signal reason codes.
-- Define Sierra Chart export fields for bars and levels.
-- Build Python loaders for Sierra-exported CSV files.
+- Define Sierra Chart export fields for bars and levels. Done.
+- Build Python loaders for Sierra-exported CSV files. Done.
 - Build the first price-only VWAP/opening-range baseline. Done.
 - Add an indicator-only ACSIL signal overlay and CSV logger.
 
