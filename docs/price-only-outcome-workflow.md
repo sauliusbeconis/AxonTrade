@@ -98,3 +98,26 @@ After the signal and outcome CSVs exist, write the report with:
 ```
 
 The report is deterministic from the two CSV inputs.
+
+## Write A Daily Breakdown
+
+Manual help is not needed.
+
+After the outcome CSV exists, write a daily aggregate with:
+
+```bash
+.venv/bin/python scripts/summarize_outcomes_by_day.py \
+  data/processed/AxonTrade_ES_price_only_outcomes.csv \
+  reports/price-only-daily-outcome-sample.csv
+```
+
+The daily file includes trades, target hits, losses, other exits, direction
+counts, average holding bars, cumulative net, and drawdown by entry date.
+
+Current sample:
+
+- trading dates with candidates: `7`
+- worst day: `2026-06-11`, net `-8881.00` USD
+- best day: `2026-06-15`, net `2404.00` USD
+- final cumulative net: `-18152.00` USD
+- max drawdown: `-18876.50` USD

@@ -3,8 +3,10 @@ from __future__ import annotations
 import pytest
 
 from axontrade.research import (
+    TRADE_OUTCOME_DAILY_CSV_HEADER,
     TradeOutcomeError,
     evaluate_trade_outcomes,
+    summarize_trade_outcomes_by_day,
     summarize_trade_outcomes,
 )
 
@@ -120,6 +122,52 @@ def test_summarizes_trade_outcomes() -> None:
     assert summary["other_exits"] == 1
     assert summary["net_usd"] == 43.0
     assert summary["average_net_usd"] == 21.5
+
+
+def test_summarizes_trade_outcomes_by_day_with_drawdown() -> None:
+    outcomes = [
+        {
+            "entry_time": "2026-06-19 10:00:00",
+            "direction": "long",
+            "exit_reason": "target_hit",
+            "gross_usd": "200",
+            "net_usd": "171.5",
+            "holding_bars": "1",
+        },
+        {
+            "entry_time": "2026-06-19 10:05:00",
+            "direction": "short",
+            "exit_reason": "stop_hit",
+            "gross_usd": "-100",
+            "net_usd": "-128.5",
+            "holding_bars": "2",
+        },
+        {
+            "entry_time": "2026-06-20 10:00:00",
+            "direction": "short",
+            "exit_reason": "end_of_session",
+            "gross_usd": "-50",
+            "net_usd": "-78.5",
+            "holding_bars": "3",
+        },
+    ]
+
+    daily_rows = summarize_trade_outcomes_by_day(outcomes)
+
+    assert list(daily_rows[0].keys()) == TRADE_OUTCOME_DAILY_CSV_HEADER
+    assert daily_rows[0]["trade_date"] == "2026-06-19"
+    assert daily_rows[0]["trades"] == 2
+    assert daily_rows[0]["target_hits"] == 1
+    assert daily_rows[0]["losses"] == 1
+    assert daily_rows[0]["other_exits"] == 0
+    assert daily_rows[0]["net_usd"] == "43"
+    assert daily_rows[0]["average_holding_bars"] == "1.5"
+    assert daily_rows[0]["cumulative_net_usd"] == "43"
+    assert daily_rows[0]["drawdown_usd"] == "0"
+    assert daily_rows[1]["trade_date"] == "2026-06-20"
+    assert daily_rows[1]["net_usd"] == "-78.5"
+    assert daily_rows[1]["cumulative_net_usd"] == "-35.5"
+    assert daily_rows[1]["drawdown_usd"] == "-78.5"
 
 
 def test_rejects_negative_slippage_override() -> None:

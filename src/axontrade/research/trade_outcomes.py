@@ -39,6 +39,25 @@ TRADE_OUTCOME_CSV_HEADER = [
     "r_multiple",
     "notes",
 ]
+TRADE_OUTCOME_DAILY_CSV_HEADER = [
+    "schema_version",
+    "trade_date",
+    "trades",
+    "target_hits",
+    "losses",
+    "other_exits",
+    "win_rate",
+    "gross_usd",
+    "net_usd",
+    "average_net_usd",
+    "long_trades",
+    "short_trades",
+    "average_holding_bars",
+    "cumulative_net_usd",
+    "peak_to_date_net_usd",
+    "drawdown_usd",
+    "notes",
+]
 _TIMESTAMP_FORMATS = (
     "%Y-%m-%d %H:%M:%S.%f",
     "%Y-%m-%d %H:%M:%S",
@@ -149,6 +168,55 @@ def summarize_trade_outcomes(outcomes: Iterable[dict[str, Any]]) -> dict[str, An
         "net_usd": net_usd,
         "average_net_usd": net_usd / total if total else 0.0,
     }
+
+
+def summarize_trade_outcomes_by_day(
+    outcomes: Iterable[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Summarize outcome rows by entry trade date with cumulative drawdown."""
+
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in outcomes:
+        trade_date = _parse_timestamp(str(row["entry_time"])).date().isoformat()
+        grouped.setdefault(trade_date, []).append(row)
+
+    daily_rows: list[dict[str, Any]] = []
+    cumulative_net_usd = 0.0
+    peak_to_date_net_usd = 0.0
+    for trade_date in sorted(grouped):
+        day_outcomes = grouped[trade_date]
+        summary = summarize_trade_outcomes(day_outcomes)
+        net_usd = _to_float(summary["net_usd"], "net_usd")
+        cumulative_net_usd += net_usd
+        peak_to_date_net_usd = max(peak_to_date_net_usd, cumulative_net_usd)
+        drawdown_usd = cumulative_net_usd - peak_to_date_net_usd
+        long_trades = sum(row["direction"] == "long" for row in day_outcomes)
+        short_trades = sum(row["direction"] == "short" for row in day_outcomes)
+        holding_bars = sum(_to_int(row["holding_bars"], "holding_bars") for row in day_outcomes)
+
+        daily_rows.append(
+            {
+                "schema_version": 1,
+                "trade_date": trade_date,
+                "trades": summary["total_trades"],
+                "target_hits": summary["wins"],
+                "losses": summary["losses"],
+                "other_exits": summary["other_exits"],
+                "win_rate": _format_number(summary["win_rate"]),
+                "gross_usd": _format_number(summary["gross_usd"]),
+                "net_usd": _format_number(net_usd),
+                "average_net_usd": _format_number(summary["average_net_usd"]),
+                "long_trades": long_trades,
+                "short_trades": short_trades,
+                "average_holding_bars": _format_number(holding_bars / len(day_outcomes)),
+                "cumulative_net_usd": _format_number(cumulative_net_usd),
+                "peak_to_date_net_usd": _format_number(peak_to_date_net_usd),
+                "drawdown_usd": _format_number(drawdown_usd),
+                "notes": "daily aggregate by entry date",
+            },
+        )
+
+    return daily_rows
 
 
 def _evaluate_one_signal(
