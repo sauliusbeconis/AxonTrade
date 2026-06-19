@@ -41,6 +41,11 @@ def main() -> int:
         help="Comma-separated minimum opening-range width point values to test.",
     )
     parser.add_argument(
+        "--direction-filters",
+        default="all,long,short",
+        help="Comma-separated direction filters to test: all,long,short.",
+    )
+    parser.add_argument(
         "--instrument-root",
         help="Instrument root for cost modeling, e.g. ES or MES. Defaults to symbol inference.",
     )
@@ -67,6 +72,7 @@ def main() -> int:
         minimum_opening_range_width_points=_parse_float_list(
             args.minimum_opening_range_widths,
         ),
+        direction_filters=_parse_string_list(args.direction_filters),
         instrument_root=args.instrument_root,
         slippage_ticks_per_side=args.slippage_ticks_per_side,
     )
@@ -89,6 +95,7 @@ def main() -> int:
         print(
             f"wrote {len(experiment_rows)} parameter rows to {output_path}; "
             f"best net_usd={float(best['net_usd']):.2f} "
+            f"with direction_filter={best['direction_filter']}, "
             f"at target_r={best['target_r_multiple']}, "
             f"stop_buffer={best['stop_buffer_points']}, "
             f"min_or_width={best['minimum_opening_range_width_points']}",
@@ -98,6 +105,10 @@ def main() -> int:
 
 def _parse_float_list(value: str) -> list[float]:
     return [float(part.strip()) for part in value.split(",") if part.strip()]
+
+
+def _parse_string_list(value: str) -> list[str]:
+    return [part.strip() for part in value.split(",") if part.strip()]
 
 
 if __name__ == "__main__":

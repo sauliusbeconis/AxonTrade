@@ -24,6 +24,7 @@ The default grid tests:
 - target R multiples: `0.5,1,1.5,2,2.5,3`;
 - stop buffers in points: `0,0.25,0.5,1`;
 - minimum opening-range width: `1`.
+- direction filters: `all,long,short`.
 
 Override the grid with:
 
@@ -31,6 +32,7 @@ Override the grid with:
 --target-r-multiples 1,1.5,2
 --stop-buffers 0,0.25,0.5
 --minimum-opening-range-widths 1,5,10
+--direction-filters all,long,short
 ```
 
 ## Output Format
@@ -40,6 +42,7 @@ The output CSV is aggregate-only: one row per parameter combination.
 Key fields:
 
 - `experiment_id`
+- `direction_filter`
 - `target_r_multiple`
 - `stop_buffer_points`
 - `minimum_opening_range_width_points`
@@ -56,9 +59,9 @@ Key fields:
 
 ## Current Sample Result
 
-The current ES sample wrote `24` experiment rows.
+The current ES sample wrote `72` experiment rows.
 
-Best net result in the default grid:
+Best net result for all directions enabled:
 
 - target R multiple: `1.5`
 - stop buffer: `0`
@@ -69,6 +72,17 @@ Best net result in the default grid:
 - other exits: `4`
 - net ES result after default costs: `-2927.00` USD
 
-Every default-grid combination is negative after costs. This supports keeping
-the price-only baseline as a control strategy before adding any order-flow
-features.
+Best net result across direction filters:
+
+- direction filter: `long`
+- target R multiple: `2.5`
+- stop buffer: `1`
+- evaluated trades: `11`
+- target hits: `4`
+- losses: `6`
+- other exits: `1`
+- net ES result after default costs: `1167.75` USD
+
+All positive rows in the current sample are long-only rows. This is a research
+lead, not a tradable rule, because it is based on only `11` long candidates in
+one export sample.

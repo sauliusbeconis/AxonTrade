@@ -45,6 +45,7 @@ def test_runs_price_only_parameter_sweep() -> None:
         target_r_multiples=[1, 2],
         stop_buffer_points=[0.25],
         minimum_opening_range_width_points=[1],
+        direction_filters=["all"],
     )
 
     assert list(experiment_rows[0].keys()) == PRICE_ONLY_PARAMETER_SWEEP_HEADER
@@ -54,8 +55,31 @@ def test_runs_price_only_parameter_sweep() -> None:
     assert experiment_rows[0]["evaluated_trades"] == 1
     assert experiment_rows[0]["long_trades"] == 1
     assert experiment_rows[0]["short_trades"] == 0
+    assert experiment_rows[0]["direction_filter"] == "all"
     assert experiment_rows[0]["target_r_multiple"] == "1"
     assert experiment_rows[1]["target_r_multiple"] == "2"
+
+
+def test_direction_filters_limit_evaluated_trades() -> None:
+    rows = [
+        _bar(0, close=99, vwap=100),
+        _bar(1, close=101, vwap=100, high=101.5, low=99.5),
+        _bar(2, close=103, vwap=101, high=106, low=102),
+    ]
+
+    experiment_rows = run_price_only_parameter_sweep(
+        rows,
+        target_r_multiples=[1],
+        stop_buffer_points=[0.25],
+        minimum_opening_range_width_points=[1],
+        direction_filters=["all", "long", "short"],
+    )
+
+    by_filter = {row["direction_filter"]: row for row in experiment_rows}
+
+    assert by_filter["all"]["evaluated_trades"] == 1
+    assert by_filter["long"]["evaluated_trades"] == 1
+    assert by_filter["short"]["evaluated_trades"] == 0
 
 
 def test_rejects_empty_parameter_grid() -> None:
@@ -65,6 +89,17 @@ def test_rejects_empty_parameter_grid() -> None:
             target_r_multiples=[],
             stop_buffer_points=[0.25],
             minimum_opening_range_width_points=[1],
+        )
+
+
+def test_rejects_invalid_direction_filter() -> None:
+    with pytest.raises(PriceOnlyExperimentError, match="unsupported"):
+        run_price_only_parameter_sweep(
+            [],
+            target_r_multiples=[1],
+            stop_buffer_points=[0.25],
+            minimum_opening_range_width_points=[1],
+            direction_filters=["sideways"],
         )
 
 
