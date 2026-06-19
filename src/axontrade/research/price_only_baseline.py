@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from axontrade.config import ConfigError, load_yaml, require_fields
-from axontrade.research.signal_log import validate_signal_log_row
+from axontrade.research.signal_log import load_signal_log_schema, validate_signal_log_row
 
 
 DEFAULT_PRICE_ONLY_BASELINE_CONFIG = "config/research/price_only_vwap_reclaim.yaml"
@@ -126,11 +126,12 @@ def evaluate_price_only_vwap_reclaim(
 
     signal_rows: list[dict[str, Any]] = []
     previous_bar_by_symbol: dict[str, PriceOnlyBar] = {}
+    signal_schema = load_signal_log_schema()
 
     for source_row in rows:
         bar = _normalize_bar(source_row, baseline_config)
         previous_bar = previous_bar_by_symbol.get(bar.symbol)
-        signal_rows.append(_evaluate_bar(bar, previous_bar, baseline_config))
+        signal_rows.append(_evaluate_bar(bar, previous_bar, baseline_config, signal_schema))
         previous_bar_by_symbol[bar.symbol] = bar
 
     return signal_rows
@@ -140,11 +141,13 @@ def _evaluate_bar(
     bar: PriceOnlyBar,
     previous_bar: PriceOnlyBar | None,
     config: dict[str, Any],
+    signal_schema: dict[str, Any],
 ) -> dict[str, Any]:
     if bar.session_phase not in set(config["allowed_session_phases"]):
         return _rejected_signal_row(
             bar,
             config,
+            signal_schema,
             config["outputs"]["outside_session_rejection_reason"],
             "bar is outside allowed session phase",
         )
@@ -157,6 +160,7 @@ def _evaluate_bar(
         return _rejected_signal_row(
             bar,
             config,
+            signal_schema,
             config["outputs"]["insufficient_context_rejection_reason"],
             "opening range is not complete",
         )
@@ -167,6 +171,7 @@ def _evaluate_bar(
         return _rejected_signal_row(
             bar,
             config,
+            signal_schema,
             config["outputs"]["insufficient_context_rejection_reason"],
             "previous bar or opening range context is insufficient",
         )
@@ -186,17 +191,19 @@ def _evaluate_bar(
         return _rejected_signal_row(
             bar,
             config,
+            signal_schema,
             config["outputs"]["ambiguous_setup_rejection_reason"],
             "long and short setup conditions both evaluated true",
         )
     if long_setup:
-        return _candidate_signal_row(bar, config, "long")
+        return _candidate_signal_row(bar, config, signal_schema, "long")
     if short_setup:
-        return _candidate_signal_row(bar, config, "short")
+        return _candidate_signal_row(bar, config, signal_schema, "short")
 
     return _rejected_signal_row(
         bar,
         config,
+        signal_schema,
         config["outputs"]["no_setup_rejection_reason"],
         "no VWAP/opening-range reclaim setup",
     )
@@ -205,6 +212,7 @@ def _evaluate_bar(
 def _candidate_signal_row(
     bar: PriceOnlyBar,
     config: dict[str, Any],
+    signal_schema: dict[str, Any],
     direction: str,
 ) -> dict[str, Any]:
     stop_buffer = float(config["rules"]["stop_buffer_points"])
@@ -223,6 +231,7 @@ def _candidate_signal_row(
         return _rejected_signal_row(
             bar,
             config,
+            signal_schema,
             config["outputs"]["risk_limit_rejection_reason"],
             "candidate has nonpositive risk distance",
         )
@@ -242,12 +251,13 @@ def _candidate_signal_row(
         },
     )
     row["event_key"] = _event_key(row)
-    return validate_signal_log_row(row)
+    return validate_signal_log_row(row, signal_schema)
 
 
 def _rejected_signal_row(
     bar: PriceOnlyBar,
     config: dict[str, Any],
+    signal_schema: dict[str, Any],
     rejection_reason: str,
     notes: str,
 ) -> dict[str, Any]:
@@ -266,7 +276,7 @@ def _rejected_signal_row(
         },
     )
     row["event_key"] = _event_key(row)
-    return validate_signal_log_row(row)
+    return validate_signal_log_row(row, signal_schema)
 
 
 def _base_signal_row(bar: PriceOnlyBar, config: dict[str, Any]) -> dict[str, Any]:

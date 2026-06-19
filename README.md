@@ -43,6 +43,9 @@ On Windows, use PowerShell with the same Python commands. The shell scripts are 
 After exporting Sierra Chart bars, run the price-only signal and outcome
 workflow documented in
 [docs/price-only-outcome-workflow.md](docs/price-only-outcome-workflow.md).
+Then use
+[docs/price-only-parameter-sweep.md](docs/price-only-parameter-sweep.md)
+to compare simple stop/target variants.
 
 ## Pop!_OS And Wine Notes
 

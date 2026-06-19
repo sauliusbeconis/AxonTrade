@@ -36,4 +36,4 @@ Every research source should be documented with a link and retrieval date.
 
 - Define the first price-only baseline outcome workflow. Done.
 - Define rejected-signal logging fields.
-- Define parameter experiment logging format.
+- Define parameter experiment logging format. Done.
