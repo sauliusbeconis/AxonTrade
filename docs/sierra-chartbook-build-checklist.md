@@ -3,6 +3,9 @@
 Use this checklist to manually build the clean AxonTrade workspace inside
 Sierra Chart.
 
+For exact menu paths and first-build settings, use
+`docs/sierra-chart-exact-build-guide.md`.
+
 ## Build Steps
 
 1. Open Sierra Chart.

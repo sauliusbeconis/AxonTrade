@@ -41,6 +41,9 @@ The workspace should provide a low-noise order-flow environment for:
 Live order routing is out of scope. The default operating assumption is
 simulation mode only.
 
+Exact click-by-click Sierra Chart instructions are in
+`docs/sierra-chart-exact-build-guide.md`.
+
 ## Chartbook Names
 
 Use separate chartbooks per instrument family:

@@ -5,6 +5,7 @@ importable_to_sierra_chart: false
 description: >
   Human-readable Sierra Chart workspace blueprint for AxonTrade order-flow
   research and simulation-safe practice.
+exact_build_guide: docs/sierra-chart-exact-build-guide.md
 visual_reference:
   source_url: https://boostyourcharts.com/product/orderflow-suite-with-tpo-footprint-dom-and-heatmap/
   usage: high_level_visual_reference_only
