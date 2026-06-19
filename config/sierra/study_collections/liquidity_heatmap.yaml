@@ -1,0 +1,64 @@
+schema_version: 1
+collection_name: Axon_Liquidity_Heatmap
+status: manual_blueprint
+importable_to_sierra_chart: false
+chart_role: Liquidity Heatmap
+primary_symbols:
+  - ES
+  - MES
+later_symbols:
+  - NQ
+  - MNQ
+
+purpose:
+  - Observe resting liquidity.
+  - Observe liquidity pull and stack context.
+  - Support discretionary context and future replay review.
+
+required_sierra_setup:
+  market_depth_recording_enabled: true
+  data_service_must_support_market_depth: true
+  symbol_mapping_verified: true
+
+studies:
+  - name: Market Depth Historical Graph
+    intent: Historical liquidity visualization.
+    settings:
+      depth_levels_displayed: start_conservative
+      history_loaded: short_initially
+      color_intensity: moderate
+      separate_from_execution_chart: true
+  - name: Optional Price Bars
+    intent: Show traded price path over depth.
+    settings:
+      enabled: true
+      minimal_style: true
+
+variants:
+  rth:
+    purpose: Intraday execution context.
+    recommended_first: true
+  eth:
+    purpose: Overnight liquidity context.
+    recommended_first: false
+    note: Enable only if useful and performant.
+
+visual_style:
+  density: high_but_readable
+  background: matte_black_or_charcoal
+  price_bars: white_or_light_gray
+  resting_liquidity_bands: muted_magenta_or_red
+  liquidity_marker_positive: cyan_blue
+  liquidity_marker_negative: magenta_red
+  lower_reference_line: orange_if_used
+  heatmap_palette: restrained
+  avoid:
+    - using_heatmap_as_standalone_signal
+    - loading_excessive_depth_history
+    - duplicating_heatmap_on_every_chart
+
+verification:
+  - Confirm heatmap is not blank after market depth recording is enabled.
+  - Confirm chart stays responsive with live data.
+  - Confirm replay behavior is usable.
+  - Confirm the heatmap does not slow the footprint execution chart.

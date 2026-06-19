@@ -1,0 +1,68 @@
+schema_version: 1
+collection_name: Axon_TPO_Context
+status: manual_blueprint
+importable_to_sierra_chart: false
+chart_role: TPO Context
+primary_symbols:
+  - ES
+  - MES
+later_symbols:
+  - NQ
+  - MNQ
+
+purpose:
+  - Define auction context.
+  - Track value, balance, imbalance, and prior session references.
+
+session:
+  timezone: America/New_York
+  default_focus: RTH
+  eth_references: optional_overnight_high_low
+  verify_session_times_in_sierra_chart: true
+
+studies:
+  - name: TPO Profile Chart
+    intent: RTH market profile context.
+    settings:
+      profile_period: daily_or_session
+      letter_or_block_duration_minutes: 15
+      show_value_area: true
+      show_poc: true
+      show_vah_val: true
+      prior_session_references: true
+  - name: Volume by Price
+    intent: Volume confirmation for value and high-volume nodes.
+    settings:
+      show_poc: true
+      show_value_area: true
+      align_with_session: true
+  - name: Prior Session Levels
+    intent: Prior high, low, POC, VAH, and VAL.
+    settings:
+      include_prior_high_low: true
+      include_prior_value_area: true
+  - name: Optional Overnight Levels
+    intent: ETH high and low context.
+    settings:
+      include_overnight_high_low: configurable
+
+visual_style:
+  density: medium
+  background: matte_black_or_charcoal
+  tpo_text: white_or_light_gray
+  volume_profile_base: gray
+  delta_profile_positive: cyan_blue
+  delta_profile_negative: magenta_red
+  value_area_fill: muted_teal_or_gray
+  session_dividers: amber_yellow
+  important_levels: high_contrast_but_sparse
+  avoid:
+    - excessive labels
+    - execution buttons
+    - signal clutter
+
+verification:
+  - Confirm RTH profile aligns with intended session.
+  - Confirm POC, VAH, and VAL display once per intended period.
+  - Confirm prior session references are visually distinct.
+  - Confirm chart remains readable when duplicated for MES.

@@ -1,0 +1,76 @@
+schema_version: 1
+collection_name: Axon_Context_Levels
+status: manual_blueprint
+importable_to_sierra_chart: false
+chart_role: Simple Context / VWAP Levels
+primary_symbols:
+  - ES
+  - MES
+later_symbols:
+  - NQ
+  - MNQ
+
+purpose:
+  - Keep clean level context visible.
+  - Avoid footprint and heatmap noise.
+  - Provide future AxonTrade level-overlay target.
+
+chart_type:
+  preferred:
+    - candlestick
+    - bar
+  style: clean_and_low_noise
+
+studies:
+  - name: VWAP
+    intent: Intraday value reference.
+    settings:
+      session_aligned: true
+      show_standard_deviation_bands: optional
+  - name: Opening Range
+    intent: RTH opening range high and low.
+    settings:
+      range_minutes: configurable
+      show_high_low: true
+  - name: Overnight High Low
+    intent: ETH high and low reference.
+    settings:
+      session_aligned: true
+      show_labels: minimal
+  - name: Prior Day High Low
+    intent: Prior day range reference.
+    settings:
+      show_high_low: true
+      carry_forward: true
+  - name: Prior Value Area
+    intent: Prior VAH, VAL, and POC.
+    settings:
+      show_vah: true
+      show_val: true
+      show_poc: true
+
+visual_style:
+  density: low
+  background: matte_black_or_charcoal
+  candles_or_bars: white_or_light_gray
+  level_colors:
+    vwap: blue
+    opening_range: amber
+    overnight: purple_or_gray
+    prior_day: gray
+    prior_value: green_or_teal
+  avoid:
+    - too_many_labels
+    - footprint_values
+    - heatmap_overlay
+
+future_axontrade_overlays:
+  - strategy_context_lines
+  - candidate_level_annotations
+  - replay_review_markers
+
+verification:
+  - Confirm VWAP resets according to intended session.
+  - Confirm opening range uses the intended duration.
+  - Confirm overnight levels use ETH, not RTH.
+  - Confirm prior value levels match the TPO Context chart.

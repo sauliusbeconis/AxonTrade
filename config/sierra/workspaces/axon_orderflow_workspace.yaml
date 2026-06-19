@@ -1,0 +1,92 @@
+schema_version: 1
+workspace_id: axon_orderflow_workspace
+status: manual_blueprint
+importable_to_sierra_chart: false
+description: >
+  Human-readable Sierra Chart workspace blueprint for AxonTrade order-flow
+  research and simulation-safe practice.
+visual_reference:
+  source_url: https://boostyourcharts.com/product/orderflow-suite-with-tpo-footprint-dom-and-heatmap/
+  usage: high_level_visual_reference_only
+  copying_proprietary_chartbook_or_settings_allowed: false
+  target_traits:
+    - dark_compact_orderflow_layout
+    - tpo_market_map
+    - liquidity_heatmap_context
+    - footprint_trigger_chart
+    - dom_docked_next_to_trigger_chart
+    - blue_magenta_gray_amber_accents
+
+chartbooks:
+  primary_build_order:
+    - AxonTrade_ES_Orderflow.cht
+    - AxonTrade_MES_Orderflow.cht
+    - AxonTrade_NQ_Orderflow.cht
+    - AxonTrade_MNQ_Orderflow.cht
+  notes:
+    - Build ES first, then duplicate and adapt for MES.
+    - Build NQ/MNQ only after the ES/MES workflow is stable.
+
+default_assumptions:
+  data_mode: simulation_safe_research
+  live_order_routing_enabled: false
+  default_trading_mode: sim_only
+  timezone: America/New_York
+  rth_session: verify_in_sierra_chart
+  eth_session: verify_in_sierra_chart
+  disable_new_entries_after: "16:35 America/New_York"
+  internal_forced_flatten_target: "16:40 America/New_York"
+  firm_flat_time_reference: "16:45 America/New_York"
+  rule_source_status: verify_current_official_firm_rules_before_use
+
+layout:
+  - chart_number: 1
+    name: TPO Context
+    manifest: config/sierra/study_collections/tpo_context.yaml
+    purpose: Auction context, value, balance, imbalance.
+  - chart_number: 2
+    name: Footprint Execution
+    manifest: config/sierra/study_collections/footprint_execution.yaml
+    purpose: Entry timing, absorption proxy review, imbalance review.
+  - chart_number: 3
+    name: DOM / Execution
+    manifest: config/sierra/study_collections/dom_execution.yaml
+    purpose: Simulation-only execution practice and order-book reading.
+  - chart_number: 4
+    name: Liquidity Heatmap
+    manifest: config/sierra/study_collections/liquidity_heatmap.yaml
+    purpose: Resting liquidity and pull/stack context.
+  - chart_number: 5
+    name: Simple Context / VWAP Levels
+    manifest: config/sierra/study_collections/context_vwap_levels.yaml
+    purpose: Clean level context without footprint noise.
+
+first_screen_arrangement:
+  left_top: TPO Context
+  left_bottom: Liquidity Heatmap
+  right_large: Footprint Execution
+  far_right_or_docked: DOM / Execution
+  secondary_tab_or_monitor: Simple Context / VWAP Levels
+  design_intent: market_map_to_liquidity_to_trigger_workflow
+
+future_integration_points:
+  footprint_execution:
+    - AxonTrade signal lines
+    - candidate signal logger
+    - rejected signal logger
+    - replay verification markers
+  context_vwap_levels:
+    - session level overlay
+    - prior value references
+    - strategy context overlay
+  dom_execution:
+    - sim-only execution assistant after future safety gate
+  liquidity_heatmap:
+    - market-depth context logging after research design approval
+
+out_of_scope:
+  - live order routing
+  - ACSIL execution logic
+  - bot behavior
+  - strategy optimization
+  - proprietary chartbook cloning

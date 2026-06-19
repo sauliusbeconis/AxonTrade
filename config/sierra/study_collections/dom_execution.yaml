@@ -1,0 +1,63 @@
+schema_version: 1
+collection_name: Axon_DOM_Execution
+status: manual_blueprint
+importable_to_sierra_chart: false
+chart_role: DOM / Execution
+primary_symbols:
+  - ES
+  - MES
+later_symbols:
+  - NQ
+  - MNQ
+
+purpose:
+  - Simulation-only order-entry practice.
+  - DOM reading.
+  - Execution visualization.
+  - Future sim-only assistant review after explicit safety gate.
+
+mode:
+  default_trade_mode: sim_only
+  live_order_routing_enabled: false
+  require_visible_sim_confirmation: true
+
+visual_style:
+  background: matte_black_or_charcoal
+  price_column: light_gray
+  bid_column: cyan_blue
+  ask_column: magenta_red
+  current_price_marker: white_or_amber
+  layout_position: docked_right_of_footprint_when_possible
+  density: compact_readable
+
+dom_type:
+  preferred:
+    - Trade DOM
+    - Chart DOM
+  selection_rule: Use whichever stays cleaner and more readable on the workstation.
+
+columns:
+  include:
+    - price
+    - bid_size
+    - ask_size
+    - recent_bid_volume
+    - recent_ask_volume
+    - position_or_sim_position_if_visible
+    - pnl_only_if_sim_and_not_distracting
+  avoid:
+    - excessive_order_buttons
+    - hidden_live_account_assumptions
+    - account_identifiers_in_screenshots
+
+risk_context:
+  disable_new_entries_after: "16:35 America/New_York"
+  internal_forced_flatten_target: "16:40 America/New_York"
+  firm_flat_time_reference: "16:45 America/New_York"
+  verify_current_official_rules: true
+
+verification:
+  - Confirm Sierra Chart is in simulation mode.
+  - Confirm no live account is selected for this workspace.
+  - Confirm DOM is readable under active data.
+  - Confirm screenshots redact account and broker details.

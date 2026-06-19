@@ -1,0 +1,86 @@
+schema_version: 1
+collection_name: Axon_Footprint_Execution
+status: manual_blueprint
+importable_to_sierra_chart: false
+chart_role: Footprint Execution
+primary_symbols:
+  - ES
+  - MES
+later_symbols:
+  - NQ
+  - MNQ
+
+purpose:
+  - Entry timing.
+  - Absorption proxy review.
+  - Imbalance review.
+  - Future AxonTrade signal visualization.
+
+bar_configuration:
+  default_bar_type: configurable
+  recommended_candidates:
+    - range
+    - reversal
+    - point_and_figure
+  selection_rule: Choose the least noisy type that preserves order-flow readability.
+
+studies:
+  - name: Numbers Bars
+    intent: Bid x ask or delta footprint display.
+    settings:
+      display_mode: bid_x_ask_or_delta
+      highlight_significant_volume: true
+      highlight_delta_extremes: true
+      highlight_imbalances: configurable
+      show_bar_delta: true
+      show_calculated_values_at_bottom: true
+  - name: Numbers Bars Calculated Values
+    intent: Bar delta, volume, and related execution-read metrics.
+    settings:
+      include_delta: true
+      include_volume: true
+      include_range: optional
+  - name: Optional Volume Profile
+    intent: Local participation context.
+    settings:
+      enabled_by_default: false
+      enable_only_if_performance_is_good: true
+  - name: Optional Delta Profile
+    intent: Local delta participation context.
+    settings:
+      enabled_by_default: false
+      enable_only_if_readable: true
+
+visual_style:
+  density: medium_high
+  background: matte_black_or_charcoal
+  price_bars: white_or_light_gray
+  positive_delta_color: cyan_blue
+  negative_delta_color: magenta_red
+  neutral_volume_color: gray
+  significant_volume_highlight: amber_or_orange
+  profile_base: dark_gray
+  bottom_delta_bars_positive: cyan_blue
+  bottom_delta_bars_negative: magenta_red
+  dom_alignment: dock_right_when_possible
+  avoid:
+    - every_price_level_highlighted
+    - overlapping labels
+    - heatmap_overlay_on_execution_chart
+
+future_axontrade_overlays:
+  - signal_line
+  - signal_label
+  - rejected_signal_marker
+  - replay_verification_marker
+
+safety:
+  live_order_routing_enabled: false
+  order_submission_code_allowed: false
+  simulation_only_default: true
+
+verification:
+  - Confirm no order-routing studies are attached.
+  - Confirm footprint bars remain readable during active data.
+  - Confirm highlight thresholds do not mark every bar as special.
+  - Confirm replay performance is acceptable.
