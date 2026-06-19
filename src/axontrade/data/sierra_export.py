@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import re
+from datetime import datetime, time
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -11,6 +12,14 @@ from axontrade.config import ConfigError, load_yaml, require_fields
 
 
 DEFAULT_SIERRA_EXPORT_CONFIG = "config/research/sierra_bar_export.yaml"
+DEFAULT_OPENING_RANGE_START_TIME = "09:30:00"
+DEFAULT_OPENING_RANGE_END_TIME = "09:59:59"
+_COMPUTED_OPENING_RANGE_FIELDS = {"opening_range_high", "opening_range_low"}
+_TIMESTAMP_FORMATS = (
+    "%Y-%m-%d %H:%M:%S.%f",
+    "%Y-%m-%d %H:%M:%S",
+    "%Y-%m-%d %H:%M",
+)
 
 
 class SierraExportError(ValueError):
@@ -107,6 +116,9 @@ def normalize_sierra_bar_study_rows(
     chart_number: int | None = None,
     session_phase: str | None = None,
     config: dict[str, Any] | None = None,
+    compute_opening_range: bool = False,
+    opening_range_start_time: str = DEFAULT_OPENING_RANGE_START_TIME,
+    opening_range_end_time: str = DEFAULT_OPENING_RANGE_END_TIME,
 ) -> list[dict[str, Any]]:
     """Normalize Sierra export rows to the price-only baseline row contract."""
 
@@ -118,13 +130,20 @@ def normalize_sierra_bar_study_rows(
 
     normalized_rows: list[dict[str, Any]] = []
     header_mapping: dict[str, str] | None = None
+    computed_fields = _COMPUTED_OPENING_RANGE_FIELDS if compute_opening_range else set()
 
     for generated_index, row in enumerate(rows):
         if header_mapping is None:
-            header_mapping = _build_header_mapping(row.keys(), export_config)
+            header_mapping = _build_header_mapping(
+                row.keys(),
+                export_config,
+                computed_fields=computed_fields,
+            )
 
         normalized = {}
         for field_name in export_config["normalized_fields"]:
+            if field_name in computed_fields:
+                continue
             normalized[field_name] = _resolve_field_value(
                 field_name,
                 row,
@@ -137,6 +156,13 @@ def normalize_sierra_bar_study_rows(
             )
         normalized_rows.append(normalized)
 
+    if compute_opening_range:
+        return _with_computed_opening_range_levels(
+            normalized_rows,
+            start_time_value=opening_range_start_time,
+            end_time_value=opening_range_end_time,
+        )
+
     return normalized_rows
 
 
@@ -147,6 +173,9 @@ def normalize_sierra_bar_study_file(
     chart_number: int | None = None,
     session_phase: str | None = None,
     config: dict[str, Any] | None = None,
+    compute_opening_range: bool = True,
+    opening_range_start_time: str = DEFAULT_OPENING_RANGE_START_TIME,
+    opening_range_end_time: str = DEFAULT_OPENING_RANGE_END_TIME,
 ) -> list[dict[str, Any]]:
     """Load and normalize one Sierra export file."""
 
@@ -157,18 +186,26 @@ def normalize_sierra_bar_study_file(
         chart_number=chart_number,
         session_phase=session_phase,
         config=config,
+        compute_opening_range=compute_opening_range,
+        opening_range_start_time=opening_range_start_time,
+        opening_range_end_time=opening_range_end_time,
     )
 
 
 def _build_header_mapping(
     headers: Iterable[str],
     config: dict[str, Any],
+    *,
+    computed_fields: set[str] | None = None,
 ) -> dict[str, str]:
     header_list = [header for header in headers if header is not None]
     normalized_to_original = {_normalize_header(header): header for header in header_list}
     mapping: dict[str, str] = {}
+    computed_fields = computed_fields or set()
 
     for field_name, aliases in config["column_aliases"].items():
+        if field_name in computed_fields:
+            continue
         if field_name == "timestamp" and "date" in normalized_to_original and "time" in normalized_to_original:
             mapping[field_name] = "__date_time__"
             continue
@@ -272,6 +309,85 @@ def _value_or_default(
 
 def _normalize_header(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", value.lower())
+
+
+def _with_computed_opening_range_levels(
+    rows: list[dict[str, Any]],
+    *,
+    start_time_value: str,
+    end_time_value: str,
+) -> list[dict[str, Any]]:
+    if not rows:
+        return []
+
+    start_time = _parse_time(start_time_value, "opening_range_start_time")
+    end_time = _parse_time(end_time_value, "opening_range_end_time")
+    if start_time > end_time:
+        raise SierraExportError("opening_range_start_time must be before opening_range_end_time")
+
+    parsed_timestamps: list[datetime] = []
+    opening_ranges: dict[tuple[str, str], tuple[float, float]] = {}
+    for row in rows:
+        timestamp = _parse_timestamp(str(row["timestamp"]))
+        parsed_timestamps.append(timestamp)
+
+        if start_time <= timestamp.time() <= end_time:
+            key = _opening_range_key(row, timestamp)
+            bar_high = _parse_float(row["high"], "high")
+            bar_low = _parse_float(row["low"], "low")
+            if key in opening_ranges:
+                current_high, current_low = opening_ranges[key]
+                opening_ranges[key] = (max(current_high, bar_high), min(current_low, bar_low))
+            else:
+                opening_ranges[key] = (bar_high, bar_low)
+
+    enriched_rows: list[dict[str, Any]] = []
+    for row, timestamp in zip(rows, parsed_timestamps, strict=True):
+        key = _opening_range_key(row, timestamp)
+        if key not in opening_ranges:
+            raise SierraExportError(
+                "No bars found inside opening range "
+                f"{start_time_value}-{end_time_value} for {key[0]} on {key[1]}",
+            )
+        opening_range_high, opening_range_low = opening_ranges[key]
+        enriched_row = dict(row)
+        enriched_row["opening_range_high"] = _format_price(opening_range_high)
+        enriched_row["opening_range_low"] = _format_price(opening_range_low)
+        enriched_rows.append(enriched_row)
+
+    return enriched_rows
+
+
+def _opening_range_key(row: dict[str, Any], timestamp: datetime) -> tuple[str, str]:
+    return str(row["symbol"]), timestamp.date().isoformat()
+
+
+def _parse_time(value: str, field_name: str) -> time:
+    try:
+        return datetime.strptime(str(value).strip(), "%H:%M:%S").time()
+    except ValueError as exc:
+        raise SierraExportError(f"Invalid {field_name}: {value!r}") from exc
+
+
+def _parse_timestamp(value: str) -> datetime:
+    timestamp_text = value.strip()
+    for timestamp_format in _TIMESTAMP_FORMATS:
+        try:
+            return datetime.strptime(timestamp_text, timestamp_format)
+        except ValueError:
+            continue
+    raise SierraExportError(f"Invalid timestamp: {value!r}")
+
+
+def _parse_float(value: Any, field_name: str) -> float:
+    try:
+        return float(str(value))
+    except ValueError as exc:
+        raise SierraExportError(f"Invalid numeric field {field_name}: {value!r}") from exc
+
+
+def _format_price(value: float) -> str:
+    return f"{value:.8f}".rstrip("0").rstrip(".")
 
 
 def _make_unique_headers(headers: list[str]) -> list[str]:

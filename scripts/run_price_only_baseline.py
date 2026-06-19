@@ -24,6 +24,21 @@ def main() -> int:
         default="rth",
         help="Session phase label for rows when not present in the export.",
     )
+    parser.add_argument(
+        "--opening-range-start",
+        default="09:30:00",
+        help="Opening range start time used when deriving levels from exported bars.",
+    )
+    parser.add_argument(
+        "--opening-range-end",
+        default="09:59:59",
+        help="Opening range end time used when deriving levels from exported bars.",
+    )
+    parser.add_argument(
+        "--use-exported-opening-range",
+        action="store_true",
+        help="Use Sierra-exported opening-range columns instead of computing them from bars.",
+    )
     args = parser.parse_args()
 
     normalized_rows = normalize_sierra_bar_study_file(
@@ -31,6 +46,9 @@ def main() -> int:
         symbol=args.symbol,
         chart_number=args.chart_number,
         session_phase=args.session_phase,
+        compute_opening_range=not args.use_exported_opening_range,
+        opening_range_start_time=args.opening_range_start,
+        opening_range_end_time=args.opening_range_end,
     )
     signal_rows = evaluate_price_only_vwap_reclaim(normalized_rows)
 

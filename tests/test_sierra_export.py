@@ -18,7 +18,7 @@ from axontrade.research import evaluate_price_only_vwap_reclaim
 def _sierra_export_rows() -> list[dict[str, str]]:
     return [
         {
-            "Date Time": "2026-06-19 09:30:00",
+            "Date Time": "2026-06-19 10:00:00",
             "Open": "99.0",
             "High": "100.0",
             "Low": "98.0",
@@ -28,7 +28,7 @@ def _sierra_export_rows() -> list[dict[str, str]]:
             "Opening Range Low": "90.0",
         },
         {
-            "Date Time": "2026-06-19 09:31:00",
+            "Date Time": "2026-06-19 10:01:00",
             "Open": "100.5",
             "High": "102.0",
             "Low": "99.5",
@@ -81,7 +81,11 @@ def test_loads_comma_export_file(tmp_path) -> None:
         writer.writerows(rows)
 
     loaded_rows = load_sierra_bar_study_rows(export_path)
-    normalized_rows = normalize_sierra_bar_study_file(export_path, symbol="ESU26-CME")
+    normalized_rows = normalize_sierra_bar_study_file(
+        export_path,
+        symbol="ESU26-CME",
+        compute_opening_range=False,
+    )
 
     assert len(loaded_rows) == 2
     assert normalized_rows[1]["bar_index"] == 1
@@ -99,6 +103,27 @@ def test_loads_tab_export_file(tmp_path) -> None:
 
     assert normalized_rows[0]["timestamp"] == "2026-06-19 09:30:00"
     assert normalized_rows[0]["opening_range_high"] == "100"
+
+
+def test_computes_opening_range_from_exported_bars(tmp_path) -> None:
+    export_path = tmp_path / "sierra-export-no-or-study.csv"
+    export_path.write_text(
+        "Date,Time,Open,High,Low,Last,VWAP\n"
+        "2026-6-19,09:30:00.000000,100,101,98,99,100\n"
+        "2026-6-19,09:59:00.000000,99,105,97,99,100\n"
+        "2026-6-19,10:00:00.000000,105,106.5,104,106,100\n",
+        encoding="utf-8",
+    )
+
+    normalized_rows = normalize_sierra_bar_study_file(export_path, symbol="ESU26-CME")
+    signal_rows = evaluate_price_only_vwap_reclaim(normalized_rows)
+
+    assert normalized_rows[2]["opening_range_high"] == "105"
+    assert normalized_rows[2]["opening_range_low"] == "97"
+    assert signal_rows[0]["rejection_reason"] == "insufficient_context"
+    assert signal_rows[1]["rejection_reason"] == "insufficient_context"
+    assert signal_rows[2]["event_type"] == "candidate_signal"
+    assert signal_rows[2]["direction"] == "long"
 
 
 def test_normalizes_actual_sierra_duplicate_headers(tmp_path) -> None:

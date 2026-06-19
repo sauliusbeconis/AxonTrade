@@ -25,6 +25,7 @@ required_bar_fields:
 
 rules:
   require_previous_bar: true
+  opening_range_end_time: "09:59:59"
   minimum_opening_range_width_points: 1.0
   stop_buffer_points: 0.25
   target_r_multiple: 2.0

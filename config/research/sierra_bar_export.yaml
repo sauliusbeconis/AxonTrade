@@ -77,6 +77,10 @@ column_aliases:
     - Session
 
 notes:
+  - The default runner computes opening_range_high and opening_range_low from
+    exported bars instead of trusting Sierra study columns.
+  - Opening-range aliases are used only when the runner is called with
+    --use-exported-opening-range.
   - Sierra Chart's exported study column names can vary with study names and
     subgraph labels. The adapter matches aliases after normalizing punctuation
     and case.

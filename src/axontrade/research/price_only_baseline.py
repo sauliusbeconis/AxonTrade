@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 from dataclasses import dataclass
+from datetime import datetime, time
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -12,6 +13,12 @@ from axontrade.research.signal_log import validate_signal_log_row
 
 
 DEFAULT_PRICE_ONLY_BASELINE_CONFIG = "config/research/price_only_vwap_reclaim.yaml"
+_TIME_FORMAT = "%H:%M:%S"
+_TIMESTAMP_FORMATS = (
+    "%Y-%m-%d %H:%M:%S.%f",
+    "%Y-%m-%d %H:%M:%S",
+    "%Y-%m-%d %H:%M",
+)
 
 
 class BaselineError(ValueError):
@@ -26,6 +33,7 @@ BASELINE_REQUIRED_FIELDS = (
     "allowed_session_phases",
     "required_bar_fields",
     "rules.require_previous_bar",
+    "rules.opening_range_end_time",
     "rules.minimum_opening_range_width_points",
     "rules.stop_buffer_points",
     "rules.target_r_multiple",
@@ -89,6 +97,7 @@ def validate_price_only_baseline_config(config: dict[str, Any]) -> dict[str, Any
     )
     for field_name in numeric_rule_fields:
         _to_float(config["rules"][field_name], f"rules.{field_name}")
+    _parse_time(config["rules"]["opening_range_end_time"], "rules.opening_range_end_time")
 
     if float(config["rules"]["target_r_multiple"]) <= 0:
         raise BaselineError("rules.target_r_multiple must be positive")
@@ -138,6 +147,18 @@ def _evaluate_bar(
             config,
             config["outputs"]["outside_session_rejection_reason"],
             "bar is outside allowed session phase",
+        )
+
+    opening_range_end_time = _parse_time(
+        config["rules"]["opening_range_end_time"],
+        "rules.opening_range_end_time",
+    )
+    if _bar_time(bar) <= opening_range_end_time:
+        return _rejected_signal_row(
+            bar,
+            config,
+            config["outputs"]["insufficient_context_rejection_reason"],
+            "opening range is not complete",
         )
 
     opening_range_width = bar.opening_range_high - bar.opening_range_low
@@ -314,6 +335,23 @@ def _to_float(value: Any, field_name: str) -> float:
         return float(str(value))
     except ValueError as exc:
         raise BaselineError(f"Invalid numeric field {field_name}: {value!r}") from exc
+
+
+def _bar_time(bar: PriceOnlyBar) -> time:
+    timestamp_text = bar.timestamp.strip()
+    for timestamp_format in _TIMESTAMP_FORMATS:
+        try:
+            return datetime.strptime(timestamp_text, timestamp_format).time()
+        except ValueError:
+            continue
+    raise BaselineError(f"Invalid timestamp: {bar.timestamp!r}")
+
+
+def _parse_time(value: Any, field_name: str) -> time:
+    try:
+        return datetime.strptime(str(value).strip(), _TIME_FORMAT).time()
+    except ValueError as exc:
+        raise BaselineError(f"Invalid time field {field_name}: {value!r}") from exc
 
 
 def _format_price(value: float) -> str:

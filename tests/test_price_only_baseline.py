@@ -20,12 +20,13 @@ def _bar(
     vwap: float,
     *,
     symbol: str = "ESU26-CME",
+    timestamp: str | None = None,
     high: float | None = None,
     low: float | None = None,
     session_phase: str = "rth",
 ) -> dict[str, object]:
     return {
-        "timestamp": f"2026-06-19 09:{30 + bar_index:02d}:00",
+        "timestamp": timestamp or f"2026-06-19 10:{bar_index:02d}:00",
         "symbol": symbol,
         "chart_number": 1,
         "bar_index": bar_index,
@@ -109,6 +110,19 @@ def test_emits_outside_session_rejection() -> None:
 
     assert signals[1]["event_type"] == "rejected_signal"
     assert signals[1]["rejection_reason"] == "outside_session"
+
+
+def test_rejects_before_opening_range_is_complete() -> None:
+    rows = [
+        _bar(0, close=99.0, vwap=100.0, timestamp="2026-06-19 09:58:00"),
+        _bar(1, close=101.0, vwap=100.0, timestamp="2026-06-19 09:59:00"),
+    ]
+
+    signals = evaluate_price_only_vwap_reclaim(rows)
+
+    assert signals[1]["event_type"] == "rejected_signal"
+    assert signals[1]["rejection_reason"] == "insufficient_context"
+    assert signals[1]["notes"] == "opening range is not complete"
 
 
 def test_preserves_chronological_input_order() -> None:

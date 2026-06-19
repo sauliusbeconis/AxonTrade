@@ -13,10 +13,11 @@ Use the ES/MES chart that has:
 - the correct futures symbol;
 - RTH session settings;
 - `Volume Weighted Average Price`;
-- opening range high/low study or lines that export as study subgraphs;
-- enough loaded days for the replay or research sample.
+- enough loaded bars to include `09:30:00` through `09:59:59` for each
+  exported RTH date.
 
-The Python baseline does not require footprint, DOM, or heatmap data.
+The Python baseline does not require footprint, DOM, heatmap, or a Sierra
+opening-range study.
 
 ## Required Normalized Columns
 
@@ -31,8 +32,8 @@ AxonTrade needs these normalized fields:
 - `low`
 - `close`
 - `vwap`
-- `opening_range_high`
-- `opening_range_low`
+- `opening_range_high`, computed in Python from exported bars
+- `opening_range_low`, computed in Python from exported bars
 - `session_phase`
 
 Sierra's exported headers may be different. The adapter maps common headers from
@@ -42,10 +43,10 @@ Sierra's exported headers may be different. The adapter maps common headers from
 
 Manual help is required.
 
-1. In Sierra Chart, click the chart that has VWAP and opening-range levels.
+1. In Sierra Chart, click the chart that has VWAP.
 2. Click `Analysis >> Studies`.
 3. Confirm `Volume Weighted Average Price` is present.
-4. Confirm the opening-range high/low study is present.
+4. An opening-range high/low study is not required for this baseline.
 5. Click `OK`.
 6. Click `Edit >> Export Bar and Study Data to Text File`.
 7. In the save dialog, use this filename:
@@ -59,32 +60,25 @@ On this workstation, the Linux path for that folder is:
 
 `/home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data`
 
-## If Opening Range Is Missing
+## Opening Range Handling
 
-Manual help is required.
+Manual help is not needed for opening-range calculation after the export exists.
 
-Add an opening-range high/low study before exporting:
+AxonTrade computes the opening range from exported bar highs/lows between
+`09:30:00` and `09:59:59`. This avoids trusting Sierra study columns that may
+write completed historical study values onto earlier bars.
 
-1. Click the ES/MES chart.
-2. Click `Analysis >> Studies`.
-3. In `Studies Available`, select `High/Low for Time Period`.
-4. Click `Add >>`.
-5. In `Studies to Graph`, select the newly added `High/Low for Time Period`.
-6. Click `Settings`.
-7. In `Settings and Inputs`, set the start time to `09:30:00`.
-8. Set the end time to `09:59:59` for the first 30-minute opening range.
-9. Confirm the high and low subgraphs are visible.
-10. Click `OK`.
-11. Click `OK`.
-12. Click `File >> Save`.
+If the script says no bars were found inside the opening range, manual help is
+required to re-export the correct chart window:
 
-Then run the export again with:
-
-`Edit >> Export Bar and Study Data to Text File`
-
-If Sierra exports the opening-range columns under unexpected names, keep the
-file and send me the header row. I will update
-`config/research/sierra_bar_export.yaml` to match your Sierra output.
+1. In Sierra Chart, click the ES/MES chart used for export.
+2. Click `Chart >> Chart Settings`.
+3. In `Chart Settings`, open the `Session Times` page or tab.
+4. Confirm the RTH session starts at `09:30:00`.
+5. Confirm the chart has bars from `09:30:00` through at least `10:00:00`.
+6. Click `OK`.
+7. Click `Edit >> Export Bar and Study Data to Text File`.
+8. Save again as `C:\SierraChart\Data\AxonTrade_ES_BarStudyExport.txt`.
 
 ## Run The Baseline
 
@@ -104,6 +98,23 @@ From the repo:
 Replace `ESU26-CME` with the exact current symbol shown in your Sierra chart
 title if it differs.
 
+The default opening-range window is `09:30:00` through `09:59:59`. To override
+it:
+
+```bash
+.venv/bin/python scripts/run_price_only_baseline.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_BarStudyExport.txt \
+  data/processed/AxonTrade_ES_price_only_signals.csv \
+  --symbol ESU26-CME \
+  --chart-number 1 \
+  --session-phase rth \
+  --opening-range-start 09:30:00 \
+  --opening-range-end 09:59:59
+```
+
+Only use `--use-exported-opening-range` when intentionally testing Sierra study
+columns. The normal research path computes opening range in Python.
+
 Expected output:
 
 - a CSV written to `data/processed/AxonTrade_ES_price_only_signals.csv`;
@@ -114,10 +125,10 @@ Expected output:
 
 ## Troubleshooting
 
-If the script says a column is missing:
+If the script says a price or VWAP column is missing:
 
 1. Open the exported file.
-2. Check the exact header name Sierra wrote for VWAP or opening-range levels.
+2. Check the exact header name Sierra wrote for VWAP.
 3. Either rename that header in the exported file, or update
    `config/research/sierra_bar_export.yaml`.
 
