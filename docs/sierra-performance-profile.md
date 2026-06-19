@@ -43,6 +43,21 @@ If the heatmap is blank, verify:
 - symbol mapping is correct;
 - enough depth data has been recorded after enabling the setting.
 
+## Linux / Wine File Compression
+
+If Sierra Chart logs `File compression not supported on file system` with
+Windows error code 50 for `.scid` or market-depth files, disable Sierra Chart's
+operating-system file compression support:
+
+1. `Global Settings >> Advanced Service Settings`.
+2. `Support Intraday and Market Depth Files Compression = No`.
+3. `Disable Intraday and Market Depth File Compression if Enabled on the File = No`.
+4. `File >> Disconnect`.
+5. `File >> Connect to Data Feed`.
+
+This is expected on filesystems that do not support Windows/NTFS compression
+through Wine. It is not an AxonTrade study error.
+
 ## Rebuild Rule
 
 After every major Sierra Chart, Wine, GPU, data-service, or OS change, reopen
@@ -53,4 +68,3 @@ the chartbook and confirm:
 - DOM remains responsive;
 - replay mode remains usable;
 - no duplicate logging or drawing behavior appears from AxonTrade studies.
-

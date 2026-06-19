@@ -42,6 +42,36 @@ If a chart has an option named `Use Evening Session`, use:
 
 Do not continue if simulation mode is not visibly enabled.
 
+## Linux / Wine File Compression Fix
+
+On Pop!_OS/Wine, Sierra Chart may log an error like:
+
+`File compression not supported on file system. C:\SierraChart\Data\SPX500.scid. Windows error code 50: Request not supported.`
+
+This means Sierra Chart tried to enable Windows/NTFS-style compression on an
+Intraday data file, but the Wine-backed Linux filesystem does not support that
+Windows compression API.
+
+Fix it before downloading a lot of data:
+
+1. In Sierra Chart, click `Global Settings >> Advanced Service Settings`.
+2. Open the `File Compression` or `Other` section.
+3. Set `Support Intraday and Market Depth Files Compression` to `No`.
+4. Keep `Disable Intraday and Market Depth File Compression if Enabled on the File`
+   set to `No`.
+5. Click `OK`.
+6. Click `File >> Disconnect`.
+7. Click `File >> Connect to Data Feed`.
+8. Reopen or reload the chart that produced the message.
+
+Expected result: the message should stop appearing for `.scid` and market-depth
+data files. The tradeoff is higher disk usage because Sierra Chart will store
+those files uncompressed.
+
+Do not delete `.scid` files just to fix this message. Only delete and redownload
+a symbol data file if the chart itself remains broken after compression support
+is disabled.
+
 ## Create The Chartbook
 
 1. Click `File >> New Chartbook`.
@@ -332,6 +362,8 @@ Do not build NQ/MNQ until ES/MES are stable and screenshotted.
 
 - Sierra Chart chartbooks and adding charts/Trade DOMs:
   https://www.sierrachart.com/index.php?page=doc/Chartbooks.html
+- Sierra Chart file compression settings:
+  https://www.sierrachart.com/index.php?page=doc/AdvancedServiceSettings.php#FileCompression
 - Sierra Chart trade simulation mode:
   https://www.sierrachart.com/index.php?page=doc/TradeSimulation.php
 - Sierra Chart session times:
@@ -344,4 +376,3 @@ Do not build NQ/MNQ until ES/MES are stable and screenshotted.
   https://www.sierrachart.com/index.php?page=doc/NumbersBars.php
 - Sierra Chart Market Depth Historical Graph:
   https://www.sierrachart.com/index.php?ID=375&page=doc/StudiesReference.php
-
