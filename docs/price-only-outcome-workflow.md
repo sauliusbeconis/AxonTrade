@@ -83,3 +83,18 @@ The June 2026 ES export currently evaluates as:
 
 This result confirms the current price-only baseline is a control strategy, not
 a tradable system.
+
+## Write A Markdown Report
+
+Manual help is not needed.
+
+After the signal and outcome CSVs exist, write the report with:
+
+```bash
+.venv/bin/python scripts/report_price_only_outcomes.py \
+  data/processed/AxonTrade_ES_price_only_signals.csv \
+  data/processed/AxonTrade_ES_price_only_outcomes.csv \
+  reports/price-only-outcome-sample.md
+```
+
+The report is deterministic from the two CSV inputs.

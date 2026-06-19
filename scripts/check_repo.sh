@@ -42,6 +42,8 @@ fi
 
 if command -v ruff >/dev/null 2>&1; then
   ruff check src tests
+elif [[ -n "$python_bin" ]] && "$python_bin" -c "import ruff" >/dev/null 2>&1; then
+  "$python_bin" -m ruff check src tests
 else
   echo "Skipping ruff: command not found."
 fi
