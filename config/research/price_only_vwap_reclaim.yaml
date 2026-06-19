@@ -1,0 +1,57 @@
+schema_version: 1
+profile_id: price_only_vwap_opening_range_reclaim
+strategy_id: price_only_vwap_opening_range_reclaim
+description: >
+  First price-only baseline. It looks for a VWAP reclaim confirmed by the
+  opening range and emits schema-compatible candidate or rejected signal rows.
+
+default_trade_mode: research
+allowed_session_phases:
+  - rth
+
+required_bar_fields:
+  - timestamp
+  - symbol
+  - chart_number
+  - bar_index
+  - open
+  - high
+  - low
+  - close
+  - vwap
+  - opening_range_high
+  - opening_range_low
+  - session_phase
+
+rules:
+  require_previous_bar: true
+  minimum_opening_range_width_points: 1.0
+  stop_buffer_points: 0.25
+  target_r_multiple: 2.0
+  confidence: 0.5
+
+long_setup:
+  previous_close_at_or_below_previous_vwap: true
+  close_above_vwap: true
+  close_above_opening_range_high: true
+
+short_setup:
+  previous_close_at_or_above_previous_vwap: true
+  close_below_vwap: true
+  close_below_opening_range_low: true
+
+outputs:
+  candidate_event_type: candidate_signal
+  rejected_event_type: rejected_signal
+  no_setup_rejection_reason: no_setup
+  insufficient_context_rejection_reason: insufficient_context
+  outside_session_rejection_reason: outside_session
+  risk_limit_rejection_reason: risk_limit
+  ambiguous_setup_rejection_reason: manual_review_required
+
+notes:
+  - This baseline intentionally ignores footprint, DOM, heatmap, and order-flow
+    features.
+  - It is not expected to be profitable. It is the first control strategy for
+    pipeline validation.
+  - It never submits, modifies, cancels, flattens, or routes orders.

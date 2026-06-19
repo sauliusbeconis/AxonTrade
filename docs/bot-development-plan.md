@@ -123,12 +123,14 @@ simulation-only assistant phase. This still does not authorize live automation.
 - Python validation checks schema consistency and signal/rejection rows.
 - `OrderFlowSignalSmokeTest.cpp` writes schema-compatible CSV rows and draws
   indicator-only signal references.
+- `config/research/price_only_vwap_reclaim.yaml` and the price-only baseline
+  module emit first-pass candidate/rejected signal rows from bar and level data.
 
 ## Next Concrete Task
 
-Implement the first price-only baseline module:
+Connect Sierra-exported bar/level data to the baseline:
 
-- define a VWAP/opening-range reclaim hypothesis in config;
-- load exported bars and level rows;
-- produce candidate and rejected signal rows using the signal log schema;
-- add tests for chronological evaluation and rejection reasons.
+- document the exact Sierra Chart export columns;
+- create a sample fixture from replay data;
+- run the baseline over the exported fixture;
+- compare generated candidate/rejected rows to the chart overlay output.

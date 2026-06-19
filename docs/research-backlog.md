@@ -24,11 +24,11 @@ Every research source should be documented with a link and retrieval date.
 
 ## Bot Pipeline
 
-- Define the first signal log schema.
+- Define the first signal log schema. Done.
 - Define rejected-signal reason codes.
 - Define Sierra Chart export fields for bars and levels.
 - Build Python loaders for Sierra-exported CSV files.
-- Build the first price-only VWAP/opening-range baseline.
+- Build the first price-only VWAP/opening-range baseline. Done.
 - Add an indicator-only ACSIL signal overlay and CSV logger.
 
 ## Reporting
