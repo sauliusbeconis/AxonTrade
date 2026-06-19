@@ -38,6 +38,12 @@ bash scripts/check_repo.sh
 
 On Windows, use PowerShell with the same Python commands. The shell scripts are intended for Pop!_OS or another Linux environment with Bash.
 
+## Current Research Workflow
+
+After exporting Sierra Chart bars, run the price-only signal and outcome
+workflow documented in
+[docs/price-only-outcome-workflow.md](docs/price-only-outcome-workflow.md).
+
 ## Pop!_OS And Wine Notes
 
 The target workstation runs Sierra Chart under Wine. See [docs/popos-wine-setup.md](docs/popos-wine-setup.md) for setup notes and [docs/sierra-chart-development.md](docs/sierra-chart-development.md) for ACSIL workflow notes.

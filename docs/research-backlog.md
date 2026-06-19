@@ -29,10 +29,11 @@ Every research source should be documented with a link and retrieval date.
 - Define Sierra Chart export fields for bars and levels. Done.
 - Build Python loaders for Sierra-exported CSV files. Done.
 - Build the first price-only VWAP/opening-range baseline. Done.
+- Build the first conservative stop/target outcome evaluator. Done.
 - Add an indicator-only ACSIL signal overlay and CSV logger.
 
 ## Reporting
 
-- Define the first price-only baseline report.
+- Define the first price-only baseline outcome workflow. Done.
 - Define rejected-signal logging fields.
 - Define parameter experiment logging format.
