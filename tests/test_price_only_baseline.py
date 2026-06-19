@@ -7,10 +7,13 @@ import pytest
 from axontrade.config import load_yaml
 from axontrade.research import (
     BaselineError,
+    evaluate_price_only_liquidity_sweep_reversal,
     evaluate_price_only_vwap_reclaim,
     load_price_only_bar_rows_csv,
     load_price_only_baseline_config,
+    load_price_only_liquidity_sweep_config,
     validate_price_only_baseline_config,
+    validate_price_only_liquidity_sweep_config,
 )
 
 
@@ -52,6 +55,19 @@ def test_price_only_baseline_config_is_valid() -> None:
     config = load_yaml("config/research/price_only_vwap_reclaim.yaml")
 
     validate_price_only_baseline_config(config)
+
+
+def test_loads_price_only_liquidity_sweep_config() -> None:
+    config = load_price_only_liquidity_sweep_config()
+
+    assert config["strategy_id"] == "price_only_opening_range_liquidity_sweep_reversal"
+    assert config["rules"]["setup_start_time"] == "10:30:00"
+
+
+def test_price_only_liquidity_sweep_config_is_valid() -> None:
+    config = load_yaml("config/research/price_only_liquidity_sweep_reversal.yaml")
+
+    validate_price_only_liquidity_sweep_config(config)
 
 
 def test_emits_long_candidate_signal_after_vwap_and_opening_range_reclaim() -> None:
@@ -178,3 +194,92 @@ def test_rejects_missing_required_bar_fields() -> None:
 
     with pytest.raises(BaselineError, match="vwap"):
         evaluate_price_only_vwap_reclaim([row])
+
+
+def test_liquidity_sweep_emits_short_after_failed_or_high_breakout() -> None:
+    rows = [
+        _bar(0, close=99.0, vwap=99.0, timestamp="2026-06-19 10:29:00"),
+        _bar(
+            1,
+            close=99.5,
+            vwap=99.0,
+            timestamp="2026-06-19 10:30:00",
+            high=101.5,
+            low=99.0,
+        ),
+    ]
+
+    signals = evaluate_price_only_liquidity_sweep_reversal(rows)
+
+    assert signals[0]["event_type"] == "rejected_signal"
+    assert signals[0]["rejection_reason"] == "outside_session"
+    assert signals[1]["event_type"] == "candidate_signal"
+    assert signals[1]["direction"] == "short"
+    assert signals[1]["strategy_id"] == "price_only_opening_range_liquidity_sweep_reversal"
+    assert float(signals[1]["stop_price"]) > float(signals[1]["signal_price"])
+    assert float(signals[1]["target_price"]) < float(signals[1]["signal_price"])
+
+
+def test_liquidity_sweep_emits_long_after_failed_or_low_breakout() -> None:
+    rows = [
+        _bar(
+            0,
+            close=90.5,
+            vwap=91.0,
+            timestamp="2026-06-19 10:30:00",
+            high=91.0,
+            low=88.5,
+        ),
+    ]
+
+    signals = evaluate_price_only_liquidity_sweep_reversal(rows)
+
+    assert signals[0]["event_type"] == "candidate_signal"
+    assert signals[0]["direction"] == "long"
+    assert float(signals[0]["stop_price"]) < float(signals[0]["signal_price"])
+    assert float(signals[0]["target_price"]) > float(signals[0]["signal_price"])
+
+
+def test_liquidity_sweep_rejects_duplicates_per_side_per_day() -> None:
+    rows = [
+        _bar(
+            0,
+            close=99.5,
+            vwap=99.0,
+            timestamp="2026-06-19 10:30:00",
+            high=101.5,
+            low=99.0,
+        ),
+        _bar(
+            1,
+            close=99.25,
+            vwap=99.0,
+            timestamp="2026-06-19 10:31:00",
+            high=102.0,
+            low=99.0,
+        ),
+    ]
+
+    signals = evaluate_price_only_liquidity_sweep_reversal(rows)
+
+    assert signals[0]["event_type"] == "candidate_signal"
+    assert signals[1]["event_type"] == "rejected_signal"
+    assert signals[1]["rejection_reason"] == "duplicate_signal"
+
+
+def test_liquidity_sweep_rejects_excessive_risk() -> None:
+    rows = [
+        _bar(
+            0,
+            close=99.5,
+            vwap=99.0,
+            timestamp="2026-06-19 10:30:00",
+            high=130.0,
+            low=99.0,
+        ),
+    ]
+
+    signals = evaluate_price_only_liquidity_sweep_reversal(rows)
+
+    assert signals[0]["event_type"] == "rejected_signal"
+    assert signals[0]["rejection_reason"] == "risk_limit"

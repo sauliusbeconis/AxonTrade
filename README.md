@@ -57,6 +57,10 @@ Then run
 to check whether the current research sample passes the configured evidence
 gates.
 
+The first concrete setup-family branch is the price-only liquidity sweep
+reversal proxy documented in
+[docs/price-only-liquidity-sweep.md](docs/price-only-liquidity-sweep.md).
+
 ## Pop!_OS And Wine Notes
 
 The target workstation runs Sierra Chart under Wine. See [docs/popos-wine-setup.md](docs/popos-wine-setup.md) for setup notes and [docs/sierra-chart-development.md](docs/sierra-chart-development.md) for ACSIL workflow notes.

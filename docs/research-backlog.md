@@ -31,6 +31,8 @@ Every research source should be documented with a link and retrieval date.
 - Define Sierra Chart export fields for bars and levels. Done.
 - Build Python loaders for Sierra-exported CSV files. Done.
 - Build the first price-only VWAP/opening-range baseline. Done.
+- Build the first price-only liquidity sweep reversal baseline. Done.
+- Add Sierra footprint/volume-at-price export fields for absorption research.
 - Build the first conservative stop/target outcome evaluator. Done.
 - Add an indicator-only ACSIL signal overlay and CSV logger.
 

@@ -43,6 +43,7 @@ def render_price_only_outcome_report(
     signals = list(signal_rows)
     outcomes = list(outcome_rows)
     signal_counts = Counter(str(row["event_type"]) for row in signals)
+    strategy_counts = Counter(str(row.get("strategy_id", "unknown")) for row in signals)
     rejection_counts = Counter(
         str(row["rejection_reason"])
         for row in signals
@@ -55,7 +56,7 @@ def render_price_only_outcome_report(
     lines = [
         "# Price-Only Outcome Report",
         "",
-        "This report evaluates the current price-only VWAP/opening-range baseline.",
+        "This report evaluates the current price-only baseline outcomes.",
         "It is research-only and does not imply a tradable strategy.",
         "",
         "## Sources",
@@ -78,6 +79,10 @@ def render_price_only_outcome_report(
         f"| Gross USD | {_format_usd(summary['gross_usd'])} |",
         f"| Net USD | {_format_usd(summary['net_usd'])} |",
         f"| Average net USD | {_format_usd(summary['average_net_usd'])} |",
+        "",
+        "## Strategy IDs",
+        "",
+        _counter_table(strategy_counts, "Strategy ID"),
         "",
         "## Exit Reasons",
         "",

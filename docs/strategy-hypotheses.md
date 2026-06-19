@@ -22,18 +22,33 @@ Initial rules to define before testing:
 - excluded market states;
 - optional order-flow confirmation.
 
-## B. Failed Auction / Absorption Proxy Reversal
+## B. Liquidity Sweep / Absorption Reversal
 
-Thesis: when price tests a prior level with aggressive activity but fails to continue, a reclaim away from the level may indicate failed auction behavior.
+Thesis: during mid-day RTH, ES/NQ breakouts beyond an established intraday
+range often fail unless larger participants are motivated to continue the
+auction. When price sweeps liquidity beyond a range edge and closes back inside
+despite aggressive activity, the breakout may be a trap and the higher-quality
+trade may be a fade back toward value.
 
 Initial components:
 
-- test of prior level;
+- test or sweep of opening range, prior high/low, value area, or overnight
+  level;
+- close back inside the swept level;
+- mid-day time filter that excludes the open and close;
 - aggressive volume into the level;
-- failure to continue;
-- reclaim away from the level;
+- absorption or failed continuation after the sweep;
 - optional stacked imbalance confirmation;
 - strict invalidation.
+
+Current first implementation:
+
+- `config/research/price_only_liquidity_sweep_reversal.yaml`
+- `scripts/run_price_only_liquidity_sweep.py`
+- `docs/price-only-liquidity-sweep.md`
+
+This implementation is price-only. It is the control sample for later
+footprint/volume-at-price absorption filters.
 
 ## C. Price-Only Baseline
 

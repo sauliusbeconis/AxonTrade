@@ -1,0 +1,64 @@
+schema_version: 1
+profile_id: price_only_opening_range_liquidity_sweep_reversal
+strategy_id: price_only_opening_range_liquidity_sweep_reversal
+description: >
+  Price-only proxy for liquidity sweep and absorption reversal research. It
+  fades opening-range breakouts only after price sweeps beyond the range and
+  closes back inside the range during the mid-day RTH window.
+
+default_trade_mode: research
+allowed_session_phases:
+  - rth
+
+required_bar_fields:
+  - timestamp
+  - symbol
+  - chart_number
+  - bar_index
+  - open
+  - high
+  - low
+  - close
+  - vwap
+  - opening_range_high
+  - opening_range_low
+  - session_phase
+
+rules:
+  opening_range_end_time: "09:59:59"
+  setup_start_time: "10:30:00"
+  setup_end_time: "15:15:00"
+  minimum_opening_range_width_points: 1.0
+  minimum_sweep_points: 1.0
+  close_back_inside_points: 0.25
+  stop_buffer_points: 0.25
+  maximum_risk_points: 20.0
+  target_level: opening_range_midpoint
+  one_signal_per_side_per_day: true
+  confidence: 0.5
+
+short_setup:
+  sweep_above_opening_range_high: true
+  close_back_below_opening_range_high: true
+  target_opening_range_midpoint: true
+
+long_setup:
+  sweep_below_opening_range_low: true
+  close_back_above_opening_range_low: true
+  target_opening_range_midpoint: true
+
+outputs:
+  candidate_event_type: candidate_signal
+  rejected_event_type: rejected_signal
+  no_setup_rejection_reason: no_setup
+  insufficient_context_rejection_reason: insufficient_context
+  outside_session_rejection_reason: outside_session
+  duplicate_signal_rejection_reason: duplicate_signal
+  risk_limit_rejection_reason: risk_limit
+  ambiguous_setup_rejection_reason: manual_review_required
+
+notes:
+  - This is not an absorption detector yet. It is the price-only control for
+    the liquidity sweep reversal thesis.
+  - Footprint/volume-at-price confirmation must be added and ablated later.
+  - It never submits, modifies, cancels, flattens, or routes orders.
