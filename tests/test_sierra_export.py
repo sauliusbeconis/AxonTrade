@@ -101,6 +101,27 @@ def test_loads_tab_export_file(tmp_path) -> None:
     assert normalized_rows[0]["opening_range_high"] == "100"
 
 
+def test_normalizes_actual_sierra_duplicate_headers(tmp_path) -> None:
+    rows = load_sierra_bar_study_rows(
+        _write_export_text(
+            tmp_path,
+            "Date, Time, Open, High, Low, Last, Volume, VWAP, High, Low, Open, High, Low, Close, High, Low\n"
+            "2026-6-10, 09:30:00.000000, 7396.75, 7399.00, 7395.25, 7398.25, 22, 7398.25, 7466.25, 7365.50, 7396.75, 7466.25, 7365.50, 7382.50, 7466.25, 7365.50\n"
+        )
+    )
+
+    normalized_rows = normalize_sierra_bar_study_rows(rows, symbol="ESU26-CME")
+
+    assert normalized_rows[0]["timestamp"] == "2026-6-10 09:30:00.000000"
+    assert normalized_rows[0]["open"] == "7396.75"
+    assert normalized_rows[0]["high"] == "7399.00"
+    assert normalized_rows[0]["low"] == "7395.25"
+    assert normalized_rows[0]["close"] == "7398.25"
+    assert normalized_rows[0]["vwap"] == "7398.25"
+    assert normalized_rows[0]["opening_range_high"] == "7466.25"
+    assert normalized_rows[0]["opening_range_low"] == "7365.50"
+
+
 def test_rejects_missing_required_export_column() -> None:
     rows = _sierra_export_rows()
     del rows[0]["Volume Weighted Average Price - VWAP"]
@@ -108,3 +129,9 @@ def test_rejects_missing_required_export_column() -> None:
 
     with pytest.raises(SierraExportError, match="vwap"):
         normalize_sierra_bar_study_rows(rows, symbol="ESU26-CME")
+
+
+def _write_export_text(tmp_path, text: str) -> str:
+    export_path = tmp_path / "actual-sierra-export.txt"
+    export_path.write_text(text, encoding="utf-8")
+    return str(export_path)

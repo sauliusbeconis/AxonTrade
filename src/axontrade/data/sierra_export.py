@@ -80,7 +80,24 @@ def load_sierra_bar_study_rows(path: str | Path) -> list[dict[str, str]]:
     except csv.Error:
         dialect = csv.excel_tab if "\t" in sample else csv.excel
 
-    return list(csv.DictReader(text.splitlines(), dialect=dialect))
+    reader = csv.reader(text.splitlines(), dialect=dialect)
+    try:
+        headers = next(reader)
+    except StopIteration:
+        return []
+
+    unique_headers = _make_unique_headers(headers)
+    rows: list[dict[str, str]] = []
+    for values in reader:
+        if not values or all(value.strip() == "" for value in values):
+            continue
+        row = {
+            header: values[index].strip() if index < len(values) else ""
+            for index, header in enumerate(unique_headers)
+        }
+        rows.append(row)
+
+    return rows
 
 
 def normalize_sierra_bar_study_rows(
@@ -152,6 +169,10 @@ def _build_header_mapping(
     mapping: dict[str, str] = {}
 
     for field_name, aliases in config["column_aliases"].items():
+        if field_name == "timestamp" and "date" in normalized_to_original and "time" in normalized_to_original:
+            mapping[field_name] = "__date_time__"
+            continue
+
         if field_name in {"symbol", "chart_number", "bar_index", "session_phase"}:
             optional = True
         else:
@@ -189,6 +210,11 @@ def _match_header(
                 if normalized_alias and normalized_alias in normalized_header:
                     return header
 
+    if field_name == "opening_range_high":
+        return _last_duplicate_study_header(headers, "High")
+    if field_name == "opening_range_low":
+        return _last_duplicate_study_header(headers, "Low")
+
     return None
 
 
@@ -213,6 +239,13 @@ def _resolve_field_value(
     if field_name == "session_phase":
         default_session_phase = session_phase or str(config["defaults"]["session_phase"])
         return _value_or_default(row, header_mapping, field_name, default_session_phase)
+    if field_name == "timestamp" and header_mapping.get(field_name) == "__date_time__":
+        date_value = row.get("Date", "")
+        time_value = row.get("Time", "")
+        timestamp = f"{date_value} {time_value}".strip()
+        if timestamp == "":
+            raise SierraExportError("Blank Sierra export value for timestamp")
+        return timestamp
 
     source_header = header_mapping[field_name]
     value = row.get(source_header)
@@ -239,3 +272,27 @@ def _value_or_default(
 
 def _normalize_header(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", value.lower())
+
+
+def _make_unique_headers(headers: list[str]) -> list[str]:
+    seen: dict[str, int] = {}
+    unique_headers: list[str] = []
+    for header in headers:
+        clean_header = header.strip()
+        seen[clean_header] = seen.get(clean_header, 0) + 1
+        if seen[clean_header] == 1:
+            unique_headers.append(clean_header)
+        else:
+            unique_headers.append(f"{clean_header}__{seen[clean_header]}")
+    return unique_headers
+
+
+def _last_duplicate_study_header(headers: list[str], base_name: str) -> str | None:
+    candidates = [
+        header
+        for header in headers
+        if header.startswith(f"{base_name}__")
+    ]
+    if candidates:
+        return candidates[-1]
+    return None
