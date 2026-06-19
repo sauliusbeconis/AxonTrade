@@ -47,6 +47,52 @@ If a chart has an option named `Use Evening Session`, use:
 
 Do not continue if simulation mode is not visibly enabled.
 
+## Build AxonTrade ACSIL Study
+
+Manual help is required for this step because Sierra Chart must compile and load
+the study from inside its own UI.
+
+Use Sierra Chart's remote build under Wine. Do not use the local Visual C++
+build path unless Visual C++ is installed and working inside the Wine prefix.
+
+1. In Sierra Chart, click `Analysis >> Build Custom Studies DLL`.
+2. In the `Build Advanced Custom Studies DLL` window, click
+   `File >> Select Files`.
+3. Select `OrderFlowSignalSmokeTest.cpp`.
+4. Click `Open`.
+5. In the same build window, click `Build >> Remote Build`.
+6. Wait for the output to say the remote build succeeded.
+7. If the build succeeds, close the build window or leave it open.
+8. Click the ES/MES chart where the study should be loaded.
+9. Click `Analysis >> Studies`.
+10. Click `Add Custom Study`.
+11. Expand `AxonTrade Simulation Safe Studies`.
+12. Select `Order Flow Signal Smoke Test`.
+13. Click `Add`.
+14. Select the added study in `Studies to Graph`.
+15. Click `Settings`.
+16. Set `Horizontal Line Price` near the current futures price.
+17. Confirm `Event Type = candidate_signal`.
+18. Confirm `Direction = long` or `short`.
+19. Confirm `Trade Mode = sim` or `replay`.
+20. Click `OK`.
+21. Click `OK`.
+
+If you see this error:
+
+`Can't recognize 'cl ...' as an internal or external command`
+
+you clicked the local Visual C++ build path. Go back to the build window and use
+`Build >> Remote Build`.
+
+If the study was already loaded and Sierra refuses to overwrite the DLL:
+
+1. Click `Analysis >> Build Custom Studies DLL`.
+2. Click `Build >> Release All DLLs and Deny Load`.
+3. Click `Build >> Remote Build`.
+4. After the build succeeds, click `Build >> Allow Load DLLs`.
+5. Return to the chart and reload/recalculate the study.
+
 ## Linux / Wine File Compression Fix
 
 On Pop!_OS/Wine, Sierra Chart may log an error like:
@@ -372,6 +418,10 @@ Do not build NQ/MNQ until ES/MES are stable and screenshotted.
 
 - Sierra Chart chartbooks and adding charts/Trade DOMs:
   https://www.sierrachart.com/index.php?page=doc/Chartbooks.html
+- Sierra Chart custom study build window:
+  https://www.sierrachart.com/index.php?page=doc/AnalysisMenu.html#BuildAdvancedStudiesDLL
+- Sierra Chart build from source guide:
+  https://www.sierrachart.com/index.php?page=doc/HowToBuildAnAdvancedCustomStudyFromSourceCode.html
 - Sierra Chart file compression settings:
   https://www.sierrachart.com/index.php?page=doc/AdvancedServiceSettings.php#FileCompression
 - Sierra Chart trade simulation mode:
