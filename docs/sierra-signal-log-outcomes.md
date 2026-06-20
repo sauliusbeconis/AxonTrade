@@ -135,6 +135,37 @@ range, average volume, average trade count, average absolute delta, entry-bar
 volume/trades/delta, and normalized ratios such as
 `sweep_abs_delta_to_average_abs_delta`.
 
+## Run Context Filter Sweep
+
+Manual help needed: **No after the context diagnostics CSV exists**.
+
+```bash
+.venv/bin/python scripts/run_signal_context_filter_sweep.py \
+  reports/sierra-signal-log-context-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-context-filter-sweep-large-sample.csv
+```
+
+This tests entry-known context thresholds on top of the quality diagnostic
+fields: original reward/risk, RTH time window, raw sweep delta, risk/target
+distance normalized by recent bar range, sweep delta normalized by recent
+absolute delta, and entry activity normalized by recent volume/trade count.
+
+## Run Context Filter Walk-Forward
+
+Manual help needed: **No after the context diagnostics CSV exists**.
+
+```bash
+.venv/bin/python scripts/run_signal_context_filter_walk_forward_sweep.py \
+  reports/sierra-signal-log-context-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-context-filter-walk-forward-large-sample.csv \
+  --train-date-count 8 \
+  --holdout-date-count 2 \
+  --minimum-train-trades 4
+```
+
+This chronologically selects the best context filter on each training window,
+then applies that exact filter to the next holdout dates.
+
 ## Run News Exclusion Annotation
 
 Manual help needed: **Yes before running this workflow**, because the scheduled
@@ -423,6 +454,14 @@ Context diagnostics:
 
 `reports/sierra-signal-log-context-diagnostics-large-sample.csv`
 
+Context filter sweep:
+
+`reports/sierra-signal-log-context-filter-sweep-large-sample.csv`
+
+Context filter walk-forward:
+
+`reports/sierra-signal-log-context-filter-walk-forward-large-sample.csv`
+
 Quality filter sweep:
 
 `reports/sierra-signal-log-quality-filter-sweep-large-sample.csv`
@@ -552,14 +591,45 @@ does not show a standalone filter strong enough to promote into another
 walk-forward optimizer. The positive rows are mostly the same lower target/R
 and earlier-session subset already seen in quality diagnostics.
 
+Context filter aggregate sweep:
+
+| Direction | Max Original RR | Minutes After Open | Max Sweep Abs Delta | Max Sweep/Avg Abs Delta | Min Volume/Avg Volume | Min Trades/Avg Trades | Trades | Target Hits | Losses | Net USD |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `all` | `3.5` | `0-120` | `3` | `1` | `0` | `0` | `6` | `5` | `1` | `1691.50` |
+
+Rolling context filter walk-forward validation:
+
+- train date count: `8`
+- holdout date count: `2`
+- minimum selected train trades: `4`
+- holdout windows: `6`
+- selected holdout trades: `4`
+- selected holdout target hits: `0`
+- selected holdout losses: `4`
+- selected holdout net USD: `-1064.00`
+
+Interpretation: the context optimizer found the same chronological failure as
+the quality-filter optimizer. The selected train filters usually kept
+`min_entry_volume_to_average_volume=0` and
+`min_entry_trades_to_average_trades=0`, so this sample does not support a
+simple "only trade above-average activity" rule. Static context filters are not
+enough; the next bot-control candidate is a strategy health/disable gate that
+stops trading after the setup family enters a losing regime.
+
 Scheduled-news exclusion status:
 
 - implementation exists
 - template CSV exists
-- current large-sample report has not been rerun with news exclusion because
-  `data/processed/AxonTrade_US_news_events.csv` has not been populated yet
-- manual help needed: **Yes**, to provide the official event rows in New York
-  time
+- local official-event sample exists at
+  `data/processed/AxonTrade_US_news_events.csv`
+- annotated output:
+  `reports/sierra-signal-log-quality-diagnostics-news-annotated-large-sample.csv`
+- configured events removed `0` of `23` candidate rows from this sample
+- news-excluded quality-filter walk-forward remained unchanged: `4` selected
+  holdout trades, `0` target hits, `4` losses, `-1064.00` net USD
+- manual help needed: **No for the current checked sample**; **Yes for future
+  samples** if the date range includes new official event rows not yet in the
+  local event CSV
 
 Target R sweep, `direction=all`:
 

@@ -31,6 +31,13 @@ from axontrade.research.signal_context_diagnostics import (
     SignalContextDiagnosticError,
     run_signal_context_diagnostics,
 )
+from axontrade.research.signal_context_filter_experiments import (
+    SIGNAL_CONTEXT_FILTER_SWEEP_HEADER,
+    SIGNAL_CONTEXT_FILTER_WALK_FORWARD_HEADER,
+    SignalContextFilterExperimentError,
+    run_signal_context_filter_sweep,
+    run_signal_context_filter_walk_forward_sweep,
+)
 from axontrade.research.signal_dynamic_exit_experiments import (
     SIGNAL_BREAKEVEN_STOP_SWEEP_HEADER,
     SIGNAL_BREAKEVEN_STOP_WALK_FORWARD_HEADER,
@@ -127,6 +134,8 @@ __all__ = [
     "PRICE_ONLY_TRAIN_HOLDOUT_SWEEP_HEADER",
     "SignalLogError",
     "SIGNAL_CONTEXT_DIAGNOSTIC_HEADER",
+    "SIGNAL_CONTEXT_FILTER_SWEEP_HEADER",
+    "SIGNAL_CONTEXT_FILTER_WALK_FORWARD_HEADER",
     "SIGNAL_BREAKEVEN_STOP_SWEEP_HEADER",
     "SIGNAL_BREAKEVEN_STOP_WALK_FORWARD_HEADER",
     "SIGNAL_TARGET_R_SWEEP_HEADER",
@@ -141,6 +150,7 @@ __all__ = [
     "VAP_ABSORPTION_THRESHOLD_SWEEP_HEADER",
     "PriceOnlyExperimentError",
     "SignalContextDiagnosticError",
+    "SignalContextFilterExperimentError",
     "SignalDynamicExitExperimentError",
     "SignalQualityDiagnosticError",
     "SignalQualityFilterExperimentError",
@@ -178,6 +188,8 @@ __all__ = [
     "run_price_only_train_holdout_sweep",
     "run_price_only_walk_forward_sweep",
     "run_signal_context_diagnostics",
+    "run_signal_context_filter_sweep",
+    "run_signal_context_filter_walk_forward_sweep",
     "run_signal_breakeven_stop_sweep",
     "run_signal_breakeven_stop_walk_forward_sweep",
     "run_signal_target_r_sweep",
