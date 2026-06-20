@@ -56,3 +56,7 @@ Interpretation: swept-zone volume is a better hypothesis than raw VAP aggression
 ratio alone, but this is not validated. The `20` volume threshold was selected
 after inspecting this sample, so the next step is a chronological sweep over VAP
 thresholds.
+
+Follow-up: the chronological threshold sweep is documented in
+`docs/liquidity-sweep-vap-threshold-sweep.md`. The train-selected VAP threshold
+did not survive holdout.

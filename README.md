@@ -75,6 +75,9 @@ The Sierra-side logger workflow for that file is documented in
 The first diagnostic pass over swept price levels is run with
 `scripts/run_vap_absorption_diagnostics.py` and documented in
 [docs/liquidity-sweep-vap-absorption-diagnostics.md](docs/liquidity-sweep-vap-absorption-diagnostics.md).
+Chronological VAP threshold sweeps are run with
+`scripts/run_vap_absorption_threshold_sweep.py` and documented in
+[docs/liquidity-sweep-vap-threshold-sweep.md](docs/liquidity-sweep-vap-threshold-sweep.md).
 
 ## Pop!_OS And Wine Notes
 

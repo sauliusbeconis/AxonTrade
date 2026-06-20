@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime
+from itertools import product
 from typing import Any, Iterable
 
 
@@ -15,6 +17,7 @@ VAP_ABSORPTION_DIAGNOSTIC_HEADER = [
     "signal_id",
     "symbol",
     "direction",
+    "entry_time",
     "entry_bar_index",
     "sweep_bar_index",
     "sweep_extreme_price",
@@ -34,7 +37,36 @@ VAP_ABSORPTION_DIAGNOSTIC_HEADER = [
     "net_usd",
     "notes",
 ]
+VAP_ABSORPTION_THRESHOLD_SWEEP_HEADER = [
+    "schema_version",
+    "split_id",
+    "sample",
+    "selected_on_train",
+    "trade_dates",
+    "experiment_id",
+    "strategy_id",
+    "direction_filter",
+    "minimum_zone_aggression_ratio",
+    "minimum_zone_volume",
+    "input_trades",
+    "evaluated_trades",
+    "target_hits",
+    "losses",
+    "other_exits",
+    "win_rate",
+    "net_usd",
+    "average_net_usd",
+    "long_trades",
+    "short_trades",
+    "notes",
+]
 _SWEEP_BAR_INDEX_RE = re.compile(r"\bsweep_bar_index=(\d+)\b")
+_TIMESTAMP_FORMATS = (
+    "%Y-%m-%d %H:%M:%S.%f",
+    "%Y-%m-%d %H:%M:%S",
+    "%Y-%m-%d %H:%M",
+)
+_ALLOWED_DIRECTION_FILTERS = ("all", "long", "short")
 
 
 class VolumeAtPriceAbsorptionError(ValueError):
@@ -123,6 +155,7 @@ def run_vap_absorption_diagnostics(
                 "signal_id": signal_id,
                 "symbol": symbol,
                 "direction": direction,
+                "entry_time": outcome["entry_time"],
                 "entry_bar_index": outcome["entry_bar_index"],
                 "sweep_bar_index": sweep_bar_index,
                 "sweep_extreme_price": _format_number(sweep_extreme_price),
@@ -152,6 +185,109 @@ def run_vap_absorption_diagnostics(
     return diagnostic_rows
 
 
+def run_vap_absorption_threshold_sweep(
+    diagnostic_rows: Iterable[dict[str, Any]],
+    *,
+    minimum_zone_aggression_ratios: Iterable[float],
+    minimum_zone_volumes: Iterable[float],
+    direction_filters: Iterable[str] = ("all",),
+) -> list[dict[str, Any]]:
+    """Sweep VAP threshold filters over existing diagnostic rows."""
+
+    rows = list(diagnostic_rows)
+    ratios = _normalize_minimum_ratios(minimum_zone_aggression_ratios)
+    volumes = _normalize_nonnegative_grid(minimum_zone_volumes, "minimum_zone_volumes")
+    directions = _normalize_direction_filters(direction_filters)
+    return [
+        _threshold_experiment_row(
+            rows,
+            minimum_zone_aggression_ratio=minimum_zone_aggression_ratio,
+            minimum_zone_volume=minimum_zone_volume,
+            direction_filter=direction_filter,
+            sample="all",
+            split_id="aggregate",
+            selected_experiment_id="",
+            trade_dates=_sorted_trade_dates(rows),
+        )
+        for minimum_zone_aggression_ratio, minimum_zone_volume, direction_filter in product(
+            ratios,
+            volumes,
+            directions,
+        )
+    ]
+
+
+def run_vap_absorption_threshold_train_holdout_sweep(
+    diagnostic_rows: Iterable[dict[str, Any]],
+    *,
+    train_date_count: int,
+    minimum_zone_aggression_ratios: Iterable[float],
+    minimum_zone_volumes: Iterable[float],
+    direction_filters: Iterable[str] = ("all",),
+    minimum_train_trades: int = 1,
+) -> list[dict[str, Any]]:
+    """Run a chronological train/holdout VAP threshold sweep."""
+
+    rows = list(diagnostic_rows)
+    dates = _sorted_trade_dates(rows)
+    if train_date_count <= 0 or train_date_count >= len(dates):
+        raise VolumeAtPriceAbsorptionError(
+            "train_date_count must be greater than zero and less than the number of trade dates",
+        )
+    if minimum_train_trades <= 0:
+        raise VolumeAtPriceAbsorptionError("minimum_train_trades must be positive")
+
+    train_dates = dates[:train_date_count]
+    holdout_dates = dates[train_date_count:]
+    train_rows = _filter_rows_by_dates(rows, train_dates)
+    holdout_rows = _filter_rows_by_dates(rows, holdout_dates)
+    train_sweep = run_vap_absorption_threshold_sweep(
+        train_rows,
+        minimum_zone_aggression_ratios=minimum_zone_aggression_ratios,
+        minimum_zone_volumes=minimum_zone_volumes,
+        direction_filters=direction_filters,
+    )
+    selected_train = _select_best_threshold_row(
+        train_sweep,
+        minimum_train_trades=minimum_train_trades,
+    )
+    selected_experiment_id = str(selected_train["experiment_id"])
+    split_id = f"chronological_train_dates={len(train_dates)}_holdout_dates={len(holdout_dates)}"
+    ratios = _normalize_minimum_ratios(minimum_zone_aggression_ratios)
+    volumes = _normalize_nonnegative_grid(minimum_zone_volumes, "minimum_zone_volumes")
+    directions = _normalize_direction_filters(direction_filters)
+
+    return [
+        *[
+            _tag_threshold_split_row(
+                row,
+                sample="train",
+                selected_experiment_id=selected_experiment_id,
+                split_id=split_id,
+                trade_dates=train_dates,
+            )
+            for row in train_sweep
+        ],
+        *[
+            _threshold_experiment_row(
+                holdout_rows,
+                minimum_zone_aggression_ratio=minimum_zone_aggression_ratio,
+                minimum_zone_volume=minimum_zone_volume,
+                direction_filter=direction_filter,
+                sample="holdout",
+                split_id=split_id,
+                selected_experiment_id=selected_experiment_id,
+                trade_dates=holdout_dates,
+            )
+            for minimum_zone_aggression_ratio, minimum_zone_volume, direction_filter in product(
+                ratios,
+                volumes,
+                directions,
+            )
+        ],
+    ]
+
+
 def summarize_vap_absorption_diagnostics(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     """Summarize VAP diagnostics by level_absorption_pass bucket."""
 
@@ -179,6 +315,135 @@ def summarize_vap_absorption_diagnostics(rows: Iterable[dict[str, Any]]) -> list
             },
         )
     return summaries
+
+
+def _threshold_experiment_row(
+    rows: list[dict[str, Any]],
+    *,
+    minimum_zone_aggression_ratio: float,
+    minimum_zone_volume: float,
+    direction_filter: str,
+    sample: str,
+    split_id: str,
+    selected_experiment_id: str,
+    trade_dates: list[str],
+) -> dict[str, Any]:
+    filtered_rows = _filter_threshold_rows(
+        rows,
+        minimum_zone_aggression_ratio=minimum_zone_aggression_ratio,
+        minimum_zone_volume=minimum_zone_volume,
+        direction_filter=direction_filter,
+    )
+    trades = len(filtered_rows)
+    wins = sum(str(row["exit_reason"]) == "target_hit" for row in filtered_rows)
+    losses = sum(
+        str(row["exit_reason"]) in {"stop_hit", "ambiguous_stop_first"}
+        for row in filtered_rows
+    )
+    net_usd = sum(_to_float(row["net_usd"], "net_usd") for row in filtered_rows)
+    experiment_id = (
+        "liquidity_sweep_vap_absorption_threshold:"
+        f"direction={direction_filter}:"
+        f"min_zone_ratio={_format_number(minimum_zone_aggression_ratio)}:"
+        f"min_zone_volume={_format_number(minimum_zone_volume)}"
+    )
+
+    return {
+        "schema_version": 1,
+        "split_id": split_id,
+        "sample": sample,
+        "selected_on_train": str(experiment_id == selected_experiment_id).lower(),
+        "trade_dates": ";".join(trade_dates),
+        "experiment_id": experiment_id,
+        "strategy_id": "liquidity_sweep_vap_absorption_reversal",
+        "direction_filter": direction_filter,
+        "minimum_zone_aggression_ratio": _format_number(minimum_zone_aggression_ratio),
+        "minimum_zone_volume": _format_number(minimum_zone_volume),
+        "input_trades": len(rows),
+        "evaluated_trades": trades,
+        "target_hits": wins,
+        "losses": losses,
+        "other_exits": trades - wins - losses,
+        "win_rate": _format_number(wins / trades if trades else 0.0),
+        "net_usd": _format_number(net_usd),
+        "average_net_usd": _format_number(net_usd / trades if trades else 0.0),
+        "long_trades": sum(str(row["direction"]) == "long" for row in filtered_rows),
+        "short_trades": sum(str(row["direction"]) == "short" for row in filtered_rows),
+        "notes": "post-diagnostic VAP threshold sweep",
+    }
+
+
+def _tag_threshold_split_row(
+    row: dict[str, Any],
+    *,
+    sample: str,
+    selected_experiment_id: str,
+    split_id: str,
+    trade_dates: list[str],
+) -> dict[str, Any]:
+    tagged = dict(row)
+    tagged["split_id"] = split_id
+    tagged["sample"] = sample
+    tagged["selected_on_train"] = str(row["experiment_id"] == selected_experiment_id).lower()
+    tagged["trade_dates"] = ";".join(trade_dates)
+    return tagged
+
+
+def _filter_threshold_rows(
+    rows: list[dict[str, Any]],
+    *,
+    minimum_zone_aggression_ratio: float,
+    minimum_zone_volume: float,
+    direction_filter: str,
+) -> list[dict[str, Any]]:
+    return [
+        row
+        for row in rows
+        if (direction_filter == "all" or str(row["direction"]) == direction_filter)
+        and _diagnostic_threshold_pass(
+            row,
+            minimum_zone_aggression_ratio=minimum_zone_aggression_ratio,
+            minimum_zone_volume=minimum_zone_volume,
+        )
+    ]
+
+
+def _diagnostic_threshold_pass(
+    row: dict[str, Any],
+    *,
+    minimum_zone_aggression_ratio: float,
+    minimum_zone_volume: float,
+) -> bool:
+    metrics = {
+        "zone_levels": _to_int(row["zone_levels"], "zone_levels"),
+        "zone_bid_volume": _to_float(row["zone_bid_volume"], "zone_bid_volume"),
+        "zone_ask_volume": _to_float(row["zone_ask_volume"], "zone_ask_volume"),
+        "zone_delta": _to_float(row["zone_delta"], "zone_delta"),
+        "zone_aggression_ratio": _to_float(row["zone_aggression_ratio"], "zone_aggression_ratio"),
+    }
+    return _level_absorption_pass(
+        metrics,
+        direction=str(row["direction"]),
+        minimum_zone_aggression_ratio=minimum_zone_aggression_ratio,
+        minimum_zone_volume=minimum_zone_volume,
+    )
+
+
+def _select_best_threshold_row(
+    rows: list[dict[str, Any]],
+    *,
+    minimum_train_trades: int,
+) -> dict[str, Any]:
+    eligible_rows = [
+        row
+        for row in rows
+        if int(row["evaluated_trades"]) >= minimum_train_trades
+    ]
+    if not eligible_rows:
+        raise VolumeAtPriceAbsorptionError(
+            f"No train experiments met minimum_train_trades={minimum_train_trades}",
+        )
+    return max(eligible_rows, key=lambda row: float(row["net_usd"]))
 
 
 def _index_vap_rows(rows: Iterable[dict[str, Any]]) -> dict[tuple[str, int], list[VolumeAtPriceLevel]]:
@@ -311,3 +576,67 @@ def _to_float(value: Any, field_name: str) -> float:
 
 def _format_number(value: Any) -> str:
     return f"{float(value):.8f}".rstrip("0").rstrip(".")
+
+
+def _sorted_trade_dates(rows: list[dict[str, Any]]) -> list[str]:
+    return sorted({_parse_trade_date(row["entry_time"]) for row in rows})
+
+
+def _filter_rows_by_dates(rows: list[dict[str, Any]], dates: list[str]) -> list[dict[str, Any]]:
+    allowed_dates = set(dates)
+    return [
+        row
+        for row in rows
+        if _parse_trade_date(row["entry_time"]) in allowed_dates
+    ]
+
+
+def _parse_trade_date(value: Any) -> str:
+    timestamp_text = _normalize_timestamp_text(str(value).strip())
+    for timestamp_format in _TIMESTAMP_FORMATS:
+        try:
+            return datetime.strptime(timestamp_text, timestamp_format).date().isoformat()
+        except ValueError:
+            continue
+    raise VolumeAtPriceAbsorptionError(f"Invalid timestamp: {value!r}")
+
+
+def _normalize_timestamp_text(value: str) -> str:
+    parts = value.split(maxsplit=1)
+    if len(parts) != 2 or "-" not in parts[0]:
+        return value
+    date_parts = parts[0].split("-")
+    if len(date_parts) != 3:
+        return value
+    normalized_date = "-".join(
+        [date_parts[0], date_parts[1].zfill(2), date_parts[2].zfill(2)],
+    )
+    return f"{normalized_date} {parts[1]}"
+
+
+def _normalize_minimum_ratios(values: Iterable[float]) -> list[float]:
+    grid = _normalize_nonnegative_grid(values, "minimum_zone_aggression_ratios")
+    if any(value < 1 for value in grid):
+        raise VolumeAtPriceAbsorptionError("minimum_zone_aggression_ratios values must be at least 1")
+    return grid
+
+
+def _normalize_nonnegative_grid(values: Iterable[float], field_name: str) -> list[float]:
+    grid = [float(value) for value in values]
+    if not grid:
+        raise VolumeAtPriceAbsorptionError(f"{field_name} must contain at least one value")
+    if any(value < 0 for value in grid):
+        raise VolumeAtPriceAbsorptionError(f"{field_name} values must be nonnegative")
+    return grid
+
+
+def _normalize_direction_filters(values: Iterable[str]) -> list[str]:
+    filters = [str(value).strip().lower() for value in values if str(value).strip()]
+    if not filters:
+        raise VolumeAtPriceAbsorptionError("direction_filters must contain at least one value")
+    invalid = [value for value in filters if value not in _ALLOWED_DIRECTION_FILTERS]
+    if invalid:
+        raise VolumeAtPriceAbsorptionError(
+            "direction_filters contains unsupported values: " + ", ".join(invalid),
+        )
+    return filters
