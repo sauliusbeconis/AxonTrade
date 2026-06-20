@@ -13,6 +13,7 @@ from axontrade.research.acceptance import (
 )
 from axontrade.research.signal_log import (
     SignalLogError,
+    load_signal_log_rows_csv,
     load_signal_log_schema,
     validate_signal_log_row,
     validate_signal_log_rows,
@@ -101,6 +102,7 @@ __all__ = [
     "load_price_only_liquidity_sweep_config",
     "load_signal_rows_csv",
     "load_signal_log_schema",
+    "load_signal_log_rows_csv",
     "price_only_acceptance_passed",
     "render_price_only_acceptance_report",
     "summarize_trade_outcomes_by_day",

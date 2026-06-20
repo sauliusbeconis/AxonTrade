@@ -83,6 +83,8 @@ Rolling walk-forward validation for those VAP thresholds is run with
 [docs/liquidity-sweep-vap-threshold-walk-forward.md](docs/liquidity-sweep-vap-threshold-walk-forward.md).
 The first Sierra-side indicator-only signal overlay and CSV logger is documented
 in [docs/sierra-liquidity-sweep-signal-overlay.md](docs/sierra-liquidity-sweep-signal-overlay.md).
+Signal-log validation and replay summaries are documented in
+[docs/sierra-signal-log-report.md](docs/sierra-signal-log-report.md).
 
 ## Pop!_OS And Wine Notes
 

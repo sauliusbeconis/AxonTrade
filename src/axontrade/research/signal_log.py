@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import csv
+from pathlib import Path
 from typing import Any, Iterable
 
 from axontrade.config import ConfigError, load_yaml, require_fields
@@ -153,6 +155,26 @@ def validate_signal_log_rows(
 
     loaded_schema = load_signal_log_schema() if schema is None else schema
     return [validate_signal_log_row(row, loaded_schema) for row in rows]
+
+
+def load_signal_log_rows_csv(
+    path: str | Path,
+    schema: dict[str, Any] | None = None,
+) -> list[dict[str, str]]:
+    """Load signal-log CSV rows and validate the contract."""
+
+    loaded_schema = load_signal_log_schema() if schema is None else schema
+    csv_path = Path(path)
+    with csv_path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        header = reader.fieldnames or []
+        expected_header = list(loaded_schema["csv"]["header"])
+        if header != expected_header:
+            raise SignalLogError(
+                "Signal log CSV header mismatch. "
+                f"Expected {expected_header}, got {header}",
+            )
+        return validate_signal_log_rows(list(reader), loaded_schema)
 
 
 def _require_nonblank_fields(row: dict[str, Any], field_names: Iterable[str]) -> None:

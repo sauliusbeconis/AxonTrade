@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import csv
+
 import pytest
 
 from axontrade.config import load_yaml
 from axontrade.research import (
     SignalLogError,
+    load_signal_log_rows_csv,
     load_signal_log_schema,
     validate_signal_log_row,
     validate_signal_log_schema,
@@ -100,6 +103,28 @@ def test_rejects_invalid_numeric_value() -> None:
 
     with pytest.raises(SignalLogError, match="signal_price"):
         validate_signal_log_row(row)
+
+
+def test_loads_signal_log_rows_csv(tmp_path) -> None:
+    schema = load_signal_log_schema()
+    csv_path = tmp_path / "signals.csv"
+    with csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=schema["csv"]["header"], lineterminator="\n")
+        writer.writeheader()
+        writer.writerow(_candidate_row())
+
+    rows = load_signal_log_rows_csv(csv_path)
+
+    assert len(rows) == 1
+    assert rows[0]["event_type"] == "candidate_signal"
+
+
+def test_rejects_signal_log_csv_header_mismatch(tmp_path) -> None:
+    csv_path = tmp_path / "signals.csv"
+    csv_path.write_text("event_type\ncandidate_signal\n", encoding="utf-8")
+
+    with pytest.raises(SignalLogError, match="header mismatch"):
+        load_signal_log_rows_csv(csv_path)
 
 
 def test_acsil_signal_logger_uses_schema_columns() -> None:

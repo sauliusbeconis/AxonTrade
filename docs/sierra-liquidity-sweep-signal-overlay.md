@@ -139,3 +139,18 @@ If you want to backfill all loaded historical bars:
 
 Leaving `Process Full Recalculation = Yes` can write many rejection rows during
 recalculations.
+
+## Report The Log
+
+Manual help needed: **No** after the CSV exists.
+
+From the repository:
+
+```bash
+.venv/bin/python scripts/report_signal_log.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_SignalLog.csv \
+  reports/sierra-signal-log-live.md
+```
+
+The reporting workflow is documented in
+[sierra-signal-log-report.md](sierra-signal-log-report.md).

@@ -50,3 +50,4 @@ Every research source should be documented with a link and retrieval date.
 - Define rejected-signal logging fields.
 - Define parameter experiment logging format. Done.
 - Define daily outcome and drawdown breakdown. Done.
+- Build Sierra overlay signal-log validation/report workflow. Done.
