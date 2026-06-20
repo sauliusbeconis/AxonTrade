@@ -198,6 +198,22 @@ This selects health-gate parameters on each training window, then applies the
 selected gate to the next holdout dates with health state warmed by the
 training window.
 
+## Run Quality Plus Health Gate Walk-Forward
+
+Manual help needed: **No after the quality diagnostics CSV exists**.
+
+```bash
+.venv/bin/python scripts/run_signal_quality_health_gate_walk_forward_sweep.py \
+  reports/sierra-signal-log-quality-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-quality-health-gate-walk-forward-large-sample.csv \
+  --train-date-count 8 \
+  --holdout-date-count 2 \
+  --minimum-train-accepted-trades 4
+```
+
+This jointly selects an entry-quality filter and a closed-trade health gate on
+each training window, then applies the selected pair to the next holdout dates.
+
 ## Run News Exclusion Annotation
 
 Manual help needed: **Yes before running this workflow**, because the scheduled
@@ -502,6 +518,10 @@ Health gate walk-forward:
 
 `reports/sierra-signal-log-health-gate-walk-forward-large-sample.csv`
 
+Quality plus health gate walk-forward:
+
+`reports/sierra-signal-log-quality-health-gate-walk-forward-large-sample.csv`
+
 Quality filter sweep:
 
 `reports/sierra-signal-log-quality-filter-sweep-large-sample.csv`
@@ -682,6 +702,25 @@ Do not enable live automation from this result. The next research question is
 whether the health gate should be combined with the quality/context filters, or
 whether the setup family needs a stricter entry definition before any bot
 execution work.
+
+Quality plus health gate walk-forward validation:
+
+- train date count: `8`
+- holdout date count: `2`
+- minimum selected train accepted trades: `4`
+- holdout windows: `6`
+- selected holdout accepted trades: `3`
+- selected holdout skipped trades: `1`
+- selected holdout target hits: `0`
+- selected holdout losses: `3`
+- selected holdout net USD: `-935.50`
+- skipped holdout net USD: `-128.50`
+
+Interpretation: combining the entry-quality filter with health gates reduces
+exposure more than either layer alone, but the selected holdout trades are still
+all losers. This is not a validation. The current setup definition likely needs
+stricter market-structure or level-specific absorption criteria before any
+execution-bot work.
 
 Scheduled-news exclusion status:
 

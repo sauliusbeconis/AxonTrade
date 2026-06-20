@@ -128,14 +128,48 @@ def run_signal_health_gate_sweep(
         drawdown_pause_trade_dates=drawdown_pause_trade_dates,
     )
     return [
-        _experiment_row(
+        evaluate_signal_health_gate(
             rows,
-            config=config,
-            report_dates=None,
-            state_warmup_rows=0,
+            maximum_daily_losses=config.maximum_daily_losses,
+            daily_loss_limit_usd=config.daily_loss_limit_usd,
+            maximum_consecutive_losses=config.maximum_consecutive_losses,
+            consecutive_loss_pause_trade_dates=config.consecutive_loss_pause_trade_dates,
+            maximum_equity_drawdown_usd=config.maximum_equity_drawdown_usd,
+            drawdown_pause_trade_dates=config.drawdown_pause_trade_dates,
         )
         for config in configs
     ]
+
+
+def evaluate_signal_health_gate(
+    diagnostic_rows: Iterable[dict[str, Any]],
+    *,
+    maximum_daily_losses: int,
+    daily_loss_limit_usd: float,
+    maximum_consecutive_losses: int,
+    consecutive_loss_pause_trade_dates: int,
+    maximum_equity_drawdown_usd: float,
+    drawdown_pause_trade_dates: int,
+    report_trade_dates: Iterable[str] | None = None,
+    state_warmup_rows: int = 0,
+) -> dict[str, Any]:
+    """Evaluate one realized-outcome health gate over diagnostic rows."""
+
+    config = _health_gate_configs(
+        maximum_daily_losses=[maximum_daily_losses],
+        daily_loss_limits_usd=[daily_loss_limit_usd],
+        maximum_consecutive_losses=[maximum_consecutive_losses],
+        consecutive_loss_pause_trade_dates=[consecutive_loss_pause_trade_dates],
+        maximum_equity_drawdowns_usd=[maximum_equity_drawdown_usd],
+        drawdown_pause_trade_dates=[drawdown_pause_trade_dates],
+    )[0]
+    report_dates = None if report_trade_dates is None else list(report_trade_dates)
+    return _experiment_row(
+        _sorted_rows(list(diagnostic_rows)),
+        config=config,
+        report_dates=report_dates,
+        state_warmup_rows=state_warmup_rows,
+    )
 
 
 def run_signal_health_gate_walk_forward_sweep(
@@ -200,10 +234,17 @@ def run_signal_health_gate_walk_forward_sweep(
             minimum_train_accepted_trades=minimum_train_accepted_trades,
         )
         selected_config = _config_from_row(best_train)
-        holdout_with_warmup = _experiment_row(
+        holdout_with_warmup = evaluate_signal_health_gate(
             train_rows + holdout_rows,
-            config=selected_config,
-            report_dates=holdout_dates,
+            maximum_daily_losses=selected_config.maximum_daily_losses,
+            daily_loss_limit_usd=selected_config.daily_loss_limit_usd,
+            maximum_consecutive_losses=selected_config.maximum_consecutive_losses,
+            consecutive_loss_pause_trade_dates=(
+                selected_config.consecutive_loss_pause_trade_dates
+            ),
+            maximum_equity_drawdown_usd=selected_config.maximum_equity_drawdown_usd,
+            drawdown_pause_trade_dates=selected_config.drawdown_pause_trade_dates,
+            report_trade_dates=holdout_dates,
             state_warmup_rows=len(train_rows),
         )
         split_id = (

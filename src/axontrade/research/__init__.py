@@ -50,8 +50,14 @@ from axontrade.research.signal_health_gate_experiments import (
     SIGNAL_HEALTH_GATE_SWEEP_HEADER,
     SIGNAL_HEALTH_GATE_WALK_FORWARD_HEADER,
     SignalHealthGateExperimentError,
+    evaluate_signal_health_gate,
     run_signal_health_gate_sweep,
     run_signal_health_gate_walk_forward_sweep,
+)
+from axontrade.research.signal_quality_health_gate_experiments import (
+    SIGNAL_QUALITY_HEALTH_GATE_WALK_FORWARD_HEADER,
+    SignalQualityHealthGateExperimentError,
+    run_signal_quality_health_gate_walk_forward_sweep,
 )
 from axontrade.research.signal_quality_diagnostics import (
     SIGNAL_QUALITY_DIAGNOSTIC_HEADER,
@@ -147,6 +153,7 @@ __all__ = [
     "SIGNAL_BREAKEVEN_STOP_WALK_FORWARD_HEADER",
     "SIGNAL_HEALTH_GATE_SWEEP_HEADER",
     "SIGNAL_HEALTH_GATE_WALK_FORWARD_HEADER",
+    "SIGNAL_QUALITY_HEALTH_GATE_WALK_FORWARD_HEADER",
     "SIGNAL_TARGET_R_SWEEP_HEADER",
     "SIGNAL_TARGET_R_WALK_FORWARD_SWEEP_HEADER",
     "SIGNAL_QUALITY_DIAGNOSTIC_HEADER",
@@ -162,6 +169,7 @@ __all__ = [
     "SignalContextFilterExperimentError",
     "SignalDynamicExitExperimentError",
     "SignalHealthGateExperimentError",
+    "SignalQualityHealthGateExperimentError",
     "SignalQualityDiagnosticError",
     "SignalQualityFilterExperimentError",
     "SignalTargetExperimentError",
@@ -175,6 +183,7 @@ __all__ = [
     "evaluate_liquidity_sweep_absorption_reversal",
     "evaluate_price_only_vwap_reclaim",
     "evaluate_signal_breakeven_stop_outcomes",
+    "evaluate_signal_health_gate",
     "evaluate_trade_outcomes",
     "load_price_only_acceptance_config",
     "load_liquidity_sweep_absorption_config",
@@ -204,6 +213,7 @@ __all__ = [
     "run_signal_breakeven_stop_walk_forward_sweep",
     "run_signal_health_gate_sweep",
     "run_signal_health_gate_walk_forward_sweep",
+    "run_signal_quality_health_gate_walk_forward_sweep",
     "run_signal_target_r_sweep",
     "run_signal_target_r_walk_forward_sweep",
     "run_signal_quality_diagnostics",
