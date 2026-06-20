@@ -72,6 +72,9 @@ The next level-specific footprint export contract is documented in
 [docs/sierra-volume-at-price-export.md](docs/sierra-volume-at-price-export.md).
 The Sierra-side logger workflow for that file is documented in
 [docs/sierra-volume-at-price-logger.md](docs/sierra-volume-at-price-logger.md).
+The first diagnostic pass over swept price levels is run with
+`scripts/run_vap_absorption_diagnostics.py` and documented in
+[docs/liquidity-sweep-vap-absorption-diagnostics.md](docs/liquidity-sweep-vap-absorption-diagnostics.md).
 
 ## Pop!_OS And Wine Notes
 

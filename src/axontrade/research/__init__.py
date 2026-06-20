@@ -59,6 +59,12 @@ from axontrade.research.trade_outcomes import (
     summarize_trade_outcomes_by_day,
     summarize_trade_outcomes,
 )
+from axontrade.research.volume_at_price_absorption import (
+    VAP_ABSORPTION_DIAGNOSTIC_HEADER,
+    VolumeAtPriceAbsorptionError,
+    run_vap_absorption_diagnostics,
+    summarize_vap_absorption_diagnostics,
+)
 
 __all__ = [
     "DEFAULT_PRICE_ONLY_ACCEPTANCE_CONFIG_PATH",
@@ -73,9 +79,11 @@ __all__ = [
     "SignalLogError",
     "TRADE_OUTCOME_CSV_HEADER",
     "TRADE_OUTCOME_DAILY_CSV_HEADER",
+    "VAP_ABSORPTION_DIAGNOSTIC_HEADER",
     "PriceOnlyExperimentError",
     "LiquiditySweepAbsorptionError",
     "TradeOutcomeError",
+    "VolumeAtPriceAbsorptionError",
     "evaluate_price_only_liquidity_sweep_reversal",
     "evaluate_price_only_acceptance",
     "evaluate_liquidity_sweep_absorption_reversal",
@@ -98,6 +106,8 @@ __all__ = [
     "run_absorption_reward_risk_walk_forward_sweep",
     "run_price_only_train_holdout_sweep",
     "run_price_only_walk_forward_sweep",
+    "run_vap_absorption_diagnostics",
+    "summarize_vap_absorption_diagnostics",
     "validate_signal_log_row",
     "validate_signal_log_rows",
     "validate_signal_log_schema",
