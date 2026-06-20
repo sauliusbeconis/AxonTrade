@@ -110,3 +110,17 @@ def test_acsil_signal_logger_uses_schema_columns() -> None:
         assert field_name in source
 
     assert 'EventType.SetString("candidate_signal")' in source
+
+
+def test_acsil_liquidity_sweep_overlay_uses_signal_schema() -> None:
+    source = open("src/acsil/AxonTradeLiquiditySweepSignalOverlay.cpp", encoding="utf-8").read()
+    schema = load_signal_log_schema()
+
+    for field_name in schema["csv"]["header"]:
+        assert field_name in source
+
+    assert "liquidity_sweep_absorption_reversal" in source
+    assert "SC_BIDVOL" in source
+    assert "SC_ASKVOL" in source
+    assert "candidate_signal" in source
+    assert "rejected_signal" in source

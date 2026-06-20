@@ -2,11 +2,26 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-wine_prefix="${WINEPREFIX:-$HOME/wineprefixes/sierrachart}"
+wine_prefix="${WINEPREFIX:-}"
 
-if [[ ! -d "$wine_prefix" ]]; then
-  echo "ERROR: Wine prefix does not exist: $wine_prefix" >&2
-  echo "Set WINEPREFIX or create the default prefix before syncing." >&2
+if [[ -z "$wine_prefix" ]]; then
+  wine_prefix_candidates=(
+    "$HOME/WinePrefixes/SierraChart"
+    "$HOME/wineprefixes/sierrachart"
+    "$HOME/.wine"
+  )
+
+  for candidate in "${wine_prefix_candidates[@]}"; do
+    if [[ -d "$candidate" ]]; then
+      wine_prefix="$candidate"
+      break
+    fi
+  done
+fi
+
+if [[ -z "$wine_prefix" || ! -d "$wine_prefix" ]]; then
+  echo "ERROR: Wine prefix does not exist: ${wine_prefix:-<not found>}" >&2
+  echo "Set WINEPREFIX to the Sierra Chart Wine prefix before syncing." >&2
   exit 1
 fi
 

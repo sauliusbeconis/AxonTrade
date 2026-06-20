@@ -42,7 +42,7 @@ Every research source should be documented with a link and retrieval date.
 - Run parameter sweeps over level-specific absorption thresholds. Done.
 - Run rolling walk-forward sweeps over level-specific absorption thresholds. Done.
 - Build the first conservative stop/target outcome evaluator. Done.
-- Add an indicator-only ACSIL signal overlay and CSV logger.
+- Add an indicator-only ACSIL signal overlay and CSV logger. Done.
 
 ## Reporting
 

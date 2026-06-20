@@ -81,6 +81,8 @@ Chronological VAP threshold sweeps are run with
 Rolling walk-forward validation for those VAP thresholds is run with
 `scripts/run_vap_absorption_threshold_walk_forward_sweep.py` and documented in
 [docs/liquidity-sweep-vap-threshold-walk-forward.md](docs/liquidity-sweep-vap-threshold-walk-forward.md).
+The first Sierra-side indicator-only signal overlay and CSV logger is documented
+in [docs/sierra-liquidity-sweep-signal-overlay.md](docs/sierra-liquidity-sweep-signal-overlay.md).
 
 ## Pop!_OS And Wine Notes
 
@@ -88,10 +90,12 @@ The target workstation runs Sierra Chart under Wine. See [docs/popos-wine-setup.
 
 ## Sync ACSIL Files Into Sierra Chart
 
-Set `WINEPREFIX` if your Sierra Chart prefix is not the default:
+The sync script auto-detects the common local Sierra Chart Wine prefixes,
+including `$HOME/WinePrefixes/SierraChart`. Set `WINEPREFIX` if your Sierra
+Chart prefix is elsewhere:
 
 ```bash
-export WINEPREFIX="$HOME/wineprefixes/sierrachart"
+export WINEPREFIX="/path/to/SierraChartWinePrefix"
 bash scripts/sync_to_sierra.sh
 ```
 

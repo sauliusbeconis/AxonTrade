@@ -37,6 +37,7 @@ Long example:
 - Rule profile: `config/research/liquidity_sweep_absorption_reversal.yaml`
 - Sierra export profile: `config/research/sierra_orderflow_bar_export.yaml`
 - Runner: `scripts/run_liquidity_sweep_absorption.py`
+- Sierra indicator-only overlay: `src/acsil/AxonTradeLiquiditySweepSignalOverlay.cpp`
 
 ## Sierra Manual Export Setup
 
@@ -124,3 +125,7 @@ chronological reward/risk filter experiment is documented in
 `5` holdout trades. The rolling walk-forward check in
 `docs/liquidity-sweep-reward-risk-walk-forward.md` did not validate the filter:
 selected holdout rows finished at `-28.75` USD after costs.
+
+The Sierra-side indicator-only overlay for this rule is documented in
+`docs/sierra-liquidity-sweep-signal-overlay.md`. Manual help is required to
+compile and load that study inside Sierra Chart.

@@ -25,6 +25,16 @@ rewrite files during replay.
 The output contract is documented in
 `config/research/sierra_volume_at_price_export.yaml`.
 
+## Liquidity Sweep Signal Overlay
+
+`AxonTradeLiquiditySweepSignalOverlay.cpp` evaluates the first bar-level
+liquidity-sweep absorption rule on the active chart, draws candidate markers,
+and writes candidate/rejection rows using
+`config/research/signal_log_schema.yaml`.
+
+Build and load instructions are documented in
+`docs/sierra-liquidity-sweep-signal-overlay.md`.
+
 ## Build Workflow
 
 1. Sync sources with `bash scripts/sync_to_sierra.sh`.
