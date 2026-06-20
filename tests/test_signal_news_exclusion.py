@@ -83,3 +83,17 @@ def test_annotate_requires_timestamp_field() -> None:
             [{"signal_id": "signal-1"}],
             [{"event_id": "event-1", "event_time": "2026-06-19 09:30:00"}],
         )
+
+
+def test_annotate_reports_news_event_row_for_missing_time() -> None:
+    with pytest.raises(
+        NewsExclusionError,
+        match="News event row 2: News event row missing event_time",
+    ):
+        annotate_rows_with_news_blackouts(
+            [{"signal_id": "signal-1", "entry_time": "2026-06-19 09:30:00"}],
+            [
+                {"event_id": "event-1", "event_time": "2026-06-19 08:30:00"},
+                {"event_id": "event-2", "event_time": None},
+            ],
+        )

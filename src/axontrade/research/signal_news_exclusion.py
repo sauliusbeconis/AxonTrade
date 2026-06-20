@@ -169,14 +169,18 @@ def _normalize_news_events(
     if default_blackout_after_minutes < 0:
         raise NewsExclusionError("default_blackout_after_minutes must be nonnegative")
 
-    events = [
-        _normalize_news_event(
-            row,
-            default_blackout_before_minutes=default_blackout_before_minutes,
-            default_blackout_after_minutes=default_blackout_after_minutes,
-        )
-        for row in rows
-    ]
+    events: list[NewsEvent] = []
+    for row_number, row in enumerate(rows, start=1):
+        try:
+            events.append(
+                _normalize_news_event(
+                    row,
+                    default_blackout_before_minutes=default_blackout_before_minutes,
+                    default_blackout_after_minutes=default_blackout_after_minutes,
+                ),
+            )
+        except NewsExclusionError as exc:
+            raise NewsExclusionError(f"News event row {row_number}: {exc}") from exc
     return sorted(events, key=lambda event: event.parsed_time)
 
 
@@ -186,10 +190,10 @@ def _normalize_news_event(
     default_blackout_before_minutes: float,
     default_blackout_after_minutes: float,
 ) -> NewsEvent:
-    event_time = str(row.get("event_time", "")).strip()
+    event_time = _optional_text(row.get("event_time"))
     if event_time == "":
         raise NewsExclusionError("News event row missing event_time")
-    event_id = str(row.get("event_id", "")).strip() or event_time
+    event_id = _optional_text(row.get("event_id")) or event_time
     before = _optional_float(row.get("blackout_before_minutes"), "blackout_before_minutes")
     after = _optional_float(row.get("blackout_after_minutes"), "blackout_after_minutes")
     before = default_blackout_before_minutes if before is None else before
@@ -201,9 +205,9 @@ def _normalize_news_event(
         event_id=event_id,
         event_time=event_time,
         parsed_time=_parse_timestamp(event_time),
-        event_name=str(row.get("event_name", "")).strip(),
-        currency=str(row.get("currency", "")).strip(),
-        impact=str(row.get("impact", "")).strip(),
+        event_name=_optional_text(row.get("event_name")),
+        currency=_optional_text(row.get("currency")),
+        impact=_optional_text(row.get("impact")),
         blackout_before_minutes=before,
         blackout_after_minutes=after,
     )
@@ -239,6 +243,12 @@ def _optional_float(value: Any, field_name: str) -> float | None:
         return float(str(value))
     except ValueError as exc:
         raise NewsExclusionError(f"Invalid numeric field {field_name}: {value!r}") from exc
+
+
+def _optional_text(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
 
 
 def _format_number(value: float) -> str:

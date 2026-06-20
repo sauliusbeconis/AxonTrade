@@ -72,7 +72,23 @@ def main() -> int:
 def _read_csv_with_header(path: Path) -> tuple[list[dict[str, str]], list[str]]:
     with path.open(newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
-        return list(reader), list(reader.fieldnames or [])
+        header = list(reader.fieldnames or [])
+        rows: list[dict[str, str]] = []
+        for row in reader:
+            line_number = reader.line_num
+            if None in row:
+                raise NewsExclusionError(
+                    f"{path}: CSV row {line_number} has more columns than the header; "
+                    "quote fields containing commas",
+                )
+            missing_fields = [field for field in header if row.get(field) is None]
+            if missing_fields:
+                raise NewsExclusionError(
+                    f"{path}: CSV row {line_number} has fewer columns than the header; "
+                    "keep each event on one physical line",
+                )
+            rows.append({field: row.get(field, "") for field in header})
+        return rows, header
 
 
 def _write_csv(path: Path, header: list[str], rows: list[dict[str, object]]) -> None:

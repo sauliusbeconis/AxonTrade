@@ -161,6 +161,9 @@ Example event row format:
 1,us-cpi-2026-06,2026-06-10 08:30:00,CPI,USD,high,15,30,official calendar,New York time
 ```
 
+Keep each event on one physical CSV line. Wrapped URLs or notes create malformed
+rows and the annotation script will reject them before parsing timestamps.
+
 After the event calendar exists, annotate diagnostics with:
 
 ```bash
@@ -193,6 +196,20 @@ Then run quality filters with news-blackout rows excluded:
 The `--exclude-news-blackout` flag intentionally fails unless the input rows
 already include `in_news_blackout`, which prevents accidental unannotated tests
 from being treated as news-filtered.
+
+Large-sample event calendar check:
+
+- Input events: BLS Employment Situation `2026-06-05 08:30`, BLS CPI
+  `2026-06-10 08:30`, BLS PPI `2026-06-11 08:30`, Census Retail Sales
+  `2026-06-17 08:30`, FOMC statement `2026-06-17 14:00`, all New York time.
+- Annotation output:
+  `reports/sierra-signal-log-quality-diagnostics-news-annotated-large-sample.csv`
+- Result: `23` signal rows annotated, `0` rows inside the configured news
+  blackout windows.
+- News-excluded walk-forward output:
+  `reports/sierra-signal-log-quality-filter-news-excluded-walk-forward-large-sample.csv`
+- Result: unchanged from the unfiltered quality-filter walk-forward run:
+  `6` holdout windows, `4` holdout trades, `-1064.00` net USD.
 
 ## Run Quality Filter Sweep
 
