@@ -95,6 +95,25 @@ This measures maximum favorable excursion, maximum adverse excursion, first
 target touch, and first stop touch from the first bar after entry through the
 evaluated exit.
 
+## Run Target R Sweep
+
+Manual help needed: **No after the fresh export and signal log exist**.
+
+```bash
+.venv/bin/python scripts/run_signal_target_r_sweep.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_replay_sample.csv \
+  reports/sierra-signal-log-target-r-sweep-replay-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --target-r-multiples 0.5,1,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --direction-filters all,long,short
+```
+
+This keeps the logged entry and stop fixed, replaces only the target price with
+an R-multiple of the original risk, and re-evaluates conservative outcomes.
+
 ## Output
 
 Outcome rows are written to:
@@ -130,3 +149,27 @@ Current diagnostic split:
 Notable failure mode: the `2026-06-17 10:42:28` long moved `7.5` points
 favorable, but the target was `9.25` points away, then price reached the stop.
 That makes target placement a concrete next research variable.
+
+Target R sweep:
+
+`reports/sierra-signal-log-target-r-sweep-replay-sample.csv`
+
+Current aggregate result for `direction=all`:
+
+| Target R | Trades | Target Hits | Losses | Other | Net USD |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| `0.5` | `2` | `1` | `0` | `1` | `-32` |
+| `1` | `2` | `1` | `0` | `1` | `18` |
+| `1.5` | `2` | `1` | `0` | `1` | `68` |
+| `2` | `2` | `1` | `0` | `1` | `118` |
+| `2.5` | `2` | `1` | `0` | `1` | `168` |
+| `3` | `2` | `1` | `0` | `1` | `218` |
+| `3.5` | `2` | `1` | `0` | `1` | `268` |
+| `4` | `2` | `0` | `1` | `1` | `-182` |
+| `4.5` | `2` | `0` | `1` | `1` | `-182` |
+| `5` | `2` | `0` | `1` | `1` | `-182` |
+
+Interpretation: on this tiny two-candidate replay sample, `3.5R` is the best
+tested target because the June 17 trade reached about `3.75R` favorable before
+stopping. This is not validation; it is a concrete hypothesis for a larger
+replay/export sample.
