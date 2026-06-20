@@ -166,6 +166,38 @@ Manual help needed: **No after the context diagnostics CSV exists**.
 This chronologically selects the best context filter on each training window,
 then applies that exact filter to the next holdout dates.
 
+## Run Health Gate Sweep
+
+Manual help needed: **No after the quality diagnostics CSV exists**.
+
+```bash
+.venv/bin/python scripts/run_signal_health_gate_sweep.py \
+  reports/sierra-signal-log-quality-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-health-gate-sweep-large-sample.csv
+```
+
+This replays candidate outcomes chronologically and tests bot-control gates
+based only on closed accepted trades: maximum daily losses, daily realized loss
+limit, consecutive-loss pauses, and accepted-equity drawdown pauses. Skipped
+trades do not update health state, matching what a live bot would know.
+
+## Run Health Gate Walk-Forward
+
+Manual help needed: **No after the quality diagnostics CSV exists**.
+
+```bash
+.venv/bin/python scripts/run_signal_health_gate_walk_forward_sweep.py \
+  reports/sierra-signal-log-quality-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-health-gate-walk-forward-large-sample.csv \
+  --train-date-count 8 \
+  --holdout-date-count 2 \
+  --minimum-train-accepted-trades 4
+```
+
+This selects health-gate parameters on each training window, then applies the
+selected gate to the next holdout dates with health state warmed by the
+training window.
+
 ## Run News Exclusion Annotation
 
 Manual help needed: **Yes before running this workflow**, because the scheduled
@@ -462,6 +494,14 @@ Context filter walk-forward:
 
 `reports/sierra-signal-log-context-filter-walk-forward-large-sample.csv`
 
+Health gate sweep:
+
+`reports/sierra-signal-log-health-gate-sweep-large-sample.csv`
+
+Health gate walk-forward:
+
+`reports/sierra-signal-log-health-gate-walk-forward-large-sample.csv`
+
 Quality filter sweep:
 
 `reports/sierra-signal-log-quality-filter-sweep-large-sample.csv`
@@ -615,6 +655,33 @@ the quality-filter optimizer. The selected train filters usually kept
 simple "only trade above-average activity" rule. Static context filters are not
 enough; the next bot-control candidate is a strategy health/disable gate that
 stops trading after the setup family enters a losing regime.
+
+Health gate aggregate sweep:
+
+| Max Daily Losses | Daily Stop USD | Max Consecutive Losses | Consecutive Pause Dates | Max Drawdown USD | Drawdown Pause Dates | Accepted | Skipped | Target Hits | Losses | Net USD | Skipped Net USD |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `1` | `150` | `2` | `2` | `500` | `3` | `12` | `11` | `6` | `6` | `833.00` | `-1713.50` |
+
+Rolling health gate walk-forward validation:
+
+- train date count: `8`
+- holdout date count: `2`
+- minimum selected train accepted trades: `4`
+- holdout windows: `6`
+- selected holdout accepted trades: `7`
+- selected holdout skipped trades: `12`
+- selected holdout target hits: `0`
+- selected holdout losses: `7`
+- selected holdout net USD: `-1237.00`
+- skipped holdout net USD: `-2654.50`
+
+Interpretation: health gates are useful damage controls, not a validated edge.
+They skipped only losing holdout candidates in this sample, which is promising
+for risk containment, but the trades still accepted in holdout were all losers.
+Do not enable live automation from this result. The next research question is
+whether the health gate should be combined with the quality/context filters, or
+whether the setup family needs a stricter entry definition before any bot
+execution work.
 
 Scheduled-news exclusion status:
 

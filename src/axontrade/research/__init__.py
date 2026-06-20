@@ -46,6 +46,13 @@ from axontrade.research.signal_dynamic_exit_experiments import (
     run_signal_breakeven_stop_sweep,
     run_signal_breakeven_stop_walk_forward_sweep,
 )
+from axontrade.research.signal_health_gate_experiments import (
+    SIGNAL_HEALTH_GATE_SWEEP_HEADER,
+    SIGNAL_HEALTH_GATE_WALK_FORWARD_HEADER,
+    SignalHealthGateExperimentError,
+    run_signal_health_gate_sweep,
+    run_signal_health_gate_walk_forward_sweep,
+)
 from axontrade.research.signal_quality_diagnostics import (
     SIGNAL_QUALITY_DIAGNOSTIC_HEADER,
     SignalQualityDiagnosticError,
@@ -138,6 +145,8 @@ __all__ = [
     "SIGNAL_CONTEXT_FILTER_WALK_FORWARD_HEADER",
     "SIGNAL_BREAKEVEN_STOP_SWEEP_HEADER",
     "SIGNAL_BREAKEVEN_STOP_WALK_FORWARD_HEADER",
+    "SIGNAL_HEALTH_GATE_SWEEP_HEADER",
+    "SIGNAL_HEALTH_GATE_WALK_FORWARD_HEADER",
     "SIGNAL_TARGET_R_SWEEP_HEADER",
     "SIGNAL_TARGET_R_WALK_FORWARD_SWEEP_HEADER",
     "SIGNAL_QUALITY_DIAGNOSTIC_HEADER",
@@ -152,6 +161,7 @@ __all__ = [
     "SignalContextDiagnosticError",
     "SignalContextFilterExperimentError",
     "SignalDynamicExitExperimentError",
+    "SignalHealthGateExperimentError",
     "SignalQualityDiagnosticError",
     "SignalQualityFilterExperimentError",
     "SignalTargetExperimentError",
@@ -192,6 +202,8 @@ __all__ = [
     "run_signal_context_filter_walk_forward_sweep",
     "run_signal_breakeven_stop_sweep",
     "run_signal_breakeven_stop_walk_forward_sweep",
+    "run_signal_health_gate_sweep",
+    "run_signal_health_gate_walk_forward_sweep",
     "run_signal_target_r_sweep",
     "run_signal_target_r_walk_forward_sweep",
     "run_signal_quality_diagnostics",
