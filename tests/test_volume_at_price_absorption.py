@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import pytest
+
 from axontrade.research import (
     VAP_ABSORPTION_DIAGNOSTIC_HEADER,
     VAP_ABSORPTION_THRESHOLD_SWEEP_HEADER,
+    VolumeAtPriceAbsorptionError,
     run_vap_absorption_diagnostics,
     run_vap_absorption_threshold_sweep,
     run_vap_absorption_threshold_train_holdout_sweep,
+    run_vap_absorption_threshold_walk_forward_sweep,
     summarize_vap_absorption_diagnostics,
 )
 
@@ -153,6 +157,63 @@ def test_runs_vap_absorption_threshold_train_holdout_sweep() -> None:
     assert selected_train["net_usd"] == "100"
     assert selected_holdout["evaluated_trades"] == 1
     assert selected_holdout["net_usd"] == "-25"
+
+
+def test_runs_vap_absorption_threshold_walk_forward_sweep() -> None:
+    rows = [
+        _diagnostic_row(0, trade_date="2026-06-10", direction="short", zone_bid=4, zone_ask=12, net_usd=50),
+        _diagnostic_row(1, trade_date="2026-06-11", direction="long", zone_bid=12, zone_ask=4, net_usd=50),
+        _diagnostic_row(2, trade_date="2026-06-12", direction="short", zone_bid=1, zone_ask=3, net_usd=-25),
+    ]
+
+    split_rows = run_vap_absorption_threshold_walk_forward_sweep(
+        rows,
+        train_date_count=1,
+        holdout_date_count=1,
+        minimum_zone_aggression_ratios=[1.25],
+        minimum_zone_volumes=[0, 20],
+        direction_filters=["all"],
+    )
+
+    assert len(split_rows) == 4
+    assert [row["sample"] for row in split_rows] == ["train", "holdout", "train", "holdout"]
+    assert split_rows[0]["trade_dates"] == "2026-06-10"
+    assert split_rows[1]["trade_dates"] == "2026-06-11"
+    assert split_rows[2]["trade_dates"] == "2026-06-11"
+    assert split_rows[3]["trade_dates"] == "2026-06-12"
+    assert all(row["selected_on_train"] == "true" for row in split_rows)
+
+
+def test_rejects_invalid_vap_absorption_walk_forward_window() -> None:
+    rows = [
+        _diagnostic_row(0, trade_date="2026-06-10", direction="short", zone_bid=4, zone_ask=12, net_usd=50),
+    ]
+
+    with pytest.raises(VolumeAtPriceAbsorptionError, match="must not exceed"):
+        run_vap_absorption_threshold_walk_forward_sweep(
+            rows,
+            train_date_count=1,
+            holdout_date_count=1,
+            minimum_zone_aggression_ratios=[1.25],
+            minimum_zone_volumes=[0],
+        )
+
+
+def test_rejects_vap_walk_forward_window_with_too_few_train_trades() -> None:
+    rows = [
+        _diagnostic_row(0, trade_date="2026-06-10", direction="short", zone_bid=4, zone_ask=12, net_usd=50),
+        _diagnostic_row(1, trade_date="2026-06-11", direction="short", zone_bid=4, zone_ask=12, net_usd=50),
+    ]
+
+    with pytest.raises(VolumeAtPriceAbsorptionError, match="minimum_train_trades=2"):
+        run_vap_absorption_threshold_walk_forward_sweep(
+            rows,
+            train_date_count=1,
+            holdout_date_count=1,
+            minimum_zone_aggression_ratios=[1.25],
+            minimum_zone_volumes=[0],
+            minimum_train_trades=2,
+        )
 
 
 def _diagnostic_row(

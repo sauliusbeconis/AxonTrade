@@ -40,7 +40,7 @@ Every research source should be documented with a link and retrieval date.
 - Build indicator-only Sierra volume-at-price CSV logger. Done.
 - Build first level-specific absorption evaluator from volume-at-price exports. Done.
 - Run parameter sweeps over level-specific absorption thresholds. Done.
-- Run rolling walk-forward sweeps over level-specific absorption thresholds.
+- Run rolling walk-forward sweeps over level-specific absorption thresholds. Done.
 - Build the first conservative stop/target outcome evaluator. Done.
 - Add an indicator-only ACSIL signal overlay and CSV logger.
 

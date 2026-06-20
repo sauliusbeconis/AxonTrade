@@ -78,6 +78,9 @@ The first diagnostic pass over swept price levels is run with
 Chronological VAP threshold sweeps are run with
 `scripts/run_vap_absorption_threshold_sweep.py` and documented in
 [docs/liquidity-sweep-vap-threshold-sweep.md](docs/liquidity-sweep-vap-threshold-sweep.md).
+Rolling walk-forward validation for those VAP thresholds is run with
+`scripts/run_vap_absorption_threshold_walk_forward_sweep.py` and documented in
+[docs/liquidity-sweep-vap-threshold-walk-forward.md](docs/liquidity-sweep-vap-threshold-walk-forward.md).
 
 ## Pop!_OS And Wine Notes
 

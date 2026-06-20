@@ -66,6 +66,7 @@ from axontrade.research.volume_at_price_absorption import (
     run_vap_absorption_diagnostics,
     run_vap_absorption_threshold_sweep,
     run_vap_absorption_threshold_train_holdout_sweep,
+    run_vap_absorption_threshold_walk_forward_sweep,
     summarize_vap_absorption_diagnostics,
 )
 
@@ -113,6 +114,7 @@ __all__ = [
     "run_vap_absorption_diagnostics",
     "run_vap_absorption_threshold_sweep",
     "run_vap_absorption_threshold_train_holdout_sweep",
+    "run_vap_absorption_threshold_walk_forward_sweep",
     "summarize_vap_absorption_diagnostics",
     "validate_signal_log_row",
     "validate_signal_log_rows",

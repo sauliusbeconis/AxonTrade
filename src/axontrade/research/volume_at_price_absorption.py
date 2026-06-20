@@ -288,6 +288,86 @@ def run_vap_absorption_threshold_train_holdout_sweep(
     ]
 
 
+def run_vap_absorption_threshold_walk_forward_sweep(
+    diagnostic_rows: Iterable[dict[str, Any]],
+    *,
+    train_date_count: int,
+    holdout_date_count: int,
+    minimum_zone_aggression_ratios: Iterable[float],
+    minimum_zone_volumes: Iterable[float],
+    direction_filters: Iterable[str] = ("all",),
+    minimum_train_trades: int = 1,
+) -> list[dict[str, Any]]:
+    """Run rolling chronological VAP threshold windows by trade date."""
+
+    rows = list(diagnostic_rows)
+    dates = _sorted_trade_dates(rows)
+    if train_date_count <= 0:
+        raise VolumeAtPriceAbsorptionError("train_date_count must be positive")
+    if holdout_date_count <= 0:
+        raise VolumeAtPriceAbsorptionError("holdout_date_count must be positive")
+    if minimum_train_trades <= 0:
+        raise VolumeAtPriceAbsorptionError("minimum_train_trades must be positive")
+    if train_date_count + holdout_date_count > len(dates):
+        raise VolumeAtPriceAbsorptionError(
+            "train_date_count plus holdout_date_count must not exceed the number of trade dates",
+        )
+
+    sweep_kwargs = {
+        "minimum_zone_aggression_ratios": minimum_zone_aggression_ratios,
+        "minimum_zone_volumes": minimum_zone_volumes,
+        "direction_filters": direction_filters,
+    }
+
+    split_rows: list[dict[str, Any]] = []
+    max_start = len(dates) - train_date_count - holdout_date_count + 1
+    for window_index in range(max_start):
+        train_dates = dates[window_index:window_index + train_date_count]
+        holdout_dates = dates[
+            window_index + train_date_count:
+            window_index + train_date_count + holdout_date_count
+        ]
+        train_rows = _filter_rows_by_dates(rows, train_dates)
+        holdout_rows = _filter_rows_by_dates(rows, holdout_dates)
+
+        train_sweep = run_vap_absorption_threshold_sweep(train_rows, **sweep_kwargs)
+        holdout_sweep = run_vap_absorption_threshold_sweep(holdout_rows, **sweep_kwargs)
+        best_train = _select_best_threshold_row(
+            train_sweep,
+            minimum_train_trades=minimum_train_trades,
+        )
+        matching_holdout = _find_threshold_experiment_row(
+            holdout_sweep,
+            str(best_train["experiment_id"]),
+        )
+        split_id = (
+            f"walk_forward_window={window_index + 1}:"
+            f"train_dates={len(train_dates)}:"
+            f"holdout_dates={len(holdout_dates)}"
+        )
+
+        split_rows.append(
+            _tag_threshold_split_row(
+                best_train,
+                sample="train",
+                selected_experiment_id=str(best_train["experiment_id"]),
+                split_id=split_id,
+                trade_dates=train_dates,
+            ),
+        )
+        split_rows.append(
+            _tag_threshold_split_row(
+                matching_holdout,
+                sample="holdout",
+                selected_experiment_id=str(best_train["experiment_id"]),
+                split_id=split_id,
+                trade_dates=holdout_dates,
+            ),
+        )
+
+    return split_rows
+
+
 def summarize_vap_absorption_diagnostics(rows: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     """Summarize VAP diagnostics by level_absorption_pass bucket."""
 
@@ -444,6 +524,13 @@ def _select_best_threshold_row(
             f"No train experiments met minimum_train_trades={minimum_train_trades}",
         )
     return max(eligible_rows, key=lambda row: float(row["net_usd"]))
+
+
+def _find_threshold_experiment_row(rows: list[dict[str, Any]], experiment_id: str) -> dict[str, Any]:
+    for row in rows:
+        if str(row["experiment_id"]) == experiment_id:
+            return row
+    raise VolumeAtPriceAbsorptionError(f"Missing matching holdout experiment row: {experiment_id}")
 
 
 def _index_vap_rows(rows: Iterable[dict[str, Any]]) -> dict[tuple[str, int], list[VolumeAtPriceLevel]]:

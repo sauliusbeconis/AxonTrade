@@ -63,6 +63,11 @@ sample still shows that high swept-zone volume is interesting, especially on
 some later short trades, but the chronological train-selected rule did not
 survive holdout.
 
+The rolling walk-forward check in
+[liquidity-sweep-vap-threshold-walk-forward.md](liquidity-sweep-vap-threshold-walk-forward.md)
+also failed on the current sample, with `6` selected holdout trades and
+`-233.50` USD net.
+
 ## Interpretation Rules
 
 - The selected train row is the highest train `net_usd` among rows with at
