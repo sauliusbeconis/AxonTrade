@@ -85,6 +85,8 @@ The first Sierra-side indicator-only signal overlay and CSV logger is documented
 in [docs/sierra-liquidity-sweep-signal-overlay.md](docs/sierra-liquidity-sweep-signal-overlay.md).
 Signal-log validation and replay summaries are documented in
 [docs/sierra-signal-log-report.md](docs/sierra-signal-log-report.md).
+Candidate outcome evaluation for those Sierra overlay logs is documented in
+[docs/sierra-signal-log-outcomes.md](docs/sierra-signal-log-outcomes.md).
 
 ## Pop!_OS And Wine Notes
 

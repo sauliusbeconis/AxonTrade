@@ -8,6 +8,7 @@ from axontrade.research import (
     evaluate_trade_outcomes,
     summarize_trade_outcomes_by_day,
     summarize_trade_outcomes,
+    validate_signal_entries_against_bars,
 )
 
 
@@ -86,6 +87,44 @@ def test_evaluates_short_stop_hit() -> None:
     assert outcomes[0]["gross_points"] == "-2"
     assert outcomes[0]["net_usd"] == "-128.5"
     assert outcomes[0]["r_multiple"] == "-1"
+
+
+def test_evaluates_timestamp_matched_overlay_signal() -> None:
+    bars = [
+        _bar(10, timestamp="2026-06-19 10:00:00", high=102, low=100, close=101),
+        _bar(11, timestamp="2026-06-19 10:01:00", high=105, low=101, close=104),
+    ]
+    signals = [_signal(1000, direction="long", entry=101, stop=99, target=105)]
+    signals[0]["bar_start_time"] = "2026-06-19 10:00:00"
+
+    outcomes = evaluate_trade_outcomes(
+        bars,
+        signals,
+        entry_match_mode="timestamp",
+    )
+
+    assert outcomes[0]["exit_reason"] == "target_hit"
+    assert outcomes[0]["exit_bar_index"] == 11
+    assert outcomes[0]["holding_bars"] == 1
+    assert outcomes[0]["notes"].endswith("entry_match_mode=timestamp")
+
+
+def test_auto_entry_match_mode_falls_back_to_timestamp() -> None:
+    bars = [
+        _bar(10, timestamp="2026-06-19 10:00:00", high=102, low=100, close=101),
+        _bar(11, timestamp="2026-06-19 10:01:00", high=105, low=101, close=104),
+    ]
+    signals = [_signal(1000, direction="long", entry=101, stop=99, target=105)]
+    signals[0]["bar_start_time"] = "2026-06-19 10:00:00"
+
+    outcomes = evaluate_trade_outcomes(
+        bars,
+        signals,
+        entry_match_mode="auto",
+    )
+
+    assert outcomes[0]["exit_reason"] == "target_hit"
+    assert outcomes[0]["notes"].endswith("entry_match_mode=timestamp")
 
 
 def test_same_bar_stop_and_target_uses_conservative_stop_first() -> None:
@@ -184,3 +223,49 @@ def test_rejects_negative_slippage_override() -> None:
             instrument_root="es",
             slippage_ticks_per_side=-1,
         )
+
+
+def test_rejects_invalid_entry_match_mode() -> None:
+    with pytest.raises(TradeOutcomeError, match="entry_match_mode"):
+        evaluate_trade_outcomes(
+            [],
+            [],
+            entry_match_mode="price",
+        )
+
+
+def test_validates_signal_entries_against_matching_exported_bars() -> None:
+    bars = [
+        _bar(10, timestamp="2026-06-19 10:00:00", high=102, low=100, close=101),
+        _bar(11, timestamp="2026-06-19 10:01:00", high=105, low=101, close=104),
+    ]
+    signals = [_signal(1000, direction="long", entry=101, stop=99, target=105)]
+    signals[0]["bar_start_time"] = "2026-06-19 10:00:00"
+
+    diagnostics = validate_signal_entries_against_bars(bars, signals)
+
+    assert diagnostics == [
+        {
+            "signal_id": "strategy_ESU26-CME_1000",
+            "symbol": "ESU26-CME",
+            "entry_time": "2026-06-19 10:00:00",
+            "entry_price": "101",
+            "nearest_bar_index": 10,
+            "nearest_bar_time": "2026-06-19 10:00:00",
+            "nearest_bar_close": "101",
+            "time_difference_seconds": "0",
+            "price_difference_points": "0",
+        },
+    ]
+
+
+def test_rejects_signal_entries_against_stale_exported_bars() -> None:
+    bars = [
+        _bar(10, timestamp="2026-06-19 10:00:00", high=102, low=100, close=115),
+        _bar(11, timestamp="2026-06-19 10:01:00", high=105, low=101, close=104),
+    ]
+    signals = [_signal(1000, direction="long", entry=101, stop=99, target=105)]
+    signals[0]["bar_start_time"] = "2026-06-19 10:00:00"
+
+    with pytest.raises(TradeOutcomeError, match="Export fresh bars"):
+        validate_signal_entries_against_bars(bars, signals)

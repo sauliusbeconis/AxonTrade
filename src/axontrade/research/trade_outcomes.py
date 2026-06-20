@@ -63,6 +63,9 @@ _TIMESTAMP_FORMATS = (
     "%Y-%m-%d %H:%M:%S",
     "%Y-%m-%d %H:%M",
 )
+_ENTRY_VALIDATION_RECOVERY = (
+    "Export fresh bars from the same Sierra chart/timezone as the signal log."
+)
 
 
 class TradeOutcomeError(ValueError):
@@ -114,6 +117,7 @@ def evaluate_trade_outcomes(
     slippage_ticks_per_side: int | None = None,
     cost_config: dict[str, Any] | None = None,
     instrument_config: dict[str, Any] | None = None,
+    entry_match_mode: str = "bar_index",
 ) -> list[dict[str, Any]]:
     """Evaluate candidate signals against later same-session bars.
 
@@ -121,6 +125,9 @@ def evaluate_trade_outcomes(
     then scans subsequent bars on the same symbol/date. If a later bar touches
     both stop and target, the stop is chosen first as the conservative outcome.
     """
+
+    if entry_match_mode not in {"bar_index", "timestamp", "auto"}:
+        raise TradeOutcomeError("entry_match_mode must be one of: bar_index, timestamp, auto")
 
     normalized_bars = [_normalize_bar(row) for row in bars]
     candidate_signals = [
@@ -140,9 +147,94 @@ def evaluate_trade_outcomes(
 
     outcomes: list[dict[str, Any]] = []
     for signal in candidate_signals:
-        outcome = _evaluate_one_signal(signal, bars_by_symbol, costs)
+        outcome = _evaluate_one_signal(
+            signal,
+            bars_by_symbol,
+            costs,
+            entry_match_mode=entry_match_mode,
+        )
         outcomes.append(outcome)
     return outcomes
+
+
+def validate_signal_entries_against_bars(
+    bars: Iterable[dict[str, Any]],
+    signal_rows: Iterable[dict[str, Any]],
+    *,
+    maximum_time_difference_seconds: float = 300.0,
+    maximum_price_difference_points: float = 0.25,
+) -> list[dict[str, Any]]:
+    """Validate that candidate signal entries line up with exported bar rows."""
+
+    if maximum_time_difference_seconds < 0:
+        raise TradeOutcomeError("maximum_time_difference_seconds must be nonnegative")
+    if maximum_price_difference_points < 0:
+        raise TradeOutcomeError("maximum_price_difference_points must be nonnegative")
+
+    normalized_bars = [_normalize_bar(row) for row in bars]
+    bars_by_symbol = _bars_by_symbol(normalized_bars)
+    candidate_signals = [
+        row for row in signal_rows if str(row.get("event_type", "")) == "candidate_signal"
+    ]
+    diagnostics: list[dict[str, Any]] = []
+    for signal in candidate_signals:
+        symbol = str(signal.get("symbol", ""))
+        entry_time = str(signal.get("bar_start_time") or signal.get("generated_at") or "")
+        entry_timestamp = _parse_timestamp(entry_time)
+        entry_price = _to_float(signal.get("signal_price"), "signal_price")
+        same_day_bars = [
+            bar
+            for bar in bars_by_symbol.get(symbol, [])
+            if bar.parsed_timestamp.date() == entry_timestamp.date()
+        ]
+        if not same_day_bars:
+            raise TradeOutcomeError(
+                f"No exported bars found for signal_id={signal.get('signal_id')} "
+                f"symbol={symbol} date={entry_timestamp.date().isoformat()}. "
+                f"{_ENTRY_VALIDATION_RECOVERY}",
+            )
+
+        nearest_bar = min(
+            same_day_bars,
+            key=lambda bar: (
+                abs((bar.parsed_timestamp - entry_timestamp).total_seconds()),
+                abs(bar.close - entry_price),
+            ),
+        )
+        time_difference_seconds = abs(
+            (nearest_bar.parsed_timestamp - entry_timestamp).total_seconds(),
+        )
+        price_difference_points = abs(nearest_bar.close - entry_price)
+        if time_difference_seconds > maximum_time_difference_seconds:
+            raise TradeOutcomeError(
+                f"Nearest export bar for signal_id={signal.get('signal_id')} is "
+                f"{time_difference_seconds:.3f}s away, above "
+                f"maximum_time_difference_seconds={maximum_time_difference_seconds}. "
+                f"{_ENTRY_VALIDATION_RECOVERY}",
+            )
+        if price_difference_points > maximum_price_difference_points:
+            raise TradeOutcomeError(
+                f"Nearest export bar for signal_id={signal.get('signal_id')} has "
+                f"close/entry difference {price_difference_points:.8f}, above "
+                f"maximum_price_difference_points={maximum_price_difference_points}. "
+                f"{_ENTRY_VALIDATION_RECOVERY}",
+            )
+
+        diagnostics.append(
+            {
+                "signal_id": signal["signal_id"],
+                "symbol": symbol,
+                "entry_time": entry_time,
+                "entry_price": _format_number(entry_price),
+                "nearest_bar_index": nearest_bar.bar_index,
+                "nearest_bar_time": nearest_bar.timestamp,
+                "nearest_bar_close": _format_number(nearest_bar.close),
+                "time_difference_seconds": _format_number(time_difference_seconds),
+                "price_difference_points": _format_number(price_difference_points),
+            },
+        )
+
+    return diagnostics
 
 
 def summarize_trade_outcomes(outcomes: Iterable[dict[str, Any]]) -> dict[str, Any]:
@@ -223,6 +315,8 @@ def _evaluate_one_signal(
     signal: dict[str, Any],
     bars_by_symbol: dict[str, list[OutcomeBar]],
     costs: OutcomeCosts,
+    *,
+    entry_match_mode: str,
 ) -> dict[str, Any]:
     symbol = str(signal.get("symbol", ""))
     direction = str(signal.get("direction", ""))
@@ -236,12 +330,12 @@ def _evaluate_one_signal(
     stop_price = _to_float(signal.get("stop_price"), "stop_price")
     target_price = _to_float(signal.get("target_price"), "target_price")
 
-    following_bars = [
-        bar
-        for bar in bars_by_symbol.get(symbol, [])
-        if bar.bar_index > entry_bar_index
-        and bar.parsed_timestamp.date() == entry_timestamp.date()
-    ]
+    following_bars, resolved_match_mode = _following_bars_for_signal(
+        bars_by_symbol.get(symbol, []),
+        entry_bar_index=entry_bar_index,
+        entry_timestamp=entry_timestamp,
+        entry_match_mode=entry_match_mode,
+    )
     exit_bar, exit_price, exit_reason = _find_exit(
         following_bars,
         direction=direction,
@@ -251,7 +345,10 @@ def _evaluate_one_signal(
     )
     exit_bar_index = exit_bar.bar_index if exit_bar is not None else entry_bar_index
     exit_time = exit_bar.timestamp if exit_bar is not None else entry_time
-    holding_bars = max(0, exit_bar_index - entry_bar_index)
+    if resolved_match_mode == "timestamp" and exit_bar is not None:
+        holding_bars = following_bars.index(exit_bar) + 1
+    else:
+        holding_bars = max(0, exit_bar_index - entry_bar_index)
 
     gross_points = _gross_points(direction, entry_price, exit_price)
     risk_points = abs(entry_price - stop_price)
@@ -283,8 +380,43 @@ def _evaluate_one_signal(
         "slippage_usd": _format_number(costs.slippage_round_turn_usd),
         "net_usd": _format_number(net_usd),
         "r_multiple": _format_number(r_multiple),
-        "notes": f"{costs.instrument_root} conservative stop/target scan",
+        "notes": (
+            f"{costs.instrument_root} conservative stop/target scan; "
+            f"entry_match_mode={resolved_match_mode}"
+        ),
     }
+
+
+def _following_bars_for_signal(
+    bars: list[OutcomeBar],
+    *,
+    entry_bar_index: int,
+    entry_timestamp: datetime,
+    entry_match_mode: str,
+) -> tuple[list[OutcomeBar], str]:
+    same_day_bars = [
+        bar
+        for bar in bars
+        if bar.parsed_timestamp.date() == entry_timestamp.date()
+    ]
+    if entry_match_mode == "bar_index":
+        return (
+            [bar for bar in same_day_bars if bar.bar_index > entry_bar_index],
+            "bar_index",
+        )
+    if entry_match_mode == "timestamp":
+        return (
+            [bar for bar in same_day_bars if bar.parsed_timestamp > entry_timestamp],
+            "timestamp",
+        )
+
+    by_bar_index = [bar for bar in same_day_bars if bar.bar_index > entry_bar_index]
+    if by_bar_index:
+        return by_bar_index, "bar_index"
+    return (
+        [bar for bar in same_day_bars if bar.parsed_timestamp > entry_timestamp],
+        "timestamp",
+    )
 
 
 def _find_exit(

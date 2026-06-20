@@ -43,6 +43,7 @@ Every research source should be documented with a link and retrieval date.
 - Run rolling walk-forward sweeps over level-specific absorption thresholds. Done.
 - Build the first conservative stop/target outcome evaluator. Done.
 - Add an indicator-only ACSIL signal overlay and CSV logger. Done.
+- Add Sierra overlay signal-log outcome workflow with stale-export preflight. Done.
 
 ## Reporting
 
@@ -51,3 +52,4 @@ Every research source should be documented with a link and retrieval date.
 - Define parameter experiment logging format. Done.
 - Define daily outcome and drawdown breakdown. Done.
 - Build Sierra overlay signal-log validation/report workflow. Done.
+- Document Sierra overlay signal-log outcome workflow. Done.

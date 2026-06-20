@@ -71,3 +71,7 @@ Candidate rows:
 
 Interpretation: the Sierra overlay is logging valid signal-schema rows. This is
 not strategy validation; candidate rows still need outcome evaluation.
+
+Next workflow:
+
+[docs/sierra-signal-log-outcomes.md](sierra-signal-log-outcomes.md)

@@ -59,6 +59,7 @@ from axontrade.research.trade_outcomes import (
     load_signal_rows_csv,
     summarize_trade_outcomes_by_day,
     summarize_trade_outcomes,
+    validate_signal_entries_against_bars,
 )
 from axontrade.research.volume_at_price_absorption import (
     VAP_ABSORPTION_DIAGNOSTIC_HEADER,
@@ -107,6 +108,7 @@ __all__ = [
     "render_price_only_acceptance_report",
     "summarize_trade_outcomes_by_day",
     "summarize_trade_outcomes",
+    "validate_signal_entries_against_bars",
     "run_price_only_parameter_sweep",
     "run_absorption_reward_risk_sweep",
     "run_absorption_reward_risk_train_holdout_sweep",

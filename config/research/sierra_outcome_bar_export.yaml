@@ -1,0 +1,62 @@
+schema_version: 1
+profile_id: sierra_outcome_bar_export_v1
+description: >
+  Minimal Sierra Chart bar export contract for evaluating already logged
+  indicator-overlay signals against later stop/target outcomes.
+
+normalized_fields:
+  - timestamp
+  - symbol
+  - chart_number
+  - bar_index
+  - open
+  - high
+  - low
+  - close
+  - session_phase
+
+defaults:
+  chart_number: 1
+  session_phase: rth
+
+required_cli_values:
+  - symbol
+
+column_aliases:
+  timestamp:
+    - Date Time
+    - DateTime
+    - Date-Time
+    - Timestamp
+    - Date
+  symbol:
+    - Symbol
+  chart_number:
+    - Chart Number
+    - ChartNumber
+  bar_index:
+    - Bar Index
+    - BarIndex
+    - Index
+  open:
+    - Open
+    - O
+  high:
+    - High
+    - H
+  low:
+    - Low
+    - L
+  close:
+    - Last
+    - Close
+    - C
+  session_phase:
+    - Session Phase
+    - Session
+
+notes:
+  - This profile intentionally does not require VWAP, bid volume, ask volume,
+    delta, or opening-range columns.
+  - Use it only for outcome evaluation of signal rows already emitted by the
+    Sierra overlay.
