@@ -77,6 +77,24 @@ The runner first checks candidate entries against the nearest exported bar. If
 it says `Export fresh bars from the same Sierra chart/timezone as the signal
 log`, the export is stale, from the wrong chart, or from a different timezone.
 
+## Run Path Diagnostics
+
+Manual help needed: **No after the fresh export and outcome CSV exist**.
+
+```bash
+.venv/bin/python scripts/run_trade_path_diagnostics.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY.txt \
+  data/processed/AxonTrade_ES_overlay_signal_outcomes.csv \
+  reports/sierra-signal-log-path-diagnostics-replay-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth
+```
+
+This measures maximum favorable excursion, maximum adverse excursion, first
+target touch, and first stop touch from the first bar after entry through the
+evaluated exit.
+
 ## Output
 
 Outcome rows are written to:
@@ -99,3 +117,16 @@ Current result from the matched New York-time export:
 - stop/ambiguous losses: `1`
 - other exits: `1`
 - net USD: `-182.00`
+
+Path diagnostics:
+
+`reports/sierra-signal-log-path-diagnostics-replay-sample.csv`
+
+Current diagnostic split:
+
+- `neither_stop_nor_target_reached`: `1`
+- `stop_reached_target_not_reached`: `1`
+
+Notable failure mode: the `2026-06-17 10:42:28` long moved `7.5` points
+favorable, but the target was `9.25` points away, then price reached the stop.
+That makes target placement a concrete next research variable.

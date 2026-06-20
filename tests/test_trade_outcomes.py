@@ -4,7 +4,9 @@ import pytest
 
 from axontrade.research import (
     TRADE_OUTCOME_DAILY_CSV_HEADER,
+    TRADE_PATH_DIAGNOSTIC_CSV_HEADER,
     TradeOutcomeError,
+    diagnose_trade_paths,
     evaluate_trade_outcomes,
     summarize_trade_outcomes_by_day,
     summarize_trade_outcomes,
@@ -207,6 +209,73 @@ def test_summarizes_trade_outcomes_by_day_with_drawdown() -> None:
     assert daily_rows[1]["net_usd"] == "-78.5"
     assert daily_rows[1]["cumulative_net_usd"] == "-35.5"
     assert daily_rows[1]["drawdown_usd"] == "-78.5"
+
+
+def test_diagnoses_trade_path_target_reached() -> None:
+    bars = [
+        _bar(0, timestamp="2026-06-19 10:00:00", high=101, low=100, close=100),
+        _bar(1, timestamp="2026-06-19 10:01:00", high=103, low=99, close=102),
+        _bar(2, timestamp="2026-06-19 10:02:00", high=106, low=102, close=105),
+    ]
+    outcomes = [
+        {
+            "outcome_id": "outcome-1",
+            "signal_id": "signal-1",
+            "symbol": "ESU26-CME",
+            "direction": "long",
+            "entry_bar_index": "0",
+            "exit_bar_index": "2",
+            "entry_time": "2026-06-19 10:00:00",
+            "exit_time": "2026-06-19 10:02:00",
+            "entry_price": "100",
+            "stop_price": "98",
+            "target_price": "105",
+            "exit_reason": "target_hit",
+        },
+    ]
+
+    diagnostics = diagnose_trade_paths(bars, outcomes)
+
+    assert list(diagnostics[0].keys()) == TRADE_PATH_DIAGNOSTIC_CSV_HEADER
+    assert diagnostics[0]["diagnostic_label"] == "target_reached_stop_not_reached"
+    assert diagnostics[0]["scanned_bars"] == 2
+    assert diagnostics[0]["max_favorable_points"] == "6"
+    assert diagnostics[0]["max_favorable_r"] == "3"
+    assert diagnostics[0]["max_adverse_points"] == "1"
+    assert diagnostics[0]["first_target_bar_index"] == 2
+    assert diagnostics[0]["first_stop_bar_index"] == ""
+
+
+def test_diagnoses_trade_path_stop_before_target() -> None:
+    bars = [
+        _bar(0, timestamp="2026-06-19 10:00:00", high=100, low=99, close=100),
+        _bar(1, timestamp="2026-06-19 10:01:00", high=102, low=97.75, close=99),
+        _bar(2, timestamp="2026-06-19 10:02:00", high=106, low=99, close=105),
+    ]
+    outcomes = [
+        {
+            "outcome_id": "outcome-1",
+            "signal_id": "signal-1",
+            "symbol": "ESU26-CME",
+            "direction": "long",
+            "entry_bar_index": "0",
+            "exit_bar_index": "2",
+            "entry_time": "2026-06-19 10:00:00",
+            "exit_time": "2026-06-19 10:02:00",
+            "entry_price": "100",
+            "stop_price": "98",
+            "target_price": "105",
+            "exit_reason": "ambiguous_stop_first",
+        },
+    ]
+
+    diagnostics = diagnose_trade_paths(bars, outcomes)
+
+    assert diagnostics[0]["diagnostic_label"] == "stop_before_target"
+    assert diagnostics[0]["first_stop_bar_index"] == 1
+    assert diagnostics[0]["first_target_bar_index"] == 2
+    assert diagnostics[0]["max_adverse_points"] == "2.25"
+    assert diagnostics[0]["max_adverse_r"] == "1.125"
 
 
 def test_rejects_negative_slippage_override() -> None:

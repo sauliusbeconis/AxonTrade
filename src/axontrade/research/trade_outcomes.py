@@ -58,6 +58,37 @@ TRADE_OUTCOME_DAILY_CSV_HEADER = [
     "drawdown_usd",
     "notes",
 ]
+TRADE_PATH_DIAGNOSTIC_CSV_HEADER = [
+    "schema_version",
+    "diagnostic_id",
+    "outcome_id",
+    "signal_id",
+    "symbol",
+    "direction",
+    "entry_time",
+    "exit_time",
+    "entry_bar_index",
+    "exit_bar_index",
+    "entry_price",
+    "stop_price",
+    "target_price",
+    "exit_reason",
+    "scanned_bars",
+    "risk_points",
+    "target_distance_points",
+    "max_favorable_points",
+    "max_favorable_r",
+    "max_adverse_points",
+    "max_adverse_r",
+    "first_target_bar_index",
+    "first_target_time",
+    "first_stop_bar_index",
+    "first_stop_time",
+    "bars_to_max_favorable",
+    "bars_to_max_adverse",
+    "diagnostic_label",
+    "notes",
+]
 _TIMESTAMP_FORMATS = (
     "%Y-%m-%d %H:%M:%S.%f",
     "%Y-%m-%d %H:%M:%S",
@@ -237,6 +268,20 @@ def validate_signal_entries_against_bars(
     return diagnostics
 
 
+def diagnose_trade_paths(
+    bars: Iterable[dict[str, Any]],
+    outcome_rows: Iterable[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Measure MFE/MAE and first stop/target touch for evaluated outcomes."""
+
+    normalized_bars = [_normalize_bar(row) for row in bars]
+    bars_by_symbol = _bars_by_symbol(normalized_bars)
+    return [
+        _diagnose_one_trade_path(outcome, bars_by_symbol)
+        for outcome in outcome_rows
+    ]
+
+
 def summarize_trade_outcomes(outcomes: Iterable[dict[str, Any]]) -> dict[str, Any]:
     """Summarize a list of trade outcome rows."""
 
@@ -309,6 +354,204 @@ def summarize_trade_outcomes_by_day(
         )
 
     return daily_rows
+
+
+def _diagnose_one_trade_path(
+    outcome: dict[str, Any],
+    bars_by_symbol: dict[str, list[OutcomeBar]],
+) -> dict[str, Any]:
+    symbol = str(outcome["symbol"])
+    direction = str(outcome["direction"])
+    if direction not in {"long", "short"}:
+        raise TradeOutcomeError(f"Unsupported outcome direction: {direction!r}")
+
+    entry_bar_index = _to_int(outcome["entry_bar_index"], "entry_bar_index")
+    exit_bar_index = _to_int(outcome["exit_bar_index"], "exit_bar_index")
+    entry_time = str(outcome["entry_time"])
+    exit_time = str(outcome["exit_time"])
+    entry_timestamp = _parse_timestamp(entry_time)
+    exit_timestamp = _parse_timestamp(exit_time)
+    entry_price = _to_float(outcome["entry_price"], "entry_price")
+    stop_price = _to_float(outcome["stop_price"], "stop_price")
+    target_price = _to_float(outcome["target_price"], "target_price")
+
+    path_bars = _path_bars_for_outcome(
+        bars_by_symbol.get(symbol, []),
+        entry_bar_index=entry_bar_index,
+        exit_bar_index=exit_bar_index,
+        entry_timestamp=entry_timestamp,
+        exit_timestamp=exit_timestamp,
+    )
+    risk_points = _risk_points(direction, entry_price, stop_price)
+    target_distance_points = _target_distance_points(direction, entry_price, target_price)
+    if risk_points <= 0:
+        raise TradeOutcomeError(f"Outcome has nonpositive risk distance: {outcome['outcome_id']}")
+
+    metrics = _trade_path_metrics(
+        path_bars,
+        direction=direction,
+        entry_price=entry_price,
+        stop_price=stop_price,
+        target_price=target_price,
+        risk_points=risk_points,
+        entry_bar_index=entry_bar_index,
+    )
+
+    return {
+        "schema_version": 1,
+        "diagnostic_id": f"{outcome['outcome_id']}:path",
+        "outcome_id": outcome["outcome_id"],
+        "signal_id": outcome["signal_id"],
+        "symbol": symbol,
+        "direction": direction,
+        "entry_time": entry_time,
+        "exit_time": exit_time,
+        "entry_bar_index": entry_bar_index,
+        "exit_bar_index": exit_bar_index,
+        "entry_price": _format_number(entry_price),
+        "stop_price": _format_number(stop_price),
+        "target_price": _format_number(target_price),
+        "exit_reason": outcome["exit_reason"],
+        "scanned_bars": len(path_bars),
+        "risk_points": _format_number(risk_points),
+        "target_distance_points": _format_number(target_distance_points),
+        "max_favorable_points": _format_number(metrics["max_favorable_points"]),
+        "max_favorable_r": _format_number(metrics["max_favorable_points"] / risk_points),
+        "max_adverse_points": _format_number(metrics["max_adverse_points"]),
+        "max_adverse_r": _format_number(metrics["max_adverse_points"] / risk_points),
+        "first_target_bar_index": metrics["first_target_bar_index"],
+        "first_target_time": metrics["first_target_time"],
+        "first_stop_bar_index": metrics["first_stop_bar_index"],
+        "first_stop_time": metrics["first_stop_time"],
+        "bars_to_max_favorable": metrics["bars_to_max_favorable"],
+        "bars_to_max_adverse": metrics["bars_to_max_adverse"],
+        "diagnostic_label": metrics["diagnostic_label"],
+        "notes": "path diagnostic from first bar after entry through evaluated exit",
+    }
+
+
+def _path_bars_for_outcome(
+    bars: list[OutcomeBar],
+    *,
+    entry_bar_index: int,
+    exit_bar_index: int,
+    entry_timestamp: datetime,
+    exit_timestamp: datetime,
+) -> list[OutcomeBar]:
+    same_day_bars = [
+        bar
+        for bar in bars
+        if bar.parsed_timestamp.date() == entry_timestamp.date()
+    ]
+    if exit_bar_index > entry_bar_index:
+        by_index = [
+            bar
+            for bar in same_day_bars
+            if entry_bar_index < bar.bar_index <= exit_bar_index
+        ]
+        if by_index:
+            return by_index
+
+    return [
+        bar
+        for bar in same_day_bars
+        if entry_timestamp < bar.parsed_timestamp <= exit_timestamp
+    ]
+
+
+def _trade_path_metrics(
+    bars: list[OutcomeBar],
+    *,
+    direction: str,
+    entry_price: float,
+    stop_price: float,
+    target_price: float,
+    risk_points: float,
+    entry_bar_index: int,
+) -> dict[str, Any]:
+    max_favorable_points = 0.0
+    max_adverse_points = 0.0
+    first_target_bar: OutcomeBar | None = None
+    first_stop_bar: OutcomeBar | None = None
+    max_favorable_bar: OutcomeBar | None = None
+    max_adverse_bar: OutcomeBar | None = None
+
+    for bar in bars:
+        if direction == "long":
+            favorable_points = max(0.0, bar.high - entry_price)
+            adverse_points = max(0.0, entry_price - bar.low)
+            target_hit = bar.high >= target_price
+            stop_hit = bar.low <= stop_price
+        else:
+            favorable_points = max(0.0, entry_price - bar.low)
+            adverse_points = max(0.0, bar.high - entry_price)
+            target_hit = bar.low <= target_price
+            stop_hit = bar.high >= stop_price
+
+        if favorable_points > max_favorable_points:
+            max_favorable_points = favorable_points
+            max_favorable_bar = bar
+        if adverse_points > max_adverse_points:
+            max_adverse_points = adverse_points
+            max_adverse_bar = bar
+        if target_hit and first_target_bar is None:
+            first_target_bar = bar
+        if stop_hit and first_stop_bar is None:
+            first_stop_bar = bar
+
+    return {
+        "max_favorable_points": max_favorable_points,
+        "max_adverse_points": max_adverse_points,
+        "first_target_bar_index": _bar_index_or_blank(first_target_bar),
+        "first_target_time": _bar_time_or_blank(first_target_bar),
+        "first_stop_bar_index": _bar_index_or_blank(first_stop_bar),
+        "first_stop_time": _bar_time_or_blank(first_stop_bar),
+        "bars_to_max_favorable": _bars_to_bar(max_favorable_bar, entry_bar_index),
+        "bars_to_max_adverse": _bars_to_bar(max_adverse_bar, entry_bar_index),
+        "diagnostic_label": _trade_path_label(first_target_bar, first_stop_bar),
+        "risk_points": risk_points,
+    }
+
+
+def _trade_path_label(
+    first_target_bar: OutcomeBar | None,
+    first_stop_bar: OutcomeBar | None,
+) -> str:
+    if first_target_bar is None and first_stop_bar is None:
+        return "neither_stop_nor_target_reached"
+    if first_target_bar is None:
+        return "stop_reached_target_not_reached"
+    if first_stop_bar is None:
+        return "target_reached_stop_not_reached"
+    if first_target_bar.bar_index == first_stop_bar.bar_index:
+        return "stop_and_target_same_bar"
+    if first_stop_bar.bar_index < first_target_bar.bar_index:
+        return "stop_before_target"
+    return "target_before_stop"
+
+
+def _risk_points(direction: str, entry_price: float, stop_price: float) -> float:
+    if direction == "long":
+        return entry_price - stop_price
+    return stop_price - entry_price
+
+
+def _target_distance_points(direction: str, entry_price: float, target_price: float) -> float:
+    if direction == "long":
+        return target_price - entry_price
+    return entry_price - target_price
+
+
+def _bar_index_or_blank(bar: OutcomeBar | None) -> int | str:
+    return "" if bar is None else bar.bar_index
+
+
+def _bar_time_or_blank(bar: OutcomeBar | None) -> str:
+    return "" if bar is None else bar.timestamp
+
+
+def _bars_to_bar(bar: OutcomeBar | None, entry_bar_index: int) -> int | str:
+    return "" if bar is None else max(0, bar.bar_index - entry_bar_index)
 
 
 def _evaluate_one_signal(

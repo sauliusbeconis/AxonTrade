@@ -44,6 +44,7 @@ Every research source should be documented with a link and retrieval date.
 - Build the first conservative stop/target outcome evaluator. Done.
 - Add an indicator-only ACSIL signal overlay and CSV logger. Done.
 - Add Sierra overlay signal-log outcome workflow with stale-export preflight. Done.
+- Add MFE/MAE path diagnostics for evaluated Sierra overlay outcomes. Done.
 
 ## Reporting
 
