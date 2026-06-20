@@ -15,6 +15,16 @@ repeated recalculation updates the same drawings instead of creating duplicates.
 CSV rows use deterministic event keys so recalculation does not create duplicate
 rows for the same event.
 
+## Volume At Price Logger
+
+`AxonTradeVolumeAtPriceLogger.cpp` writes one CSV row per chart bar price level
+using Sierra Chart's `sc.VolumeAtPriceForBars` data. The study is indicator-only
+and uses an explicit one-shot `Export Now` input so it does not continuously
+rewrite files during replay.
+
+The output contract is documented in
+`config/research/sierra_volume_at_price_export.yaml`.
+
 ## Build Workflow
 
 1. Sync sources with `bash scripts/sync_to_sierra.sh`.

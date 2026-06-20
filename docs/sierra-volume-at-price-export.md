@@ -86,8 +86,9 @@ manual_sierra_help_needed=no
 
 Manual help needed: **Not now**.
 
-The repo can now validate the file format, but we still need a producer for this
-file. The likely next implementation is an indicator-only ACSIL study that:
+The repo can validate the file format. The Sierra-side producer is the
+indicator-only ACSIL study documented in
+`docs/sierra-volume-at-price-logger.md`. It:
 
 1. sets `sc.MaintainVolumeAtPriceData = 1` in `sc.SetDefaults`;
 2. reads each bar's `sc.VolumeAtPriceForBars` entries;
