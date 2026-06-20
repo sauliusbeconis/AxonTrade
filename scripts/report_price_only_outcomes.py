@@ -17,6 +17,16 @@ def main() -> int:
     parser.add_argument("signals", help="Path to price-only signal CSV rows.")
     parser.add_argument("outcomes", help="Path to price-only outcome CSV rows.")
     parser.add_argument("report", help="Path to write the Markdown report.")
+    parser.add_argument(
+        "--title",
+        default="Price-Only Outcome Report",
+        help="Markdown report title.",
+    )
+    parser.add_argument(
+        "--description",
+        default="This report evaluates the current price-only baseline outcomes.",
+        help="One-sentence report description.",
+    )
     args = parser.parse_args()
 
     signal_rows = _read_csv(Path(args.signals))
@@ -27,6 +37,8 @@ def main() -> int:
         outcome_rows,
         signals_source=args.signals,
         outcomes_source=args.outcomes,
+        title=args.title,
+        description=args.description,
     )
     print(f"wrote report to {args.report}")
     return 0

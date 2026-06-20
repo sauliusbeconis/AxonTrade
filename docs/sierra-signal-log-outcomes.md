@@ -84,3 +84,18 @@ Outcome rows are written to:
 `data/processed/AxonTrade_ES_overlay_signal_outcomes.csv`
 
 The output is a local research artifact and is ignored by Git.
+
+## Current Replay Outcome Sample
+
+Report:
+
+`reports/sierra-signal-log-outcomes-replay-sample.md`
+
+Current result from the matched New York-time export:
+
+- candidate signals: `2`
+- evaluated trades: `2`
+- target hits: `0`
+- stop/ambiguous losses: `1`
+- other exits: `1`
+- net USD: `-182.00`

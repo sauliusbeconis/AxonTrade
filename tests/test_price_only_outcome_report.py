@@ -54,3 +54,17 @@ def test_interprets_empty_candidate_sample() -> None:
     )
 
     assert "No candidate trades were generated in this sample." in report
+
+
+def test_renders_custom_outcome_report_title_and_description() -> None:
+    report = render_price_only_outcome_report(
+        [],
+        [],
+        signals_source="signals.csv",
+        outcomes_source="outcomes.csv",
+        title="Sierra Signal Log Outcome Report",
+        description="This report evaluates Sierra overlay candidates.",
+    )
+
+    assert "# Sierra Signal Log Outcome Report" in report
+    assert "This report evaluates Sierra overlay candidates." in report

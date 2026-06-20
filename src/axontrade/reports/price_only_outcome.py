@@ -16,6 +16,8 @@ def write_price_only_outcome_report(
     *,
     signals_source: str,
     outcomes_source: str,
+    title: str = "Price-Only Outcome Report",
+    description: str = "This report evaluates the current price-only baseline outcomes.",
 ) -> str:
     """Render and write a Markdown report for signal and outcome rows."""
 
@@ -24,6 +26,8 @@ def write_price_only_outcome_report(
         outcome_rows,
         signals_source=signals_source,
         outcomes_source=outcomes_source,
+        title=title,
+        description=description,
     )
     report_path = Path(path)
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -37,6 +41,8 @@ def render_price_only_outcome_report(
     *,
     signals_source: str,
     outcomes_source: str,
+    title: str = "Price-Only Outcome Report",
+    description: str = "This report evaluates the current price-only baseline outcomes.",
 ) -> str:
     """Render a deterministic Markdown report from signal and outcome rows."""
 
@@ -54,9 +60,9 @@ def render_price_only_outcome_report(
     summary = summarize_trade_outcomes(outcomes)
 
     lines = [
-        "# Price-Only Outcome Report",
+        f"# {title}",
         "",
-        "This report evaluates the current price-only baseline outcomes.",
+        description,
         "It is research-only and does not imply a tradable strategy.",
         "",
         "## Sources",
