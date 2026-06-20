@@ -155,6 +155,52 @@ Manual help needed: **No after the fresh export and signal log exist**.
 This selects the best target R and direction filter on earlier candidate dates,
 then evaluates the same selection on later candidate dates.
 
+## Run Breakeven Stop Sweep
+
+Manual help needed: **No after the fresh export and signal log exist**.
+
+```bash
+.venv/bin/python scripts/run_signal_breakeven_stop_sweep.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-breakeven-stop-sweep-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --target-r-multiples 1,1.25,1.5,2,2.5,3 \
+  --breakeven-trigger-r-multiples 0.5,0.75,1,1.25,1.5 \
+  --direction-filters all,long,short
+```
+
+This keeps the logged entry and initial stop fixed, replaces the target with a
+fixed R multiple, and moves the stop to entry after price reaches the configured
+favorable R threshold. If one exported OHLC bar can mean both target and active
+stop were hit, the simulator chooses the stop first.
+
+## Run Breakeven Stop Walk-Forward
+
+Manual help needed: **No after the fresh export and signal log exist**.
+
+```bash
+.venv/bin/python scripts/run_signal_breakeven_stop_walk_forward_sweep.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-breakeven-stop-walk-forward-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --train-date-count 8 \
+  --holdout-date-count 2 \
+  --minimum-train-trades 4 \
+  --target-r-multiples 1,1.25,1.5,2,2.5,3 \
+  --breakeven-trigger-r-multiples 0.5,0.75,1,1.25,1.5 \
+  --direction-filters all,long,short
+```
+
+This selects the best target R, breakeven trigger R, and direction filter on
+earlier candidate dates, then evaluates the same selection on later candidate
+dates.
+
 ## Output
 
 Outcome rows are written to:
@@ -241,6 +287,14 @@ Target R walk-forward:
 
 `reports/sierra-signal-log-target-r-walk-forward-large-sample.csv`
 
+Breakeven stop sweep:
+
+`reports/sierra-signal-log-breakeven-stop-sweep-large-sample.csv`
+
+Breakeven stop walk-forward:
+
+`reports/sierra-signal-log-breakeven-stop-walk-forward-large-sample.csv`
+
 Sample range:
 
 - first row: `2026-05-21 09:30:00`
@@ -325,6 +379,34 @@ Interpretation: target R optimization did not validate chronologically. The
 aggregate `2R` result is likely overfit to this sample. Do not change Sierra
 overlay target defaults from this result alone. The next research step should
 filter or improve candidate quality before another target-optimization pass.
+
+Breakeven stop aggregate sweep:
+
+| Direction | Target R | BE Trigger R | Trades | Target Hits | Losses | BE Exits | Net USD |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `all` | `2.5` | `1.25` | `23` | `10` | `11` | `2` | `1794.50` |
+| `all` | `2.5` | `1.5` | `23` | `10` | `11` | `2` | `1794.50` |
+| `all` | `2` | `1.25` | `23` | `12` | `11` | `0` | `1682.00` |
+| `long` | `2.5` | `1.25` | `12` | `6` | `5` | `1` | `1358.00` |
+| `all` | `1.5` | `1` | `23` | `10` | `11` | `2` | `-161.75` |
+
+Rolling breakeven stop walk-forward validation:
+
+- train date count: `8`
+- holdout date count: `2`
+- minimum selected train trades: `4`
+- holdout windows: `6`
+- selected holdout trades: `12`
+- selected holdout target hits: `1`
+- selected holdout losses: `11`
+- selected holdout breakeven exits: `0`
+- selected holdout net USD: `-2142.00`
+
+Interpretation: the dynamic breakeven stop improved the best aggregate row from
+the fixed target-only sweep, but it still failed chronological validation. The
+specific proposed rule `target=1.5R, breakeven_trigger=1R` was negative on the
+large sample under conservative OHLC ordering. Candidate quality filters remain
+the higher-priority research step.
 
 Implementation note: Sierra exports sub-second bar timestamps, while the signal
 log stores whole-second bar times. Outcome preflight therefore validates matching

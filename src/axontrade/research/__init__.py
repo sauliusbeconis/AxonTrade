@@ -19,6 +19,14 @@ from axontrade.research.signal_log import (
     validate_signal_log_rows,
     validate_signal_log_schema,
 )
+from axontrade.research.signal_dynamic_exit_experiments import (
+    SIGNAL_BREAKEVEN_STOP_SWEEP_HEADER,
+    SIGNAL_BREAKEVEN_STOP_WALK_FORWARD_HEADER,
+    SignalDynamicExitExperimentError,
+    evaluate_signal_breakeven_stop_outcomes,
+    run_signal_breakeven_stop_sweep,
+    run_signal_breakeven_stop_walk_forward_sweep,
+)
 from axontrade.research.signal_quality_diagnostics import (
     SIGNAL_QUALITY_DIAGNOSTIC_HEADER,
     SignalQualityDiagnosticError,
@@ -97,6 +105,8 @@ __all__ = [
     "PRICE_ONLY_PARAMETER_SWEEP_HEADER",
     "PRICE_ONLY_TRAIN_HOLDOUT_SWEEP_HEADER",
     "SignalLogError",
+    "SIGNAL_BREAKEVEN_STOP_SWEEP_HEADER",
+    "SIGNAL_BREAKEVEN_STOP_WALK_FORWARD_HEADER",
     "SIGNAL_TARGET_R_SWEEP_HEADER",
     "SIGNAL_TARGET_R_WALK_FORWARD_SWEEP_HEADER",
     "SIGNAL_QUALITY_DIAGNOSTIC_HEADER",
@@ -106,6 +116,7 @@ __all__ = [
     "VAP_ABSORPTION_DIAGNOSTIC_HEADER",
     "VAP_ABSORPTION_THRESHOLD_SWEEP_HEADER",
     "PriceOnlyExperimentError",
+    "SignalDynamicExitExperimentError",
     "SignalQualityDiagnosticError",
     "SignalTargetExperimentError",
     "LiquiditySweepAbsorptionError",
@@ -116,6 +127,7 @@ __all__ = [
     "evaluate_price_only_acceptance",
     "evaluate_liquidity_sweep_absorption_reversal",
     "evaluate_price_only_vwap_reclaim",
+    "evaluate_signal_breakeven_stop_outcomes",
     "evaluate_trade_outcomes",
     "load_price_only_acceptance_config",
     "load_liquidity_sweep_absorption_config",
@@ -136,6 +148,8 @@ __all__ = [
     "run_absorption_reward_risk_walk_forward_sweep",
     "run_price_only_train_holdout_sweep",
     "run_price_only_walk_forward_sweep",
+    "run_signal_breakeven_stop_sweep",
+    "run_signal_breakeven_stop_walk_forward_sweep",
     "run_signal_target_r_sweep",
     "run_signal_target_r_walk_forward_sweep",
     "run_signal_quality_diagnostics",

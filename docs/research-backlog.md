@@ -48,6 +48,7 @@ Every research source should be documented with a link and retrieval date.
 - Add target R-multiple sweep for logged Sierra overlay candidates. Done.
 - Add rolling walk-forward validation for logged Sierra overlay target R sweeps. Done.
 - Add signal quality diagnostics for logged Sierra overlay outcomes. Done.
+- Add dynamic breakeven stop sweeps and walk-forward validation for logged Sierra overlay candidates. Done.
 
 ## Reporting
 
