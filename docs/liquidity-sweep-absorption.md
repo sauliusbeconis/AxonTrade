@@ -117,8 +117,9 @@ Current sample result:
 - long trades: `15`, net `-465.00` USD
 - short trades: `15`, net `-558.75` USD
 
-This rejects the current absorption rule as a standalone strategy. The next
-research step is a formal, chronological experiment around target distance versus
-risk distance. The expanded sample suggests low reward/risk setups are a major
-failure mode, but that must be tested out-of-sample before changing the base
-rule.
+This rejects the current absorption rule as a standalone strategy. The first
+chronological reward/risk filter experiment is documented in
+`docs/liquidity-sweep-reward-risk-sweep.md`. Its train-selected
+`minimum_reward_risk=2` rule was positive on the holdout window, but only across
+`5` holdout trades, so it remains a research candidate rather than a validated
+strategy rule.

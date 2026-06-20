@@ -43,6 +43,12 @@ from axontrade.research.liquidity_sweep_absorption import (
     load_liquidity_sweep_absorption_config,
     validate_liquidity_sweep_absorption_config,
 )
+from axontrade.research.absorption_experiments import (
+    ABSORPTION_REWARD_RISK_SWEEP_HEADER,
+    AbsorptionExperimentError,
+    run_absorption_reward_risk_sweep,
+    run_absorption_reward_risk_train_holdout_sweep,
+)
 from axontrade.research.trade_outcomes import (
     TRADE_OUTCOME_CSV_HEADER,
     TRADE_OUTCOME_DAILY_CSV_HEADER,
@@ -57,6 +63,8 @@ __all__ = [
     "DEFAULT_PRICE_ONLY_ACCEPTANCE_CONFIG_PATH",
     "AcceptanceFinding",
     "AcceptanceGateError",
+    "ABSORPTION_REWARD_RISK_SWEEP_HEADER",
+    "AbsorptionExperimentError",
     "BaselineError",
     "DEFAULT_LIQUIDITY_SWEEP_ABSORPTION_CONFIG",
     "PRICE_ONLY_PARAMETER_SWEEP_HEADER",
@@ -84,6 +92,8 @@ __all__ = [
     "summarize_trade_outcomes_by_day",
     "summarize_trade_outcomes",
     "run_price_only_parameter_sweep",
+    "run_absorption_reward_risk_sweep",
+    "run_absorption_reward_risk_train_holdout_sweep",
     "run_price_only_train_holdout_sweep",
     "run_price_only_walk_forward_sweep",
     "validate_signal_log_row",

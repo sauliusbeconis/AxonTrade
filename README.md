@@ -64,6 +64,8 @@ The first bid/ask-volume absorption layer is documented in
 [docs/liquidity-sweep-absorption.md](docs/liquidity-sweep-absorption.md).
 Use `scripts/check_orderflow_export.py` before running that layer to verify the
 Sierra export contains the required bid/ask volume fields.
+Reward/risk filtering experiments for that layer are documented in
+[docs/liquidity-sweep-reward-risk-sweep.md](docs/liquidity-sweep-reward-risk-sweep.md).
 
 ## Pop!_OS And Wine Notes
 
