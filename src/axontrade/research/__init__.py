@@ -21,8 +21,10 @@ from axontrade.research.signal_log import (
 )
 from axontrade.research.signal_target_experiments import (
     SIGNAL_TARGET_R_SWEEP_HEADER,
+    SIGNAL_TARGET_R_WALK_FORWARD_SWEEP_HEADER,
     SignalTargetExperimentError,
     run_signal_target_r_sweep,
+    run_signal_target_r_walk_forward_sweep,
 )
 from axontrade.research.price_only_baseline import (
     BaselineError,
@@ -91,6 +93,7 @@ __all__ = [
     "PRICE_ONLY_TRAIN_HOLDOUT_SWEEP_HEADER",
     "SignalLogError",
     "SIGNAL_TARGET_R_SWEEP_HEADER",
+    "SIGNAL_TARGET_R_WALK_FORWARD_SWEEP_HEADER",
     "TRADE_OUTCOME_CSV_HEADER",
     "TRADE_OUTCOME_DAILY_CSV_HEADER",
     "TRADE_PATH_DIAGNOSTIC_CSV_HEADER",
@@ -127,6 +130,7 @@ __all__ = [
     "run_price_only_train_holdout_sweep",
     "run_price_only_walk_forward_sweep",
     "run_signal_target_r_sweep",
+    "run_signal_target_r_walk_forward_sweep",
     "run_vap_absorption_diagnostics",
     "run_vap_absorption_threshold_sweep",
     "run_vap_absorption_threshold_train_holdout_sweep",

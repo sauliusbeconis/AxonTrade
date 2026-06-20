@@ -4,8 +4,10 @@ import pytest
 
 from axontrade.research import (
     SIGNAL_TARGET_R_SWEEP_HEADER,
+    SIGNAL_TARGET_R_WALK_FORWARD_SWEEP_HEADER,
     SignalTargetExperimentError,
     run_signal_target_r_sweep,
+    run_signal_target_r_walk_forward_sweep,
 )
 
 
@@ -41,6 +43,14 @@ def _candidate() -> dict[str, object]:
         "stop_price": "99",
         "target_price": "104",
     }
+
+
+def _candidate_on(trade_date: str) -> dict[str, object]:
+    candidate = _candidate()
+    candidate["event_key"] = f"ESU26-CME:1:{trade_date}:test:candidate_signal:long"
+    candidate["signal_id"] = f"test_strategy_ESU26-CME_{trade_date}"
+    candidate["bar_start_time"] = f"{trade_date} 10:00:00"
+    return candidate
 
 
 def test_runs_signal_target_r_sweep() -> None:
@@ -91,4 +101,47 @@ def test_signal_target_r_sweep_rejects_invalid_target_grid() -> None:
             [],
             [],
             target_r_multiples=[0],
+        )
+
+
+def test_runs_signal_target_r_walk_forward_sweep() -> None:
+    bars = []
+    signals = []
+    for trade_date in ("2026-06-10", "2026-06-11", "2026-06-12"):
+        bars.extend(
+            [
+                _bar(0, timestamp=f"{trade_date} 10:00:00", high=100, low=99.75, close=100),
+                _bar(1, timestamp=f"{trade_date} 10:01:00", high=102.25, low=99.5, close=102),
+            ],
+        )
+        signals.append(_candidate_on(trade_date))
+
+    split_rows = run_signal_target_r_walk_forward_sweep(
+        bars,
+        signals,
+        train_date_count=2,
+        holdout_date_count=1,
+        target_r_multiples=[1, 2],
+        minimum_train_trades=2,
+    )
+
+    assert list(split_rows[0].keys()) == SIGNAL_TARGET_R_WALK_FORWARD_SWEEP_HEADER
+    assert [row["sample"] for row in split_rows] == ["train", "holdout"]
+    assert all(row["selected_on_train"] == "true" for row in split_rows)
+    assert split_rows[0]["target_r_multiple"] == "2"
+    assert split_rows[0]["evaluated_trades"] == 2
+    assert split_rows[0]["net_usd"] == "143"
+    assert split_rows[1]["trade_dates"] == "2026-06-12"
+    assert split_rows[1]["evaluated_trades"] == 1
+    assert split_rows[1]["net_usd"] == "71.5"
+
+
+def test_signal_target_r_walk_forward_requires_enough_dates() -> None:
+    with pytest.raises(SignalTargetExperimentError, match="candidate trade dates"):
+        run_signal_target_r_walk_forward_sweep(
+            [],
+            [_candidate_on("2026-06-10")],
+            train_date_count=1,
+            holdout_date_count=1,
+            target_r_multiples=[1],
         )

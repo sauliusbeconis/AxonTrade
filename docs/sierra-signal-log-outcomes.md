@@ -114,6 +114,28 @@ Manual help needed: **No after the fresh export and signal log exist**.
 This keeps the logged entry and stop fixed, replaces only the target price with
 an R-multiple of the original risk, and re-evaluates conservative outcomes.
 
+## Run Target R Walk-Forward
+
+Manual help needed: **No after the fresh export and signal log exist**.
+
+```bash
+.venv/bin/python scripts/run_signal_target_r_walk_forward_sweep.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-target-r-walk-forward-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --train-date-count 8 \
+  --holdout-date-count 2 \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --direction-filters all,long,short
+```
+
+This selects the best target R and direction filter on earlier candidate dates,
+then evaluates the same selection on later candidate dates.
+
 ## Output
 
 Outcome rows are written to:
@@ -192,6 +214,10 @@ Target R sweep:
 
 `reports/sierra-signal-log-target-r-sweep-large-sample.csv`
 
+Target R walk-forward:
+
+`reports/sierra-signal-log-target-r-walk-forward-large-sample.csv`
+
 Sample range:
 
 - first row: `2026-05-21 09:30:00`
@@ -235,6 +261,29 @@ opening-range-midpoint target. In the fixed-R sweep, `2R` is the best aggregate
 tested target. Direction-specific rows suggest `2.5R` performed best for longs
 and `4.5R` performed best for shorts, but those are still small subsamples and
 must be tested chronologically before changing the Sierra overlay defaults.
+
+Rolling walk-forward validation:
+
+- train date count: `8`
+- holdout date count: `2`
+- minimum selected train trades: `4`
+- holdout windows: `6`
+- selected holdout trades: `13`
+- selected holdout net USD: `-2408.00`
+
+| Window | Train Dates | Holdout Dates | Selected Direction | Selected Target R | Train Net USD | Holdout Trades | Holdout Net USD |
+| ---: | --- | --- | --- | ---: | ---: | ---: | ---: |
+| `1` | `2026-05-21` to `2026-06-03` | `2026-06-04` to `2026-06-08` | `all` | `2.5` | `2770.5` | `3` | `-798` |
+| `2` | `2026-05-22` to `2026-06-04` | `2026-06-08` to `2026-06-10` | `all` | `2.5` | `2299` | `4` | `-489` |
+| `3` | `2026-05-25` to `2026-06-08` | `2026-06-10` to `2026-06-11` | `long` | `2` | `691.5` | `2` | `-332` |
+| `4` | `2026-05-26` to `2026-06-10` | `2026-06-11` to `2026-06-12` | `short` | `4.5` | `601.25` | `2` | `-469.5` |
+| `5` | `2026-05-27` to `2026-06-11` | `2026-06-12` to `2026-06-17` | `short` | `2` | `32.5` | `1` | `-203.5` |
+| `6` | `2026-05-29` to `2026-06-12` | `2026-06-17` to `2026-06-19` | `short` | `2` | `-171` | `1` | `-116` |
+
+Interpretation: target R optimization did not validate chronologically. The
+aggregate `2R` result is likely overfit to this sample. Do not change Sierra
+overlay target defaults from this result alone. The next research step should
+filter or improve candidate quality before another target-optimization pass.
 
 Implementation note: Sierra exports sub-second bar timestamps, while the signal
 log stores whole-second bar times. Outcome preflight therefore validates matching

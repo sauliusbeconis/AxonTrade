@@ -46,6 +46,7 @@ Every research source should be documented with a link and retrieval date.
 - Add Sierra overlay signal-log outcome workflow with stale-export preflight. Done.
 - Add MFE/MAE path diagnostics for evaluated Sierra overlay outcomes. Done.
 - Add target R-multiple sweep for logged Sierra overlay candidates. Done.
+- Add rolling walk-forward validation for logged Sierra overlay target R sweeps. Done.
 
 ## Reporting
 
