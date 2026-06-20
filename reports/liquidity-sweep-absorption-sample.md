@@ -12,51 +12,52 @@ It is research-only and does not imply a tradable strategy.
 
 | Metric | Value |
 | --- | ---: |
-| Total signal rows | 5314 |
-| Candidate signals | 5 |
-| Rejected signals | 5309 |
-| Evaluated trades | 5 |
-| Target hits | 3 |
-| Stop/ambiguous losses | 2 |
+| Total signal rows | 28158 |
+| Candidate signals | 30 |
+| Rejected signals | 28128 |
+| Evaluated trades | 30 |
+| Target hits | 15 |
+| Stop/ambiguous losses | 15 |
 | Other exits | 0 |
-| Win rate | 60.00% |
-| Gross USD | 456.25 |
-| Net USD | 313.75 |
-| Average net USD | 62.75 |
+| Win rate | 50.00% |
+| Gross USD | -168.75 |
+| Net USD | -1023.75 |
+| Average net USD | -34.12 |
 
 ## Strategy IDs
 
 | Strategy ID | Count |
 | --- | ---: |
-| liquidity_sweep_absorption_reversal | 5314 |
+| liquidity_sweep_absorption_reversal | 28158 |
 
 ## Exit Reasons
 
 | Exit reason | Count |
 | --- | ---: |
-| stop_hit | 2 |
-| target_hit | 3 |
+| stop_hit | 15 |
+| target_hit | 15 |
 
 ## Candidate Direction
 
 | Direction | Trades | Net USD |
 | --- | ---: | ---: |
-| long | 2 | -244.50 |
-| short | 3 | 558.25 |
+| long | 15 | -465.00 |
+| short | 15 | -558.75 |
 
 ## Rejected Signal Reasons
 
 | Rejection reason | Count |
 | --- | ---: |
-| duplicate_signal | 2395 |
-| insufficient_context | 102 |
-| no_absorption | 24 |
-| no_setup | 1836 |
-| outside_session | 952 |
+| duplicate_signal | 16067 |
+| insufficient_context | 475 |
+| no_absorption | 111 |
+| no_setup | 4924 |
+| outside_session | 6531 |
+| risk_limit | 20 |
 
 ## Interpretation
 
-This sample was positive after configured costs. Treat it as research evidence only.
+This sample was negative after configured costs. Treat the baseline as a control, not a tradable strategy.
 
 ## Model Notes
 

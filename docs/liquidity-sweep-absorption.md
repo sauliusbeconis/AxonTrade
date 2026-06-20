@@ -101,22 +101,24 @@ Then write the report:
 The evaluator is implemented and tested with synthetic rows. It has not yet
 been validated across enough real Sierra order-flow exports.
 
-The first real order-flow export check passed:
+The first 22-date order-flow export check passed:
 
-- rows: `5314`
-- dates: `2026-06-17` through `2026-06-19`
+- rows: `28158`
+- dates: `2026-05-21` through `2026-06-19`
 - matched bid/ask fields: `Bid Volume`, `Ask Volume`
 - matched delta field: `Ask Volume Bid Volume Difference`
 
 Current sample result:
 
-- candidates: `5`
-- target hits: `3`
-- stop/ambiguous losses: `2`
-- net ES result after default costs: `313.75` USD
-- long trades: `2`, net `-244.50` USD
-- short trades: `3`, net `558.25` USD
+- candidates: `30`
+- target hits: `15`
+- stop/ambiguous losses: `15`
+- net ES result after default costs: `-1023.75` USD
+- long trades: `15`, net `-465.00` USD
+- short trades: `15`, net `-558.75` USD
 
-This is a useful improvement over the price-only proxy, but it is not enough
-evidence to validate the setup. It needs more dates, walk-forward testing, and
-separate ES/NQ review before any strategy claim is allowed.
+This rejects the current absorption rule as a standalone strategy. The next
+research step is a formal, chronological experiment around target distance versus
+risk distance. The expanded sample suggests low reward/risk setups are a major
+failure mode, but that must be tested out-of-sample before changing the base
+rule.
