@@ -129,6 +129,84 @@ def run_absorption_reward_risk_train_holdout_sweep(
     ]
 
 
+def run_absorption_reward_risk_walk_forward_sweep(
+    outcome_rows: Iterable[dict[str, Any]],
+    *,
+    train_date_count: int,
+    holdout_date_count: int,
+    minimum_reward_risks: Iterable[float],
+    direction_filters: Iterable[str] = ("all",),
+    minimum_train_trades: int = 1,
+) -> list[dict[str, Any]]:
+    """Run rolling chronological reward/risk threshold windows by trade date."""
+
+    rows = list(outcome_rows)
+    dates = _sorted_trade_dates(rows)
+    if train_date_count <= 0:
+        raise AbsorptionExperimentError("train_date_count must be positive")
+    if holdout_date_count <= 0:
+        raise AbsorptionExperimentError("holdout_date_count must be positive")
+    if minimum_train_trades <= 0:
+        raise AbsorptionExperimentError("minimum_train_trades must be positive")
+    if train_date_count + holdout_date_count > len(dates):
+        raise AbsorptionExperimentError(
+            "train_date_count plus holdout_date_count must not exceed the number of trade dates",
+        )
+
+    sweep_kwargs = {
+        "minimum_reward_risks": minimum_reward_risks,
+        "direction_filters": direction_filters,
+    }
+
+    split_rows: list[dict[str, Any]] = []
+    max_start = len(dates) - train_date_count - holdout_date_count + 1
+    for window_index in range(max_start):
+        train_dates = dates[window_index:window_index + train_date_count]
+        holdout_dates = dates[
+            window_index + train_date_count:
+            window_index + train_date_count + holdout_date_count
+        ]
+        train_rows = _filter_rows_by_dates(rows, train_dates)
+        holdout_rows = _filter_rows_by_dates(rows, holdout_dates)
+
+        train_sweep = run_absorption_reward_risk_sweep(train_rows, **sweep_kwargs)
+        holdout_sweep = run_absorption_reward_risk_sweep(holdout_rows, **sweep_kwargs)
+        best_train = _select_best_train_row(
+            train_sweep,
+            minimum_train_trades=minimum_train_trades,
+        )
+        matching_holdout = _find_experiment_row(
+            holdout_sweep,
+            str(best_train["experiment_id"]),
+        )
+        split_id = (
+            f"walk_forward_window={window_index + 1}:"
+            f"train_dates={len(train_dates)}:"
+            f"holdout_dates={len(holdout_dates)}"
+        )
+
+        split_rows.append(
+            _tag_split_row(
+                best_train,
+                sample="train",
+                selected_experiment_id=str(best_train["experiment_id"]),
+                split_id=split_id,
+                trade_dates=train_dates,
+            ),
+        )
+        split_rows.append(
+            _tag_split_row(
+                matching_holdout,
+                sample="holdout",
+                selected_experiment_id=str(best_train["experiment_id"]),
+                split_id=split_id,
+                trade_dates=holdout_dates,
+            ),
+        )
+
+    return split_rows
+
+
 def _experiment_row(
     rows: list[dict[str, Any]],
     *,
@@ -191,6 +269,30 @@ def _tag_split_row(
     tagged["selected_on_train"] = str(row["experiment_id"] == selected_experiment_id).lower()
     tagged["trade_dates"] = ";".join(trade_dates)
     return tagged
+
+
+def _find_experiment_row(rows: list[dict[str, Any]], experiment_id: str) -> dict[str, Any]:
+    for row in rows:
+        if str(row["experiment_id"]) == experiment_id:
+            return row
+    raise AbsorptionExperimentError(f"Missing matching holdout experiment row: {experiment_id}")
+
+
+def _select_best_train_row(
+    rows: list[dict[str, Any]],
+    *,
+    minimum_train_trades: int,
+) -> dict[str, Any]:
+    eligible_rows = [
+        row
+        for row in rows
+        if int(row["evaluated_trades"]) >= minimum_train_trades
+    ]
+    if not eligible_rows:
+        raise AbsorptionExperimentError(
+            f"No train experiments met minimum_train_trades={minimum_train_trades}",
+        )
+    return max(eligible_rows, key=lambda row: float(row["net_usd"]))
 
 
 def _filter_outcomes(

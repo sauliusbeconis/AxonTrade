@@ -48,6 +48,7 @@ from axontrade.research.absorption_experiments import (
     AbsorptionExperimentError,
     run_absorption_reward_risk_sweep,
     run_absorption_reward_risk_train_holdout_sweep,
+    run_absorption_reward_risk_walk_forward_sweep,
 )
 from axontrade.research.trade_outcomes import (
     TRADE_OUTCOME_CSV_HEADER,
@@ -94,6 +95,7 @@ __all__ = [
     "run_price_only_parameter_sweep",
     "run_absorption_reward_risk_sweep",
     "run_absorption_reward_risk_train_holdout_sweep",
+    "run_absorption_reward_risk_walk_forward_sweep",
     "run_price_only_train_holdout_sweep",
     "run_price_only_walk_forward_sweep",
     "validate_signal_log_row",

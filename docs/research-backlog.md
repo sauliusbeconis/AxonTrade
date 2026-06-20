@@ -35,6 +35,7 @@ Every research source should be documented with a link and retrieval date.
 - Define Sierra bid/ask volume export fields for absorption research. Done.
 - Build first bid/ask-volume absorption filter for liquidity sweep reversals. Done.
 - Add chronological reward/risk filter experiment for absorption outcomes. Done.
+- Add rolling reward/risk walk-forward experiment for absorption outcomes. Done.
 - Add Sierra footprint/volume-at-price export fields for level-specific absorption research.
 - Build the first conservative stop/target outcome evaluator. Done.
 - Add an indicator-only ACSIL signal overlay and CSV logger.

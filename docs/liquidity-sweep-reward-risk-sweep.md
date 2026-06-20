@@ -75,6 +75,10 @@ the selected rule is not validated yet. The holdout sample has only `5` trades,
 and the train-selected rule was chosen from a small grid after observing the
 first sample.
 
+Follow-up: the rolling walk-forward check in
+`docs/liquidity-sweep-reward-risk-walk-forward.md` did not validate the filter.
+Its selected holdout rows were slightly negative after costs.
+
 ## Interpretation Rules
 
 - The selected train row is the highest train `net_usd`.

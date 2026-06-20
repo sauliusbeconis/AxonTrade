@@ -119,7 +119,8 @@ Current sample result:
 
 This rejects the current absorption rule as a standalone strategy. The first
 chronological reward/risk filter experiment is documented in
-`docs/liquidity-sweep-reward-risk-sweep.md`. Its train-selected
-`minimum_reward_risk=2` rule was positive on the holdout window, but only across
-`5` holdout trades, so it remains a research candidate rather than a validated
-strategy rule.
+`docs/liquidity-sweep-reward-risk-sweep.md`; its train-selected
+`minimum_reward_risk=2` rule was positive on one holdout window, but only across
+`5` holdout trades. The rolling walk-forward check in
+`docs/liquidity-sweep-reward-risk-walk-forward.md` did not validate the filter:
+selected holdout rows finished at `-28.75` USD after costs.

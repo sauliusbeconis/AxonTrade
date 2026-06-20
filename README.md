@@ -66,6 +66,8 @@ Use `scripts/check_orderflow_export.py` before running that layer to verify the
 Sierra export contains the required bid/ask volume fields.
 Reward/risk filtering experiments for that layer are documented in
 [docs/liquidity-sweep-reward-risk-sweep.md](docs/liquidity-sweep-reward-risk-sweep.md).
+Rolling walk-forward validation for that filter is documented in
+[docs/liquidity-sweep-reward-risk-walk-forward.md](docs/liquidity-sweep-reward-risk-walk-forward.md).
 
 ## Pop!_OS And Wine Notes
 

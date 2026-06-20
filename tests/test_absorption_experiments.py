@@ -7,6 +7,7 @@ from axontrade.research import (
     AbsorptionExperimentError,
     run_absorption_reward_risk_sweep,
     run_absorption_reward_risk_train_holdout_sweep,
+    run_absorption_reward_risk_walk_forward_sweep,
 )
 
 
@@ -88,4 +89,58 @@ def test_rejects_invalid_absorption_reward_risk_sweep() -> None:
         run_absorption_reward_risk_sweep(
             [],
             minimum_reward_risks=[-1],
+        )
+
+
+def test_runs_absorption_reward_risk_walk_forward_sweep() -> None:
+    rows = [
+        _outcome(0, trade_date="2026-06-10", direction="long", entry=100, stop=99, target=102, exit_reason="target_hit", net_usd=100),
+        _outcome(1, trade_date="2026-06-11", direction="long", entry=100, stop=99, target=100.5, exit_reason="stop_hit", net_usd=-50),
+        _outcome(2, trade_date="2026-06-12", direction="short", entry=100, stop=101, target=98, exit_reason="target_hit", net_usd=100),
+    ]
+
+    split_rows = run_absorption_reward_risk_walk_forward_sweep(
+        rows,
+        train_date_count=1,
+        holdout_date_count=1,
+        minimum_reward_risks=[0, 1],
+        direction_filters=["all"],
+    )
+
+    assert len(split_rows) == 4
+    assert [row["sample"] for row in split_rows] == ["train", "holdout", "train", "holdout"]
+    assert split_rows[0]["trade_dates"] == "2026-06-10"
+    assert split_rows[1]["trade_dates"] == "2026-06-11"
+    assert split_rows[2]["trade_dates"] == "2026-06-11"
+    assert split_rows[3]["trade_dates"] == "2026-06-12"
+    assert all(row["selected_on_train"] == "true" for row in split_rows)
+
+
+def test_rejects_invalid_absorption_walk_forward_window() -> None:
+    rows = [
+        _outcome(0, trade_date="2026-06-10", direction="long", entry=100, stop=99, target=102, exit_reason="target_hit", net_usd=100),
+    ]
+
+    with pytest.raises(AbsorptionExperimentError, match="must not exceed"):
+        run_absorption_reward_risk_walk_forward_sweep(
+            rows,
+            train_date_count=1,
+            holdout_date_count=1,
+            minimum_reward_risks=[1],
+        )
+
+
+def test_rejects_walk_forward_window_with_too_few_train_trades() -> None:
+    rows = [
+        _outcome(0, trade_date="2026-06-10", direction="long", entry=100, stop=99, target=102, exit_reason="target_hit", net_usd=100),
+        _outcome(1, trade_date="2026-06-11", direction="long", entry=100, stop=99, target=102, exit_reason="target_hit", net_usd=100),
+    ]
+
+    with pytest.raises(AbsorptionExperimentError, match="minimum_train_trades=2"):
+        run_absorption_reward_risk_walk_forward_sweep(
+            rows,
+            train_date_count=1,
+            holdout_date_count=1,
+            minimum_reward_risks=[1],
+            minimum_train_trades=2,
         )
