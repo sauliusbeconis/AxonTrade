@@ -32,6 +32,13 @@ from axontrade.research.signal_quality_diagnostics import (
     SignalQualityDiagnosticError,
     run_signal_quality_diagnostics,
 )
+from axontrade.research.signal_quality_filter_experiments import (
+    SIGNAL_QUALITY_FILTER_SWEEP_HEADER,
+    SIGNAL_QUALITY_FILTER_WALK_FORWARD_HEADER,
+    SignalQualityFilterExperimentError,
+    run_signal_quality_filter_sweep,
+    run_signal_quality_filter_walk_forward_sweep,
+)
 from axontrade.research.signal_target_experiments import (
     SIGNAL_TARGET_R_SWEEP_HEADER,
     SIGNAL_TARGET_R_WALK_FORWARD_SWEEP_HEADER,
@@ -110,6 +117,8 @@ __all__ = [
     "SIGNAL_TARGET_R_SWEEP_HEADER",
     "SIGNAL_TARGET_R_WALK_FORWARD_SWEEP_HEADER",
     "SIGNAL_QUALITY_DIAGNOSTIC_HEADER",
+    "SIGNAL_QUALITY_FILTER_SWEEP_HEADER",
+    "SIGNAL_QUALITY_FILTER_WALK_FORWARD_HEADER",
     "TRADE_OUTCOME_CSV_HEADER",
     "TRADE_OUTCOME_DAILY_CSV_HEADER",
     "TRADE_PATH_DIAGNOSTIC_CSV_HEADER",
@@ -118,6 +127,7 @@ __all__ = [
     "PriceOnlyExperimentError",
     "SignalDynamicExitExperimentError",
     "SignalQualityDiagnosticError",
+    "SignalQualityFilterExperimentError",
     "SignalTargetExperimentError",
     "LiquiditySweepAbsorptionError",
     "TradeOutcomeError",
@@ -153,6 +163,8 @@ __all__ = [
     "run_signal_target_r_sweep",
     "run_signal_target_r_walk_forward_sweep",
     "run_signal_quality_diagnostics",
+    "run_signal_quality_filter_sweep",
+    "run_signal_quality_filter_walk_forward_sweep",
     "run_vap_absorption_diagnostics",
     "run_vap_absorption_threshold_sweep",
     "run_vap_absorption_threshold_train_holdout_sweep",

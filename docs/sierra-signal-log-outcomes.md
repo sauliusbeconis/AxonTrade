@@ -114,6 +114,45 @@ minutes after RTH open, original target/risk distance, sweep-to-entry bar gap,
 sweep delta, sweep aggression ratio, and confirmation close location. Optional
 MFE/MAE fields are included for post-trade diagnosis, not for entry filtering.
 
+## Run Quality Filter Sweep
+
+Manual help needed: **No after the quality diagnostics CSV exists**.
+
+```bash
+.venv/bin/python scripts/run_signal_quality_filter_sweep.py \
+  reports/sierra-signal-log-quality-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-quality-filter-sweep-large-sample.csv \
+  --max-original-reward-risks 1.5,2,2.5,3,3.5,4,999 \
+  --min-minutes-after-rth-open 0,60,90 \
+  --max-minutes-after-rth-open 120,150,180,240,390 \
+  --max-sweep-abs-deltas 3,5,10,20,999999 \
+  --direction-filters all,long,short
+```
+
+This tests entry-known filters only: target distance in R, minutes after RTH
+open, absolute sweep delta, and direction. It does not change exits.
+
+## Run Quality Filter Walk-Forward
+
+Manual help needed: **No after the quality diagnostics CSV exists**.
+
+```bash
+.venv/bin/python scripts/run_signal_quality_filter_walk_forward_sweep.py \
+  reports/sierra-signal-log-quality-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-quality-filter-walk-forward-large-sample.csv \
+  --train-date-count 8 \
+  --holdout-date-count 2 \
+  --minimum-train-trades 4 \
+  --max-original-reward-risks 1.5,2,2.5,3,3.5,4,999 \
+  --min-minutes-after-rth-open 0,60,90 \
+  --max-minutes-after-rth-open 120,150,180,240,390 \
+  --max-sweep-abs-deltas 3,5,10,20,999999 \
+  --direction-filters all,long,short
+```
+
+This selects the best quality filter on earlier candidate dates, then evaluates
+the same filter on later candidate dates.
+
 ## Run Target R Sweep
 
 Manual help needed: **No after the fresh export and signal log exist**.
@@ -279,6 +318,14 @@ Quality diagnostics:
 
 `reports/sierra-signal-log-quality-diagnostics-large-sample.csv`
 
+Quality filter sweep:
+
+`reports/sierra-signal-log-quality-filter-sweep-large-sample.csv`
+
+Quality filter walk-forward:
+
+`reports/sierra-signal-log-quality-filter-walk-forward-large-sample.csv`
+
 Target R sweep:
 
 `reports/sierra-signal-log-target-r-sweep-large-sample.csv`
@@ -335,6 +382,52 @@ that are too far from entry relative to stop distance. Simple "bigger sweep is
 better" logic is not supported by this sample. This is still in-sample
 diagnosis on only `23` candidates, so use it to design the next filter test,
 not as production evidence.
+
+External parameter clues, retrieved `2026-06-20`:
+
+- [Returns and Order Flow Imbalances: Intraday Dynamics and Macroeconomic News Effects](https://arxiv.org/html/2508.06788)
+  studies S&P 500 E-mini futures at one-second frequency by 15-minute interval.
+  Practical clue: time-of-day and news context matter; do not use a single raw
+  order-flow threshold across the whole session.
+- [Intraday Trading Invariance in the E-mini S&P 500 Futures Market](https://ideas.repec.org/p/cfr/cefirw/w0229.html)
+  reports a pronounced intraday diurnal pattern and a relationship between
+  return variation per transaction and trade size. Practical clue: raw volume or
+  sweep size should eventually be normalized by activity/volatility.
+- [Overnight-Intraday Reversal Everywhere](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2730304)
+  documents reversal behavior across asset classes and links it to liquidity
+  provision. Practical clue: reversal logic is plausible, but should be tested
+  by session context instead of assumed from every sweep.
+- [CME Group: Reassessing Liquidity, Beyond Order Book Depth](https://www.cmegroup.com/articles/2025/reassessing-liquidity-beyond-order-book-depth.html)
+  shows that ES volume and order-book depth can move in opposite directions
+  during volatility. Practical clue: a large sweep alone is not enough; combine
+  it with contextual filters.
+
+Quality filter aggregate sweep:
+
+| Direction | Max Original RR | Minutes After Open | Max Sweep Abs Delta | Trades | Target Hits | Losses | Net USD |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| `all` | `3.5` | `0-120` | `3` | `6` | `5` | `1` | `1691.50` |
+| `all` | `3.5` | `0-120` | `999999` | `8` | `6` | `2` | `1628.25` |
+| `all` | `3.5` | `0-150` | `999999` | `9` | `6` | `3` | `1387.25` |
+| `all` | `3.5` | `0-390` | `3` | `10` | `6` | `4` | `1358.75` |
+
+Rolling quality filter walk-forward validation:
+
+- train date count: `8`
+- holdout date count: `2`
+- minimum selected train trades: `4`
+- holdout windows: `6`
+- selected holdout trades: `4`
+- selected holdout target hits: `0`
+- selected holdout losses: `4`
+- selected holdout net USD: `-1064.00`
+
+Interpretation: quality filters reduce trade count and improve several
+aggregate rows, but the selected filters still failed chronologically. This is
+less bad than the target-only and breakeven-stop walk-forward runs, but it is
+still not a validated edge. The next improvement should avoid raw sweep-size
+thresholds and add normalized context: current volatility, current traded
+volume, and scheduled-news exclusion.
 
 Target R sweep, `direction=all`:
 
