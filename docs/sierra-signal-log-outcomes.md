@@ -114,6 +114,27 @@ minutes after RTH open, original target/risk distance, sweep-to-entry bar gap,
 sweep delta, sweep aggression ratio, and confirmation close location. Optional
 MFE/MAE fields are included for post-trade diagnosis, not for entry filtering.
 
+## Run Context Diagnostics
+
+Manual help needed: **No after the orderflow export and quality diagnostics CSV
+exist**.
+
+```bash
+.venv/bin/python scripts/run_signal_context_diagnostics.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  reports/sierra-signal-log-quality-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-context-diagnostics-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --lookback-bars 50
+```
+
+This adds rolling pre-entry context from the orderflow bar export: average bar
+range, average volume, average trade count, average absolute delta, entry-bar
+volume/trades/delta, and normalized ratios such as
+`sweep_abs_delta_to_average_abs_delta`.
+
 ## Run Quality Filter Sweep
 
 Manual help needed: **No after the quality diagnostics CSV exists**.
@@ -318,6 +339,10 @@ Quality diagnostics:
 
 `reports/sierra-signal-log-quality-diagnostics-large-sample.csv`
 
+Context diagnostics:
+
+`reports/sierra-signal-log-context-diagnostics-large-sample.csv`
+
 Quality filter sweep:
 
 `reports/sierra-signal-log-quality-filter-sweep-large-sample.csv`
@@ -428,6 +453,24 @@ less bad than the target-only and breakeven-stop walk-forward runs, but it is
 still not a validated edge. The next improvement should avoid raw sweep-size
 thresholds and add normalized context: current volatility, current traded
 volume, and scheduled-news exclusion.
+
+Context diagnostic observations:
+
+- context rows: `23`
+- lookback bars per row: `50`
+- `sweep_abs_delta_to_average_abs_delta <= 1`: `15` trades, `6` target hits,
+  net `478.75`
+- `target_distance_to_average_bar_range <= 20`: `11` trades, `5` target hits,
+  net `399.00`
+- `risk_to_average_bar_range <= 8`: `18` trades, `4` target hits, net
+  `-1638.00`
+- `entry_volume_to_average_volume >= 1`: `10` trades, `3` target hits, net
+  `-135.00`
+
+Interpretation: normalized context is now available, but the first scan still
+does not show a standalone filter strong enough to promote into another
+walk-forward optimizer. The positive rows are mostly the same lower target/R
+and earlier-session subset already seen in quality diagnostics.
 
 Target R sweep, `direction=all`:
 

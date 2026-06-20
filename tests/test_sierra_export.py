@@ -58,6 +58,7 @@ def test_orderflow_export_config_is_valid() -> None:
 
     validate_sierra_export_config(config)
     assert "bid_volume" in config["normalized_fields"]
+    assert "number_of_trades" in config["optional_fields"]
     assert "delta" in config["optional_fields"]
 
 
@@ -159,6 +160,7 @@ def test_normalizes_optional_orderflow_fields() -> None:
                 "OR Low": "99",
                 "Bid Volume": "80",
                 "Ask Volume": "120",
+                "# of Trades": "10",
             },
         ],
         symbol="ESU26-CME",
@@ -167,6 +169,7 @@ def test_normalizes_optional_orderflow_fields() -> None:
 
     assert rows[0]["bid_volume"] == "80"
     assert rows[0]["ask_volume"] == "120"
+    assert rows[0]["number_of_trades"] == "10"
     assert rows[0]["delta"] == ""
     assert rows[0]["volume"] == ""
 

@@ -50,7 +50,8 @@ Every research source should be documented with a link and retrieval date.
 - Add signal quality diagnostics for logged Sierra overlay outcomes. Done.
 - Add dynamic breakeven stop sweeps and walk-forward validation for logged Sierra overlay candidates. Done.
 - Add entry-quality filter sweeps and walk-forward validation for logged Sierra overlay diagnostics. Done.
-- Add volatility/activity-normalized sweep features for logged Sierra overlay diagnostics.
+- Add volatility/activity-normalized sweep features for logged Sierra overlay diagnostics. Done.
+- Build walk-forward filters over normalized context features after the sample is large enough.
 - Add scheduled-news exclusion to Sierra overlay research exports.
 
 ## Reporting
