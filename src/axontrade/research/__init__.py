@@ -19,6 +19,11 @@ from axontrade.research.signal_log import (
     validate_signal_log_rows,
     validate_signal_log_schema,
 )
+from axontrade.research.signal_quality_diagnostics import (
+    SIGNAL_QUALITY_DIAGNOSTIC_HEADER,
+    SignalQualityDiagnosticError,
+    run_signal_quality_diagnostics,
+)
 from axontrade.research.signal_target_experiments import (
     SIGNAL_TARGET_R_SWEEP_HEADER,
     SIGNAL_TARGET_R_WALK_FORWARD_SWEEP_HEADER,
@@ -94,12 +99,14 @@ __all__ = [
     "SignalLogError",
     "SIGNAL_TARGET_R_SWEEP_HEADER",
     "SIGNAL_TARGET_R_WALK_FORWARD_SWEEP_HEADER",
+    "SIGNAL_QUALITY_DIAGNOSTIC_HEADER",
     "TRADE_OUTCOME_CSV_HEADER",
     "TRADE_OUTCOME_DAILY_CSV_HEADER",
     "TRADE_PATH_DIAGNOSTIC_CSV_HEADER",
     "VAP_ABSORPTION_DIAGNOSTIC_HEADER",
     "VAP_ABSORPTION_THRESHOLD_SWEEP_HEADER",
     "PriceOnlyExperimentError",
+    "SignalQualityDiagnosticError",
     "SignalTargetExperimentError",
     "LiquiditySweepAbsorptionError",
     "TradeOutcomeError",
@@ -131,6 +138,7 @@ __all__ = [
     "run_price_only_walk_forward_sweep",
     "run_signal_target_r_sweep",
     "run_signal_target_r_walk_forward_sweep",
+    "run_signal_quality_diagnostics",
     "run_vap_absorption_diagnostics",
     "run_vap_absorption_threshold_sweep",
     "run_vap_absorption_threshold_train_holdout_sweep",

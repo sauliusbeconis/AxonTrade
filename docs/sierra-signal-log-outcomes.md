@@ -95,6 +95,25 @@ This measures maximum favorable excursion, maximum adverse excursion, first
 target touch, and first stop touch from the first bar after entry through the
 evaluated exit.
 
+## Run Quality Diagnostics
+
+Manual help needed: **No after the signal log, outcome CSV, and optional path
+diagnostics CSV exist**.
+
+```bash
+.venv/bin/python scripts/run_signal_quality_diagnostics.py \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  data/processed/AxonTrade_ES_overlay_signal_outcomes_large_sample.csv \
+  reports/sierra-signal-log-quality-diagnostics-large-sample.csv \
+  --path-diagnostics reports/sierra-signal-log-path-diagnostics-large-sample.csv
+```
+
+This joins each evaluated outcome back to the candidate signal notes and path
+diagnostics. The current fields focus on entry-known quality variables:
+minutes after RTH open, original target/risk distance, sweep-to-entry bar gap,
+sweep delta, sweep aggression ratio, and confirmation close location. Optional
+MFE/MAE fields are included for post-trade diagnosis, not for entry filtering.
+
 ## Run Target R Sweep
 
 Manual help needed: **No after the fresh export and signal log exist**.
@@ -210,6 +229,10 @@ Path diagnostics:
 
 `reports/sierra-signal-log-path-diagnostics-large-sample.csv`
 
+Quality diagnostics:
+
+`reports/sierra-signal-log-quality-diagnostics-large-sample.csv`
+
 Target R sweep:
 
 `reports/sierra-signal-log-target-r-sweep-large-sample.csv`
@@ -240,6 +263,24 @@ Path diagnostic split:
 
 - `target_reached_stop_not_reached`: `7`
 - `stop_reached_target_not_reached`: `16`
+
+Quality diagnostic observations:
+
+- diagnostic rows: `23`
+- original target hits: `7`
+- original stops: `16`
+- target-hit median original reward/risk: `1.74R`
+- stop-hit median original reward/risk: `3.85R`
+- `original_reward_risk > 3`: `11` trades, `1` target hit, net `-1432.25`
+- `original_reward_risk > 4`: `8` trades, `0` target hits, net `-1478.00`
+- `original_reward_risk <= 2.5`: `10` trades, `6` target hits, net `1021.25`
+- `sweep_abs_delta >= 5`: `10` trades, `1` target hit, net `-1641.25`
+
+Interpretation: the clearest current failure mode is taking midpoint targets
+that are too far from entry relative to stop distance. Simple "bigger sweep is
+better" logic is not supported by this sample. This is still in-sample
+diagnosis on only `23` candidates, so use it to design the next filter test,
+not as production evidence.
 
 Target R sweep, `direction=all`:
 
