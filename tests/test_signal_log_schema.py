@@ -124,3 +124,4 @@ def test_acsil_liquidity_sweep_overlay_uses_signal_schema() -> None:
     assert "SC_ASKVOL" in source
     assert "candidate_signal" in source
     assert "rejected_signal" in source
+    assert "latest_closed_bar_index < last_processed_bar_index" in source

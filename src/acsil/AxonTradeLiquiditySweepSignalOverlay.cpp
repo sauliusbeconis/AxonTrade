@@ -782,6 +782,8 @@ SCSFExport scsf_AxonTradeLiquiditySweepSignalOverlay(SCStudyInterfaceRef sc)
     int& last_processed_bar_index = sc.GetPersistentInt(1);
     if (sc.IsFullRecalculation && ProcessFullRecalculation.GetYesNo() != 0)
         last_processed_bar_index = -1;
+    else if (latest_closed_bar_index < last_processed_bar_index)
+        last_processed_bar_index = latest_closed_bar_index - 1;
 
     int start_bar_index = latest_closed_bar_index;
     if (ProcessFullRecalculation.GetYesNo() != 0 && sc.IsFullRecalculation)
