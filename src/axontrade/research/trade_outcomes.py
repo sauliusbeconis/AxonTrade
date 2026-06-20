@@ -225,12 +225,12 @@ def validate_signal_entries_against_bars(
                 f"{_ENTRY_VALIDATION_RECOVERY}",
             )
 
-        nearest_bar = min(
+        entry_bar_index = _to_int(signal.get("bar_index"), "bar_index")
+        nearest_bar = _entry_validation_bar(
             same_day_bars,
-            key=lambda bar: (
-                abs((bar.parsed_timestamp - entry_timestamp).total_seconds()),
-                abs(bar.close - entry_price),
-            ),
+            entry_bar_index=entry_bar_index,
+            entry_timestamp=entry_timestamp,
+            entry_price=entry_price,
         )
         time_difference_seconds = abs(
             (nearest_bar.parsed_timestamp - entry_timestamp).total_seconds(),
@@ -266,6 +266,32 @@ def validate_signal_entries_against_bars(
         )
 
     return diagnostics
+
+
+def _entry_validation_bar(
+    same_day_bars: list[OutcomeBar],
+    *,
+    entry_bar_index: int,
+    entry_timestamp: datetime,
+    entry_price: float,
+) -> OutcomeBar:
+    same_index_bars = [bar for bar in same_day_bars if bar.bar_index == entry_bar_index]
+    if same_index_bars:
+        return min(
+            same_index_bars,
+            key=lambda bar: (
+                abs(bar.close - entry_price),
+                abs((bar.parsed_timestamp - entry_timestamp).total_seconds()),
+            ),
+        )
+
+    return min(
+        same_day_bars,
+        key=lambda bar: (
+            abs((bar.parsed_timestamp - entry_timestamp).total_seconds()),
+            abs(bar.close - entry_price),
+        ),
+    )
 
 
 def diagnose_trade_paths(

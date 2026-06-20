@@ -328,6 +328,21 @@ def test_validates_signal_entries_against_matching_exported_bars() -> None:
     ]
 
 
+def test_validates_signal_entries_prefers_bar_index_when_timestamps_are_rounded() -> None:
+    bars = [
+        _bar(1789, timestamp="2026-05-29 10:51:24.240000", high=7645, low=7644, close=7645),
+        _bar(1796, timestamp="2026-05-29 10:51:24.410000", high=7653, low=7652, close=7653),
+    ]
+    signals = [_signal(1796, direction="long", entry=7653, stop=7646.5, target=7661)]
+    signals[0]["bar_start_time"] = "2026-05-29 10:51:24"
+
+    diagnostics = validate_signal_entries_against_bars(bars, signals)
+
+    assert diagnostics[0]["nearest_bar_index"] == 1796
+    assert diagnostics[0]["nearest_bar_close"] == "7653"
+    assert diagnostics[0]["price_difference_points"] == "0"
+
+
 def test_rejects_signal_entries_against_stale_exported_bars() -> None:
     bars = [
         _bar(10, timestamp="2026-06-19 10:00:00", high=102, low=100, close=115),

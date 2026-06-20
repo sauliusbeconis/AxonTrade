@@ -173,3 +173,69 @@ Interpretation: on this tiny two-candidate replay sample, `3.5R` is the best
 tested target because the June 17 trade reached about `3.75R` favorable before
 stopping. This is not validation; it is a concrete hypothesis for a larger
 replay/export sample.
+
+## Larger Recalculation Sample
+
+Signal report:
+
+`reports/sierra-signal-log-large-sample.md`
+
+Outcome report:
+
+`reports/sierra-signal-log-outcomes-large-sample.md`
+
+Path diagnostics:
+
+`reports/sierra-signal-log-path-diagnostics-large-sample.csv`
+
+Target R sweep:
+
+`reports/sierra-signal-log-target-r-sweep-large-sample.csv`
+
+Sample range:
+
+- first row: `2026-05-21 09:30:00`
+- last row: `2026-06-19 12:59:58`
+- signal rows: `43048`
+- candidate signals: `23`
+- long candidates: `12`
+- short candidates: `11`
+
+Original opening-range-midpoint target result:
+
+- evaluated trades: `23`
+- target hits: `7`
+- stop/ambiguous losses: `16`
+- other exits: `0`
+- win rate: `30.43%`
+- net USD: `-880.50`
+
+Path diagnostic split:
+
+- `target_reached_stop_not_reached`: `7`
+- `stop_reached_target_not_reached`: `16`
+
+Target R sweep, `direction=all`:
+
+| Target R | Trades | Target Hits | Losses | Other | Win Rate | Net USD |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `0.5` | `23` | `12` | `11` | `0` | `52.17%` | `-1655.5` |
+| `1` | `23` | `12` | `11` | `0` | `52.17%` | `-543` |
+| `1.5` | `23` | `12` | `11` | `0` | `52.17%` | `569.5` |
+| `2` | `23` | `12` | `11` | `0` | `52.17%` | `1682` |
+| `2.5` | `23` | `10` | `13` | `0` | `43.48%` | `1394.5` |
+| `3` | `23` | `8` | `14` | `1` | `34.78%` | `657` |
+| `3.5` | `23` | `7` | `15` | `1` | `30.43%` | `725.75` |
+| `4` | `23` | `5` | `17` | `1` | `21.74%` | `219.5` |
+| `4.5` | `23` | `5` | `17` | `1` | `21.74%` | `725.75` |
+| `5` | `23` | `3` | `18` | `2` | `13.04%` | `-55.5` |
+
+Interpretation: the larger sample does not support the current
+opening-range-midpoint target. In the fixed-R sweep, `2R` is the best aggregate
+tested target. Direction-specific rows suggest `2.5R` performed best for longs
+and `4.5R` performed best for shorts, but those are still small subsamples and
+must be tested chronologically before changing the Sierra overlay defaults.
+
+Implementation note: Sierra exports sub-second bar timestamps, while the signal
+log stores whole-second bar times. Outcome preflight therefore validates matching
+entries by same-day `bar_index` first, then falls back to nearest timestamp.
