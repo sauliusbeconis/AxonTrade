@@ -1,0 +1,1 @@
+schema_version,event_id,event_time,event_name,currency,impact,blackout_before_minutes,blackout_after_minutes,source,notes

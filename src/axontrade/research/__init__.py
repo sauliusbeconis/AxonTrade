@@ -19,6 +19,13 @@ from axontrade.research.signal_log import (
     validate_signal_log_rows,
     validate_signal_log_schema,
 )
+from axontrade.research.signal_news_exclusion import (
+    NEWS_ANNOTATION_FIELDS,
+    NEWS_EVENT_CSV_HEADER,
+    NewsExclusionError,
+    annotate_rows_with_news_blackouts,
+    filter_news_blackout_rows,
+)
 from axontrade.research.signal_context_diagnostics import (
     SIGNAL_CONTEXT_DIAGNOSTIC_HEADER,
     SignalContextDiagnosticError,
@@ -114,6 +121,8 @@ __all__ = [
     "AbsorptionExperimentError",
     "BaselineError",
     "DEFAULT_LIQUIDITY_SWEEP_ABSORPTION_CONFIG",
+    "NEWS_ANNOTATION_FIELDS",
+    "NEWS_EVENT_CSV_HEADER",
     "PRICE_ONLY_PARAMETER_SWEEP_HEADER",
     "PRICE_ONLY_TRAIN_HOLDOUT_SWEEP_HEADER",
     "SignalLogError",
@@ -137,6 +146,7 @@ __all__ = [
     "SignalQualityFilterExperimentError",
     "SignalTargetExperimentError",
     "LiquiditySweepAbsorptionError",
+    "NewsExclusionError",
     "TradeOutcomeError",
     "VolumeAtPriceAbsorptionError",
     "diagnose_trade_paths",
@@ -159,6 +169,8 @@ __all__ = [
     "summarize_trade_outcomes_by_day",
     "summarize_trade_outcomes",
     "validate_signal_entries_against_bars",
+    "annotate_rows_with_news_blackouts",
+    "filter_news_blackout_rows",
     "run_price_only_parameter_sweep",
     "run_absorption_reward_risk_sweep",
     "run_absorption_reward_risk_train_holdout_sweep",

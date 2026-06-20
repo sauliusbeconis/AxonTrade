@@ -9,7 +9,9 @@ from pathlib import Path
 
 from axontrade.research import (
     SIGNAL_QUALITY_FILTER_WALK_FORWARD_HEADER,
+    NewsExclusionError,
     SignalQualityFilterExperimentError,
+    filter_news_blackout_rows,
     run_signal_quality_filter_walk_forward_sweep,
 )
 
@@ -63,10 +65,20 @@ def main() -> int:
         default="all,long,short",
         help="Comma-separated direction filters to test: all,long,short.",
     )
+    parser.add_argument(
+        "--exclude-news-blackout",
+        action="store_true",
+        help="Require and exclude rows with in_news_blackout=true.",
+    )
     args = parser.parse_args()
 
     try:
         diagnostic_rows = _read_csv(Path(args.diagnostics))
+        if args.exclude_news_blackout:
+            diagnostic_rows = filter_news_blackout_rows(
+                diagnostic_rows,
+                require_annotation=True,
+            )
         split_rows = run_signal_quality_filter_walk_forward_sweep(
             diagnostic_rows,
             train_date_count=args.train_date_count,
@@ -82,7 +94,7 @@ def main() -> int:
             max_sweep_abs_deltas=_parse_float_list(args.max_sweep_abs_deltas),
             direction_filters=_parse_string_list(args.direction_filters),
         )
-    except (SignalQualityFilterExperimentError, OSError) as exc:
+    except (NewsExclusionError, SignalQualityFilterExperimentError, OSError) as exc:
         print(f"error: {exc}")
         return 2
 

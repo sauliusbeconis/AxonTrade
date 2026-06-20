@@ -135,6 +135,65 @@ range, average volume, average trade count, average absolute delta, entry-bar
 volume/trades/delta, and normalized ratios such as
 `sweep_abs_delta_to_average_abs_delta`.
 
+## Run News Exclusion Annotation
+
+Manual help needed: **Yes before running this workflow**, because the scheduled
+news event CSV must be populated from an official economic calendar. Use New
+York local time, matching the Sierra signal log and exports.
+
+Template:
+
+`config/research/news_events.template.csv`
+
+Working event calendar path:
+
+`data/processed/AxonTrade_US_news_events.csv`
+
+Required CSV header:
+
+```text
+schema_version,event_id,event_time,event_name,currency,impact,blackout_before_minutes,blackout_after_minutes,source,notes
+```
+
+Example event row format:
+
+```text
+1,us-cpi-2026-06,2026-06-10 08:30:00,CPI,USD,high,15,30,official calendar,New York time
+```
+
+After the event calendar exists, annotate diagnostics with:
+
+```bash
+.venv/bin/python scripts/run_signal_news_exclusion.py \
+  reports/sierra-signal-log-quality-diagnostics-large-sample.csv \
+  data/processed/AxonTrade_US_news_events.csv \
+  reports/sierra-signal-log-quality-diagnostics-news-annotated-large-sample.csv \
+  --timestamp-field entry_time \
+  --default-blackout-before-minutes 10 \
+  --default-blackout-after-minutes 15
+```
+
+Then run quality filters with news-blackout rows excluded:
+
+```bash
+.venv/bin/python scripts/run_signal_quality_filter_walk_forward_sweep.py \
+  reports/sierra-signal-log-quality-diagnostics-news-annotated-large-sample.csv \
+  reports/sierra-signal-log-quality-filter-news-excluded-walk-forward-large-sample.csv \
+  --train-date-count 8 \
+  --holdout-date-count 2 \
+  --minimum-train-trades 4 \
+  --max-original-reward-risks 1.5,2,2.5,3,3.5,4,999 \
+  --min-minutes-after-rth-open 0,60,90 \
+  --max-minutes-after-rth-open 120,150,180,240,390 \
+  --max-sweep-abs-deltas 3,5,10,20,999999 \
+  --direction-filters all,long,short \
+  --exclude-news-blackout
+```
+
+The `--exclude-news-blackout` flag intentionally fails unless the input rows
+already include `in_news_blackout`, which prevents accidental unannotated tests
+from being treated as news-filtered.
+
 ## Run Quality Filter Sweep
 
 Manual help needed: **No after the quality diagnostics CSV exists**.
@@ -339,6 +398,10 @@ Quality diagnostics:
 
 `reports/sierra-signal-log-quality-diagnostics-large-sample.csv`
 
+News-annotated diagnostics, once a news calendar exists:
+
+`reports/sierra-signal-log-quality-diagnostics-news-annotated-large-sample.csv`
+
 Context diagnostics:
 
 `reports/sierra-signal-log-context-diagnostics-large-sample.csv`
@@ -471,6 +534,15 @@ Interpretation: normalized context is now available, but the first scan still
 does not show a standalone filter strong enough to promote into another
 walk-forward optimizer. The positive rows are mostly the same lower target/R
 and earlier-session subset already seen in quality diagnostics.
+
+Scheduled-news exclusion status:
+
+- implementation exists
+- template CSV exists
+- current large-sample report has not been rerun with news exclusion because
+  `data/processed/AxonTrade_US_news_events.csv` has not been populated yet
+- manual help needed: **Yes**, to provide the official event rows in New York
+  time
 
 Target R sweep, `direction=all`:
 
