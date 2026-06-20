@@ -1,0 +1,117 @@
+schema_version: 1
+profile_id: sierra_volume_at_price_export_v1
+description: >
+  Normalization contract for Sierra Chart volume-at-price exports used by
+  level-specific liquidity sweep absorption research.
+
+normalized_fields:
+  - timestamp
+  - symbol
+  - chart_number
+  - bar_index
+  - open
+  - high
+  - low
+  - close
+  - price
+  - bid_volume
+  - ask_volume
+  - level_volume
+  - delta
+  - number_of_trades
+  - session_phase
+
+optional_fields:
+  - level_volume
+  - delta
+  - number_of_trades
+
+defaults:
+  chart_number: 1
+  session_phase: rth
+
+required_cli_values:
+  - symbol
+
+column_aliases:
+  timestamp:
+    - Date Time
+    - DateTime
+    - Date-Time
+    - Timestamp
+    - Date
+  symbol:
+    - Symbol
+  chart_number:
+    - Chart Number
+    - ChartNumber
+  bar_index:
+    - Bar Index
+    - BarIndex
+    - Index
+  open:
+    - Open
+    - O
+    - Bar Open
+  high:
+    - High
+    - H
+    - Bar High
+  low:
+    - Low
+    - L
+    - Bar Low
+  close:
+    - Last
+    - Close
+    - C
+    - Bar Close
+  price:
+    - Price
+    - Price Level
+    - PriceLevel
+    - VAP Price
+    - Volume At Price Price
+  bid_volume:
+    - Bid Volume
+    - BidVolume
+    - Bid Vol
+    - Level Bid Volume
+    - VAP Bid Volume
+  ask_volume:
+    - Ask Volume
+    - AskVolume
+    - Ask Vol
+    - Level Ask Volume
+    - VAP Ask Volume
+  level_volume:
+    - Volume
+    - Total Volume
+    - Level Volume
+    - VAP Volume
+    - Volume At Price Volume
+  delta:
+    - Delta
+    - Ask - Bid
+    - Ask-Bid
+    - Ask Bid Difference
+    - Ask Volume Bid Volume Difference
+    - Level Delta
+  number_of_trades:
+    - Number of Trades
+    - Num Trades
+    - Trades
+    - Level Trades
+    - VAP Trades
+  session_phase:
+    - Session Phase
+    - Session
+
+notes:
+  - One row must represent one price level inside one chart bar.
+  - bid_volume and ask_volume are required because level-specific absorption
+    needs aggressor-side volume at the swept price levels.
+  - level_volume is optional because it can be computed as bid_volume plus
+    ask_volume when Sierra does not export it.
+  - delta is optional because it can be computed as ask_volume minus bid_volume.
+  - number_of_trades is optional for the first level-specific absorption pass.

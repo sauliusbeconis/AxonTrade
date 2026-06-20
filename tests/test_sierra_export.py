@@ -61,6 +61,14 @@ def test_orderflow_export_config_is_valid() -> None:
     assert "delta" in config["optional_fields"]
 
 
+def test_volume_at_price_export_config_is_valid() -> None:
+    config = load_sierra_export_config("config/research/sierra_volume_at_price_export.yaml")
+
+    validate_sierra_export_config(config)
+    assert "price" in config["normalized_fields"]
+    assert "number_of_trades" in config["optional_fields"]
+
+
 def test_normalizes_sierra_export_rows_for_baseline() -> None:
     rows = normalize_sierra_bar_study_rows(_sierra_export_rows(), symbol="ESU26-CME")
 
@@ -186,6 +194,65 @@ def test_inspects_orderflow_export_headers() -> None:
     assert by_field["ask_volume"].matched_header == "Ask Volume"
     assert by_field["delta"].status == "missing"
     assert by_field["delta"].required is False
+
+
+def test_inspects_volume_at_price_export_headers() -> None:
+    config = load_sierra_export_config("config/research/sierra_volume_at_price_export.yaml")
+    statuses = inspect_sierra_bar_study_headers(
+        [
+            "Date Time",
+            "Open",
+            "High",
+            "Low",
+            "Last",
+            "Price",
+            "Bid Volume",
+            "Ask Volume",
+            "Volume",
+            "Trades",
+        ],
+        config=config,
+        compute_opening_range=False,
+    )
+    by_field = {status.field_name: status for status in statuses}
+
+    assert by_field["timestamp"].status == "matched"
+    assert by_field["price"].matched_header == "Price"
+    assert by_field["bid_volume"].matched_header == "Bid Volume"
+    assert by_field["ask_volume"].matched_header == "Ask Volume"
+    assert by_field["level_volume"].matched_header == "Volume"
+    assert by_field["delta"].status == "missing"
+    assert by_field["delta"].required is False
+    assert by_field["number_of_trades"].matched_header == "Trades"
+
+
+def test_normalizes_volume_at_price_export_rows() -> None:
+    config = load_sierra_export_config("config/research/sierra_volume_at_price_export.yaml")
+    rows = normalize_sierra_bar_study_rows(
+        [
+            {
+                "Date Time": "2026-06-19 10:30:00",
+                "Open": "100",
+                "High": "101",
+                "Low": "99",
+                "Last": "100.5",
+                "Price": "100.25",
+                "Bid Volume": "80",
+                "Ask Volume": "120",
+                "Trades": "15",
+            },
+        ],
+        symbol="ESU26-CME",
+        config=config,
+    )
+
+    assert rows[0]["timestamp"] == "2026-06-19 10:30:00"
+    assert rows[0]["price"] == "100.25"
+    assert rows[0]["bid_volume"] == "80"
+    assert rows[0]["ask_volume"] == "120"
+    assert rows[0]["level_volume"] == ""
+    assert rows[0]["delta"] == ""
+    assert rows[0]["number_of_trades"] == "15"
 
 
 def test_inspects_missing_required_orderflow_export_fields(tmp_path) -> None:

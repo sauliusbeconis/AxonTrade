@@ -68,6 +68,8 @@ Reward/risk filtering experiments for that layer are documented in
 [docs/liquidity-sweep-reward-risk-sweep.md](docs/liquidity-sweep-reward-risk-sweep.md).
 Rolling walk-forward validation for that filter is documented in
 [docs/liquidity-sweep-reward-risk-walk-forward.md](docs/liquidity-sweep-reward-risk-walk-forward.md).
+The next level-specific footprint export contract is documented in
+[docs/sierra-volume-at-price-export.md](docs/sierra-volume-at-price-export.md).
 
 ## Pop!_OS And Wine Notes
 
