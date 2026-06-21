@@ -872,6 +872,49 @@ specific proposed rule `target=1.5R, breakeven_trigger=1R` was negative on the
 large sample under conservative OHLC ordering. Candidate quality filters remain
 the higher-priority research step.
 
+Volume-at-price absorption diagnostics:
+
+- VAP export:
+  `C:\SierraChart\Data\AxonTrade_ES_VolumeAtPriceExport.txt`
+- diagnostics output:
+  `reports/sierra-signal-log-vap-absorption-diagnostics-large-sample.csv`
+- evaluated trades: `23`
+- VAP covered trades: `23`
+- default level-absorption passes: `23`
+- target hits: `7`
+- losses: `16`
+- net USD: `-880.50`
+- swept-zone volume min/median/max: `1` / `6` / `205`
+
+Interpretation: the refreshed VAP export is aligned with the NY large-sample
+signal log. However, the default swept-zone aggression rule accepts every
+evaluated candidate, because the setup definition already requires sweep-side
+aggression. Level-specific VAP confirms that the sweep happened; it does not
+separate winning traps from losing continuation attempts.
+
+VAP threshold train/holdout validation:
+
+| Sample | Direction | Min Zone Ratio | Min Zone Volume | Trades | Target Hits | Losses | Net USD |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `train` | `all` | `1` | `0` | `12` | `7` | `5` | `1283.00` |
+| `holdout` | `all` | `1` | `0` | `11` | `0` | `11` | `-2163.50` |
+
+VAP threshold rolling walk-forward validation:
+
+- train date count: `8`
+- holdout date count: `2`
+- minimum selected train trades: `4`
+- holdout windows: `6`
+- selected holdout trades: `11`
+- selected holdout target hits: `0`
+- selected holdout losses: `11`
+- selected holdout net USD: `-2501.00`
+
+Interpretation: swept-zone VAP thresholds do not validate on the current large
+sample. Tightening ratio or volume either preserves the losing holdout trades or
+selects no trades. Do not promote VAP aggression/volume thresholds to Sierra
+overlay defaults from this result.
+
 Implementation note: Sierra exports sub-second bar timestamps, while the signal
 log stores whole-second bar times. Outcome preflight therefore validates matching
 entries by same-day `bar_index` first, then falls back to nearest timestamp.

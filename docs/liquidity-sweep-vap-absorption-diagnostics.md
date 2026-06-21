@@ -81,3 +81,46 @@ thresholds.
 Follow-up: the chronological threshold sweep is documented in
 `docs/liquidity-sweep-vap-threshold-sweep.md`. The train-selected VAP threshold
 did not survive holdout.
+
+## Current Large Sierra Signal Sample
+
+Input files:
+
+- signals: `data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv`
+- outcomes:
+  `data/processed/AxonTrade_ES_overlay_signal_outcomes_large_sample.csv`
+- VAP export:
+  `C:\SierraChart\Data\AxonTrade_ES_VolumeAtPriceExport.txt`
+- output:
+  `reports/sierra-signal-log-vap-absorption-diagnostics-large-sample.csv`
+
+Command:
+
+```bash
+.venv/bin/python scripts/run_vap_absorption_diagnostics.py \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  data/processed/AxonTrade_ES_overlay_signal_outcomes_large_sample.csv \
+  reports/sierra-signal-log-vap-absorption-diagnostics-large-sample.csv \
+  --vap-input /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_VolumeAtPriceExport.txt \
+  --symbol ESU26-CME \
+  --sweep-zone-points 1.0 \
+  --stop-buffer-points 0.25 \
+  --minimum-zone-aggression-ratio 1.25 \
+  --minimum-zone-volume 0
+```
+
+Result:
+
+- evaluated trades: `23`
+- VAP covered trades: `23`
+- default level-absorption passes: `23`
+- target hits: `7`
+- losses: `16`
+- net USD: `-880.50`
+- swept-zone volume min/median/max: `1` / `6` / `205`
+- swept-zone aggression ratio min/median/max: `1.25641026` / `3.5` / `inf`
+
+Interpretation: the refreshed VAP export is aligned and usable, but the default
+swept-zone aggression rule does not discriminate. Every evaluated candidate
+passes, so the next useful test is threshold validation, not another default
+diagnostic run.

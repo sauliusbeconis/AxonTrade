@@ -94,6 +94,53 @@ walk-forward testing. The filter finds some useful holdout trades, but the
 selected rolling rule remains negative on the available sample and the trade
 count is too small for execution decisions.
 
+## Current Large Sierra Signal Sample
+
+Input diagnostics:
+
+- source:
+  `reports/sierra-signal-log-vap-absorption-diagnostics-large-sample.csv`
+- evaluated trades before filtering: `23`
+- output:
+  `reports/sierra-signal-log-vap-threshold-walk-forward-large-sample.csv`
+
+Command:
+
+```bash
+.venv/bin/python scripts/run_vap_absorption_threshold_walk_forward_sweep.py \
+  reports/sierra-signal-log-vap-absorption-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-vap-threshold-walk-forward-large-sample.csv \
+  --train-date-count 8 \
+  --holdout-date-count 2 \
+  --minimum-zone-aggression-ratios 1,1.05,1.1,1.25,1.5,2,3 \
+  --minimum-zone-volumes 0,5,10,20,50,100,150,200,300,500,750,1000 \
+  --direction-filters all,long,short \
+  --minimum-train-trades 4
+```
+
+Selected holdout result:
+
+- holdout windows: `6`
+- selected holdout trades: `11`
+- target hits: `0`
+- stop/ambiguous losses: `11`
+- net result after default costs: `-2501.00` USD
+
+Selected holdout rows:
+
+| Window | Holdout Dates | Direction | Min Zone Ratio | Min Zone Volume | Trades | Net USD |
+| ---: | --- | --- | ---: | ---: | ---: | ---: |
+| `1` | `2026-06-04` to `2026-06-08` | `all` | `1` | `0` | `3` | `-798.00` |
+| `2` | `2026-06-08` to `2026-06-10` | `all` | `3` | `0` | `3` | `-685.50` |
+| `3` | `2026-06-10` to `2026-06-11` | `all` | `3` | `0` | `4` | `-751.50` |
+| `4` | `2026-06-11` to `2026-06-12` | `short` | `2` | `0` | `1` | `-266.00` |
+| `5` | `2026-06-12` to `2026-06-17` | `long` | `3` | `0` | `0` | `0.00` |
+| `6` | `2026-06-17` to `2026-06-19` | `long` | `3` | `0` | `0` | `0.00` |
+
+Interpretation: the large-sample rolling result is a clear rejection of the
+current VAP threshold filter. Later holdout candidates still show swept-zone
+aggression, but that aggression often precedes continuation into the stop.
+
 ## Interpretation Rules
 
 - Sum only the `holdout` rows to evaluate the walk-forward result.

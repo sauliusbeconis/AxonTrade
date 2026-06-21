@@ -68,6 +68,50 @@ The rolling walk-forward check in
 also failed on the current sample, with `6` selected holdout trades and
 `-233.50` USD net.
 
+## Current Large Sierra Signal Sample
+
+Input diagnostics:
+
+- source:
+  `reports/sierra-signal-log-vap-absorption-diagnostics-large-sample.csv`
+- evaluated trades before filtering: `23`
+- output:
+  `reports/sierra-signal-log-vap-threshold-sweep-large-sample.csv`
+
+Command:
+
+```bash
+.venv/bin/python scripts/run_vap_absorption_threshold_sweep.py \
+  reports/sierra-signal-log-vap-absorption-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-vap-threshold-sweep-large-sample.csv \
+  --train-date-count 8 \
+  --minimum-zone-aggression-ratios 1,1.05,1.1,1.25,1.5,2,3 \
+  --minimum-zone-volumes 0,5,10,20,50,100,150,200,300,500,750,1000 \
+  --direction-filters all,long,short \
+  --minimum-train-trades 4
+```
+
+Train-selected rule:
+
+- direction filter: `all`
+- minimum swept-zone aggression ratio: `1`
+- minimum swept-zone volume: `0`
+- train trades: `12`
+- train target hits: `7`
+- train losses: `5`
+- train net: `1283.00` USD
+
+Matching holdout row:
+
+- holdout trades: `11`
+- target hits: `0`
+- losses: `11`
+- holdout net: `-2163.50` USD
+
+Interpretation: the VAP threshold idea fails this chronological split. The best
+training rule is effectively "take everything", and the matching holdout period
+is all losses.
+
 ## Interpretation Rules
 
 - The selected train row is the highest train `net_usd` among rows with at
