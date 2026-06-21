@@ -59,6 +59,13 @@ from axontrade.research.signal_quality_health_gate_experiments import (
     SignalQualityHealthGateExperimentError,
     run_signal_quality_health_gate_walk_forward_sweep,
 )
+from axontrade.research.signal_structure_filter_experiments import (
+    SIGNAL_STRUCTURE_FILTER_SWEEP_HEADER,
+    SIGNAL_STRUCTURE_FILTER_WALK_FORWARD_HEADER,
+    SignalStructureFilterExperimentError,
+    run_signal_structure_filter_sweep,
+    run_signal_structure_filter_walk_forward_sweep,
+)
 from axontrade.research.signal_quality_diagnostics import (
     SIGNAL_QUALITY_DIAGNOSTIC_HEADER,
     SignalQualityDiagnosticError,
@@ -154,6 +161,8 @@ __all__ = [
     "SIGNAL_HEALTH_GATE_SWEEP_HEADER",
     "SIGNAL_HEALTH_GATE_WALK_FORWARD_HEADER",
     "SIGNAL_QUALITY_HEALTH_GATE_WALK_FORWARD_HEADER",
+    "SIGNAL_STRUCTURE_FILTER_SWEEP_HEADER",
+    "SIGNAL_STRUCTURE_FILTER_WALK_FORWARD_HEADER",
     "SIGNAL_TARGET_R_SWEEP_HEADER",
     "SIGNAL_TARGET_R_WALK_FORWARD_SWEEP_HEADER",
     "SIGNAL_QUALITY_DIAGNOSTIC_HEADER",
@@ -170,6 +179,7 @@ __all__ = [
     "SignalDynamicExitExperimentError",
     "SignalHealthGateExperimentError",
     "SignalQualityHealthGateExperimentError",
+    "SignalStructureFilterExperimentError",
     "SignalQualityDiagnosticError",
     "SignalQualityFilterExperimentError",
     "SignalTargetExperimentError",
@@ -214,6 +224,8 @@ __all__ = [
     "run_signal_health_gate_sweep",
     "run_signal_health_gate_walk_forward_sweep",
     "run_signal_quality_health_gate_walk_forward_sweep",
+    "run_signal_structure_filter_sweep",
+    "run_signal_structure_filter_walk_forward_sweep",
     "run_signal_target_r_sweep",
     "run_signal_target_r_walk_forward_sweep",
     "run_signal_quality_diagnostics",

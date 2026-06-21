@@ -166,6 +166,37 @@ Manual help needed: **No after the context diagnostics CSV exists**.
 This chronologically selects the best context filter on each training window,
 then applies that exact filter to the next holdout dates.
 
+## Run Structure Filter Sweep
+
+Manual help needed: **No after the quality diagnostics CSV exists**.
+
+```bash
+.venv/bin/python scripts/run_signal_structure_filter_sweep.py \
+  reports/sierra-signal-log-quality-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-structure-filter-sweep-large-sample.csv
+```
+
+This tests stricter entry-known setup-structure filters: maximum bars from
+sweep to confirmation, minimum sweep-side aggression ratio, and direction-aware
+confirmation close location, on top of reward/risk, time, and sweep-size
+filters.
+
+## Run Structure Filter Walk-Forward
+
+Manual help needed: **No after the quality diagnostics CSV exists**.
+
+```bash
+.venv/bin/python scripts/run_signal_structure_filter_walk_forward_sweep.py \
+  reports/sierra-signal-log-quality-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-structure-filter-walk-forward-large-sample.csv \
+  --train-date-count 8 \
+  --holdout-date-count 2 \
+  --minimum-train-trades 4
+```
+
+This chronologically selects the best structure filter on each training window,
+then applies that exact filter to the next holdout dates.
+
 ## Run Health Gate Sweep
 
 Manual help needed: **No after the quality diagnostics CSV exists**.
@@ -530,6 +561,14 @@ Quality filter walk-forward:
 
 `reports/sierra-signal-log-quality-filter-walk-forward-large-sample.csv`
 
+Structure filter sweep:
+
+`reports/sierra-signal-log-structure-filter-sweep-large-sample.csv`
+
+Structure filter walk-forward:
+
+`reports/sierra-signal-log-structure-filter-walk-forward-large-sample.csv`
+
 Target R sweep:
 
 `reports/sierra-signal-log-target-r-sweep-large-sample.csv`
@@ -632,6 +671,30 @@ less bad than the target-only and breakeven-stop walk-forward runs, but it is
 still not a validated edge. The next improvement should avoid raw sweep-size
 thresholds and add normalized context: current volatility, current traded
 volume, and scheduled-news exclusion.
+
+Structure filter aggregate sweep:
+
+| Direction | Max Original RR | Minutes After Open | Max Sweep Abs Delta | Max Bars After Sweep | Min Sweep Aggression Ratio | Min Confirmation Edge Close | Trades | Target Hits | Losses | Net USD |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `all` | `3.5` | `0-120` | `3` | `5` | `1` | `0.55` | `6` | `5` | `1` | `1691.50` |
+
+Rolling structure filter walk-forward validation:
+
+- train date count: `8`
+- holdout date count: `2`
+- minimum selected train trades: `4`
+- holdout windows: `6`
+- selected holdout trades: `3`
+- selected holdout target hits: `0`
+- selected holdout losses: `3`
+- selected holdout net USD: `-1010.50`
+
+Interpretation: the structure filters did not solve the problem. The best
+aggregate row is still the same early-sample pocket as the basic quality
+filter, and the walk-forward selector often kept `max_bars_after_sweep=5` and
+`min_confirmation_edge_close=0.55`, meaning stricter sweep timing and close
+location did not consistently win. The setup likely needs level-specific
+absorption evidence, not more bar-level proxy thresholds.
 
 Context diagnostic observations:
 
