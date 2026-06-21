@@ -88,6 +88,60 @@ def test_vap_absorption_diagnostics_can_require_zone_volume() -> None:
     assert rows[0]["level_absorption_pass"] == "false"
 
 
+def test_vap_absorption_diagnostics_falls_back_to_sweep_timestamp() -> None:
+    rows = run_vap_absorption_diagnostics(
+        outcome_rows=[
+            {
+                "outcome_id": "outcome-1",
+                "signal_id": "signal-1",
+                "symbol": "ESU26-CME",
+                "direction": "short",
+                "entry_time": "2026-06-10 10:10:00",
+                "entry_bar_index": "12",
+                "stop_price": "101.25",
+                "exit_reason": "target_hit",
+                "net_usd": "50",
+            },
+        ],
+        signal_rows=[
+            {
+                "signal_id": "signal-1",
+                "event_type": "candidate_signal",
+                "symbol": "ESU26-CME",
+                "bar_index": "12",
+                "bar_start_time": "2026-06-10 10:10:00",
+                "notes": "short absorption reversal; sweep_bar_index=10",
+            },
+            {
+                "signal_id": "signal-0",
+                "event_type": "rejected_signal",
+                "symbol": "ESU26-CME",
+                "bar_index": "10",
+                "bar_start_time": "2026-06-10 10:08:03",
+                "notes": "",
+            },
+        ],
+        vap_rows=[
+            {
+                "timestamp": "2026-06-10 10:08:03.456000",
+                "symbol": "ESU26-CME",
+                "bar_index": "999",
+                "price": "101",
+                "bid_volume": "4",
+                "ask_volume": "12",
+            },
+        ],
+        sweep_zone_points=0.25,
+        stop_buffer_points=0.25,
+        minimum_zone_aggression_ratio=1.25,
+        minimum_zone_volume=10,
+    )
+
+    assert rows[0]["zone_levels"] == 1
+    assert rows[0]["level_absorption_pass"] == "true"
+    assert "vap_lookup=timestamp" in rows[0]["notes"]
+
+
 def test_summarizes_vap_absorption_diagnostics() -> None:
     summary_rows = summarize_vap_absorption_diagnostics(
         [

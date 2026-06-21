@@ -63,6 +63,11 @@ def main() -> int:
         default=0.0,
         help="Minimum total bid+ask volume in the swept price zone.",
     )
+    parser.add_argument(
+        "--allow-empty-vap-coverage",
+        action="store_true",
+        help="Write output even when no evaluated trades match any VAP price levels.",
+    )
     args = parser.parse_args()
 
     signal_rows = _read_csv(Path(args.signals))
@@ -81,6 +86,21 @@ def main() -> int:
         minimum_zone_aggression_ratio=args.minimum_zone_aggression_ratio,
         minimum_zone_volume=args.minimum_zone_volume,
     )
+    covered_rows = [
+        row
+        for row in diagnostic_rows
+        if int(row["zone_levels"]) > 0
+    ]
+    if diagnostic_rows and not covered_rows and not args.allow_empty_vap_coverage:
+        print("status=FAIL vap_coverage=0")
+        print("manual_sierra_help_needed=yes")
+        print(
+            "reason=No evaluated trades matched volume-at-price levels at their swept price zones. "
+            "The VAP export is probably stale or from a different chart/timezone/replay segment.",
+        )
+        print("expected_windows_path=C:\\SierraChart\\Data\\AxonTrade_ES_VolumeAtPriceExport.txt")
+        print(f"vap_input={args.vap_input}")
+        return 1
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -101,6 +121,7 @@ def main() -> int:
     pass_net = sum(float(row["net_usd"]) for row in passed_rows)
     print(
         f"wrote {len(diagnostic_rows)} VAP diagnostic rows to {output_path}; "
+        f"vap_covered_trades={len(covered_rows)}, "
         f"pass_trades={len(passed_rows)}, "
         f"pass_net_usd={pass_net:.2f}",
     )

@@ -107,12 +107,16 @@ def run_vap_absorption_diagnostics(
     if minimum_zone_volume < 0:
         raise VolumeAtPriceAbsorptionError("minimum_zone_volume must be nonnegative")
 
+    signal_rows_list = list(signal_rows)
+    vap_rows_list = list(vap_rows)
     signal_by_id = {
         str(row["signal_id"]): row
-        for row in signal_rows
+        for row in signal_rows_list
         if str(row.get("event_type", "")) == "candidate_signal"
     }
-    vap_by_bar = _index_vap_rows(vap_rows)
+    signal_timestamp_by_bar = _index_signal_bar_timestamps(signal_rows_list)
+    vap_by_bar = _index_vap_rows(vap_rows_list)
+    vap_by_timestamp = _index_vap_rows_by_timestamp(vap_rows_list)
 
     diagnostic_rows: list[dict[str, Any]] = []
     for outcome in outcome_rows:
@@ -134,11 +138,15 @@ def run_vap_absorption_diagnostics(
             sweep_extreme_price=sweep_extreme_price,
             sweep_zone_points=sweep_zone_points,
         )
-        levels = [
-            level
-            for level in vap_by_bar.get((symbol, sweep_bar_index), [])
-            if zone_low <= level.price <= zone_high
-        ]
+        levels, vap_lookup_mode = _lookup_sweep_zone_levels(
+            symbol=symbol,
+            sweep_bar_index=sweep_bar_index,
+            zone_low=zone_low,
+            zone_high=zone_high,
+            signal_timestamp_by_bar=signal_timestamp_by_bar,
+            vap_by_bar=vap_by_bar,
+            vap_by_timestamp=vap_by_timestamp,
+        )
         metrics = _level_metrics(levels, direction=direction, extreme_price=sweep_extreme_price)
         level_absorption_pass = _level_absorption_pass(
             metrics,
@@ -177,7 +185,8 @@ def run_vap_absorption_diagnostics(
                     "sweep-zone VAP diagnostics; "
                     f"sweep_zone_points={_format_number(sweep_zone_points)}; "
                     f"minimum_zone_aggression_ratio={_format_number(minimum_zone_aggression_ratio)}; "
-                    f"minimum_zone_volume={_format_number(minimum_zone_volume)}"
+                    f"minimum_zone_volume={_format_number(minimum_zone_volume)}; "
+                    f"vap_lookup={vap_lookup_mode}"
                 ),
             },
         )
@@ -547,6 +556,78 @@ def _index_vap_rows(rows: Iterable[dict[str, Any]]) -> dict[tuple[str, int], lis
     return indexed
 
 
+def _index_vap_rows_by_timestamp(rows: Iterable[dict[str, Any]]) -> dict[tuple[str, str], list[VolumeAtPriceLevel]]:
+    indexed: dict[tuple[str, str], list[VolumeAtPriceLevel]] = defaultdict(list)
+    for row in rows:
+        timestamp = str(row.get("timestamp", "")).strip()
+        if not timestamp:
+            continue
+        level = VolumeAtPriceLevel(
+            symbol=str(row["symbol"]),
+            bar_index=_to_int(row["bar_index"], "bar_index"),
+            price=_to_float(row["price"], "price"),
+            bid_volume=_to_float(row["bid_volume"], "bid_volume"),
+            ask_volume=_to_float(row["ask_volume"], "ask_volume"),
+        )
+        indexed[(level.symbol, _timestamp_key(timestamp))].append(level)
+    return indexed
+
+
+def _index_signal_bar_timestamps(rows: Iterable[dict[str, Any]]) -> dict[tuple[str, int], str]:
+    indexed: dict[tuple[str, int], str] = {}
+    for row in rows:
+        symbol = str(row.get("symbol", "")).strip()
+        bar_index = str(row.get("bar_index", "")).strip()
+        timestamp = (
+            str(row.get("bar_start_time", "")).strip()
+            or str(row.get("generated_at", "")).strip()
+            or str(row.get("timestamp", "")).strip()
+        )
+        if not symbol or not bar_index or not timestamp:
+            continue
+        indexed[(symbol, _to_int(bar_index, "bar_index"))] = timestamp
+    return indexed
+
+
+def _lookup_sweep_zone_levels(
+    *,
+    symbol: str,
+    sweep_bar_index: int,
+    zone_low: float,
+    zone_high: float,
+    signal_timestamp_by_bar: dict[tuple[str, int], str],
+    vap_by_bar: dict[tuple[str, int], list[VolumeAtPriceLevel]],
+    vap_by_timestamp: dict[tuple[str, str], list[VolumeAtPriceLevel]],
+) -> tuple[list[VolumeAtPriceLevel], str]:
+    by_bar = _filter_zone_levels(vap_by_bar.get((symbol, sweep_bar_index), []), zone_low, zone_high)
+    if by_bar:
+        return by_bar, "bar_index"
+
+    sweep_timestamp = signal_timestamp_by_bar.get((symbol, sweep_bar_index))
+    if sweep_timestamp is not None:
+        by_timestamp = _filter_zone_levels(
+            vap_by_timestamp.get((symbol, _timestamp_key(sweep_timestamp)), []),
+            zone_low,
+            zone_high,
+        )
+        if by_timestamp:
+            return by_timestamp, "timestamp"
+
+    return [], "missing"
+
+
+def _filter_zone_levels(
+    levels: list[VolumeAtPriceLevel],
+    zone_low: float,
+    zone_high: float,
+) -> list[VolumeAtPriceLevel]:
+    return [
+        level
+        for level in levels
+        if zone_low <= level.price <= zone_high
+    ]
+
+
 def _parse_sweep_bar_index(signal_row: dict[str, Any]) -> int:
     notes = str(signal_row.get("notes", ""))
     match = _SWEEP_BAR_INDEX_RE.search(notes)
@@ -683,6 +764,16 @@ def _parse_trade_date(value: Any) -> str:
     for timestamp_format in _TIMESTAMP_FORMATS:
         try:
             return datetime.strptime(timestamp_text, timestamp_format).date().isoformat()
+        except ValueError:
+            continue
+    raise VolumeAtPriceAbsorptionError(f"Invalid timestamp: {value!r}")
+
+
+def _timestamp_key(value: str) -> str:
+    timestamp_text = _normalize_timestamp_text(value.strip())
+    for timestamp_format in _TIMESTAMP_FORMATS:
+        try:
+            return datetime.strptime(timestamp_text, timestamp_format).replace(microsecond=0).isoformat(sep=" ")
         except ValueError:
             continue
     raise VolumeAtPriceAbsorptionError(f"Invalid timestamp: {value!r}")

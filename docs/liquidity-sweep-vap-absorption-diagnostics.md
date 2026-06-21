@@ -3,8 +3,9 @@
 This workflow joins existing absorption outcomes to the Sierra
 volume-at-price export and measures swept-zone bid/ask volume.
 
-Manual help needed: **No** after
-`C:\SierraChart\Data\AxonTrade_ES_VolumeAtPriceExport.txt` exists.
+Manual help needed: **No** after a fresh
+`C:\SierraChart\Data\AxonTrade_ES_VolumeAtPriceExport.txt` exists from the
+same Sierra chart, timezone, replay segment, and contract as the signal log.
 
 ## Run
 
@@ -18,11 +19,31 @@ Manual help needed: **No** after
   --minimum-zone-volume 20
 ```
 
+For the current large Sierra signal sample:
+
+```bash
+.venv/bin/python scripts/run_vap_absorption_diagnostics.py \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  data/processed/AxonTrade_ES_overlay_signal_outcomes_large_sample.csv \
+  reports/sierra-signal-log-vap-absorption-diagnostics-large-sample.csv \
+  --vap-input /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_VolumeAtPriceExport.txt \
+  --symbol ESU26-CME \
+  --minimum-zone-volume 0
+```
+
+The command fails with `status=FAIL vap_coverage=0` when the VAP file is stale
+or came from a different chart. In that case manual help is needed: refresh the
+VAP export using `Analysis >> Studies >> AxonTrade Volume At Price CSV Logger >>
+Settings >> Settings and Inputs >> Export Now = Yes` on the same ES chart that
+produced `C:\SierraChart\Data\AxonTrade_ES_OrderflowExport_NY_Large.txt`.
+
 ## Rule Measured
 
 For each evaluated absorption outcome:
 
 - parse `sweep_bar_index` from the candidate signal notes;
+- join VAP levels by sweep bar index, then by the sweep bar timestamp if the
+  bar indexes drift after a chart reload;
 - recover the swept extreme from stop price and stop buffer;
 - inspect the `1.0` point zone nearest the swept extreme;
 - calculate swept-zone bid volume, ask volume, delta, and aggressor ratio;

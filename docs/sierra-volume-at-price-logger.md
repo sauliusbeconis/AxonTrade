@@ -73,6 +73,13 @@ Use the chart that has the ES/MES order-flow bars loaded.
 
 Manual help needed: **Yes**.
 
+Use the same ES chart window that produced:
+
+`C:\SierraChart\Data\AxonTrade_ES_OrderflowExport_NY_Large.txt`
+
+The current large-sample signal/outcome research requires the volume-at-price
+file to come from that same chart, timezone, replay segment, and contract.
+
 1. Click the ES chart window.
 2. Click `Analysis >> Studies`.
 3. Select `AxonTrade Volume At Price CSV Logger`.
@@ -116,3 +123,23 @@ manual_sierra_help_needed=no
 
 If it fails, copy the exact `status=FAIL` output and the relevant line from
 `Window >> Message Log`.
+
+## Validate Against Signal Research
+
+Manual help needed: **No** after Sierra writes the refreshed VAP file.
+
+From the repository:
+
+```bash
+.venv/bin/python scripts/run_vap_absorption_diagnostics.py \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  data/processed/AxonTrade_ES_overlay_signal_outcomes_large_sample.csv \
+  reports/sierra-signal-log-vap-absorption-diagnostics-large-sample.csv \
+  --vap-input /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_VolumeAtPriceExport.txt \
+  --symbol ESU26-CME \
+  --minimum-zone-volume 0
+```
+
+Expected successful output includes `vap_covered_trades=` greater than `0`.
+If the command prints `status=FAIL vap_coverage=0`, repeat the export from the
+same chart that produced `AxonTrade_ES_OrderflowExport_NY_Large.txt`.
