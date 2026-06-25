@@ -915,6 +915,35 @@ sample. Tightening ratio or volume either preserves the losing holdout trades or
 selects no trades. Do not promote VAP aggression/volume thresholds to Sierra
 overlay defaults from this result.
 
+VAP trap filter validation:
+
+This tests a stricter interpretation of absorption: enough sweep-side
+aggression, limited total swept-zone volume, limited number of swept-zone price
+levels, and enough volume concentrated at the exact swept extreme.
+
+Train/holdout selected rule:
+
+| Sample | Direction | Min Ratio | Max Zone Volume | Max Zone Levels | Min Extreme Share | Trades | Target Hits | Losses | Net USD |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `train` | `all` | `1` | `20` | `5` | `0.25` | `8` | `6` | `2` | `1953.25` |
+| `holdout` | `all` | `1` | `20` | `5` | `0.25` | `5` | `0` | `5` | `-1130.00` |
+
+VAP trap filter rolling walk-forward validation:
+
+- train date count: `8`
+- holdout date count: `2`
+- minimum selected train trades: `4`
+- holdout windows: `6`
+- selected holdout trades: `5`
+- selected holdout target hits: `0`
+- selected holdout losses: `5`
+- selected holdout net USD: `-1205.00`
+
+Interpretation: the trap filter is directionally better as damage reduction
+than the broad VAP threshold filter, but it is still not an edge. It selected
+fewer holdout trades and every selected holdout trade lost. Do not automate from
+this result.
+
 Implementation note: Sierra exports sub-second bar timestamps, while the signal
 log stores whole-second bar times. Outcome preflight therefore validates matching
 entries by same-day `bar_index` first, then falls back to nearest timestamp.

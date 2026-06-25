@@ -132,11 +132,15 @@ from axontrade.research.trade_outcomes import (
 from axontrade.research.volume_at_price_absorption import (
     VAP_ABSORPTION_DIAGNOSTIC_HEADER,
     VAP_ABSORPTION_THRESHOLD_SWEEP_HEADER,
+    VAP_TRAP_FILTER_SWEEP_HEADER,
     VolumeAtPriceAbsorptionError,
     run_vap_absorption_diagnostics,
     run_vap_absorption_threshold_sweep,
     run_vap_absorption_threshold_train_holdout_sweep,
     run_vap_absorption_threshold_walk_forward_sweep,
+    run_vap_trap_filter_sweep,
+    run_vap_trap_filter_train_holdout_sweep,
+    run_vap_trap_filter_walk_forward_sweep,
     summarize_vap_absorption_diagnostics,
 )
 
@@ -173,6 +177,7 @@ __all__ = [
     "TRADE_PATH_DIAGNOSTIC_CSV_HEADER",
     "VAP_ABSORPTION_DIAGNOSTIC_HEADER",
     "VAP_ABSORPTION_THRESHOLD_SWEEP_HEADER",
+    "VAP_TRAP_FILTER_SWEEP_HEADER",
     "PriceOnlyExperimentError",
     "SignalContextDiagnosticError",
     "SignalContextFilterExperimentError",
@@ -235,6 +240,9 @@ __all__ = [
     "run_vap_absorption_threshold_sweep",
     "run_vap_absorption_threshold_train_holdout_sweep",
     "run_vap_absorption_threshold_walk_forward_sweep",
+    "run_vap_trap_filter_sweep",
+    "run_vap_trap_filter_train_holdout_sweep",
+    "run_vap_trap_filter_walk_forward_sweep",
     "summarize_vap_absorption_diagnostics",
     "validate_signal_log_row",
     "validate_signal_log_rows",

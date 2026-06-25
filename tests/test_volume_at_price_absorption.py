@@ -5,11 +5,15 @@ import pytest
 from axontrade.research import (
     VAP_ABSORPTION_DIAGNOSTIC_HEADER,
     VAP_ABSORPTION_THRESHOLD_SWEEP_HEADER,
+    VAP_TRAP_FILTER_SWEEP_HEADER,
     VolumeAtPriceAbsorptionError,
     run_vap_absorption_diagnostics,
     run_vap_absorption_threshold_sweep,
     run_vap_absorption_threshold_train_holdout_sweep,
     run_vap_absorption_threshold_walk_forward_sweep,
+    run_vap_trap_filter_sweep,
+    run_vap_trap_filter_train_holdout_sweep,
+    run_vap_trap_filter_walk_forward_sweep,
     summarize_vap_absorption_diagnostics,
 )
 
@@ -238,6 +242,154 @@ def test_runs_vap_absorption_threshold_walk_forward_sweep() -> None:
     assert all(row["selected_on_train"] == "true" for row in split_rows)
 
 
+def test_runs_vap_trap_filter_sweep() -> None:
+    rows = [
+        _diagnostic_row(
+            0,
+            trade_date="2026-06-10",
+            direction="short",
+            zone_bid=4,
+            zone_ask=12,
+            extreme_bid=1,
+            extreme_ask=11,
+            net_usd=50,
+        ),
+        _diagnostic_row(
+            1,
+            trade_date="2026-06-10",
+            direction="short",
+            zone_bid=20,
+            zone_ask=60,
+            extreme_bid=1,
+            extreme_ask=4,
+            net_usd=-25,
+        ),
+    ]
+
+    sweep_rows = run_vap_trap_filter_sweep(
+        rows,
+        minimum_zone_aggression_ratios=[1.25],
+        maximum_zone_volumes=[20],
+        maximum_zone_levels=[3],
+        minimum_extreme_volume_shares=[0.5],
+        direction_filters=["all"],
+    )
+
+    assert list(sweep_rows[0].keys()) == VAP_TRAP_FILTER_SWEEP_HEADER
+    assert sweep_rows[0]["evaluated_trades"] == 1
+    assert sweep_rows[0]["target_hits"] == 1
+    assert sweep_rows[0]["net_usd"] == "50"
+
+
+def test_runs_vap_trap_filter_train_holdout_sweep() -> None:
+    rows = [
+        _diagnostic_row(
+            0,
+            trade_date="2026-06-10",
+            direction="short",
+            zone_bid=4,
+            zone_ask=12,
+            extreme_bid=1,
+            extreme_ask=11,
+            net_usd=50,
+        ),
+        _diagnostic_row(
+            1,
+            trade_date="2026-06-11",
+            direction="long",
+            zone_bid=12,
+            zone_ask=4,
+            extreme_bid=11,
+            extreme_ask=1,
+            net_usd=50,
+        ),
+        _diagnostic_row(
+            2,
+            trade_date="2026-06-12",
+            direction="short",
+            zone_bid=1,
+            zone_ask=3,
+            extreme_bid=0,
+            extreme_ask=1,
+            net_usd=-25,
+        ),
+    ]
+
+    split_rows = run_vap_trap_filter_train_holdout_sweep(
+        rows,
+        train_date_count=2,
+        minimum_zone_aggression_ratios=[1.25],
+        maximum_zone_volumes=[5, 20],
+        maximum_zone_levels=[3],
+        minimum_extreme_volume_shares=[0.5],
+        direction_filters=["all"],
+    )
+
+    selected_train = next(
+        row
+        for row in split_rows
+        if row["sample"] == "train" and row["selected_on_train"] == "true"
+    )
+    selected_holdout = next(
+        row
+        for row in split_rows
+        if row["sample"] == "holdout" and row["selected_on_train"] == "true"
+    )
+    assert selected_train["maximum_zone_volume"] == "20"
+    assert selected_train["net_usd"] == "100"
+    assert selected_holdout["evaluated_trades"] == 0
+
+
+def test_runs_vap_trap_filter_walk_forward_sweep() -> None:
+    rows = [
+        _diagnostic_row(
+            0,
+            trade_date="2026-06-10",
+            direction="short",
+            zone_bid=4,
+            zone_ask=12,
+            extreme_bid=1,
+            extreme_ask=11,
+            net_usd=50,
+        ),
+        _diagnostic_row(
+            1,
+            trade_date="2026-06-11",
+            direction="long",
+            zone_bid=12,
+            zone_ask=4,
+            extreme_bid=11,
+            extreme_ask=1,
+            net_usd=50,
+        ),
+        _diagnostic_row(
+            2,
+            trade_date="2026-06-12",
+            direction="short",
+            zone_bid=1,
+            zone_ask=3,
+            extreme_bid=0,
+            extreme_ask=1,
+            net_usd=-25,
+        ),
+    ]
+
+    split_rows = run_vap_trap_filter_walk_forward_sweep(
+        rows,
+        train_date_count=1,
+        holdout_date_count=1,
+        minimum_zone_aggression_ratios=[1.25],
+        maximum_zone_volumes=[5, 20],
+        maximum_zone_levels=[3],
+        minimum_extreme_volume_shares=[0.5],
+        direction_filters=["all"],
+    )
+
+    assert len(split_rows) == 4
+    assert [row["sample"] for row in split_rows] == ["train", "holdout", "train", "holdout"]
+    assert all(row["selected_on_train"] == "true" for row in split_rows)
+
+
 def test_rejects_invalid_vap_absorption_walk_forward_window() -> None:
     rows = [
         _diagnostic_row(0, trade_date="2026-06-10", direction="short", zone_bid=4, zone_ask=12, net_usd=50),
@@ -278,13 +430,21 @@ def _diagnostic_row(
     zone_bid: float,
     zone_ask: float,
     net_usd: float,
+    extreme_bid: float | None = None,
+    extreme_ask: float | None = None,
 ) -> dict[str, object]:
     zone_delta = zone_ask - zone_bid
+    if extreme_bid is None:
+        extreme_bid = zone_bid
+    if extreme_ask is None:
+        extreme_ask = zone_ask
     if direction == "short":
         ratio = zone_ask / zone_bid if zone_bid else float("inf")
+        extreme_ratio = extreme_ask / extreme_bid if extreme_bid else float("inf")
         exit_reason = "target_hit" if net_usd >= 0 else "stop_hit"
     else:
         ratio = zone_bid / zone_ask if zone_ask else float("inf")
+        extreme_ratio = extreme_bid / extreme_ask if extreme_ask else float("inf")
         exit_reason = "target_hit" if net_usd >= 0 else "stop_hit"
     return {
         "entry_time": f"{trade_date} 10:{index:02d}:00",
@@ -294,6 +454,10 @@ def _diagnostic_row(
         "zone_ask_volume": zone_ask,
         "zone_delta": zone_delta,
         "zone_aggression_ratio": ratio,
+        "extreme_bid_volume": extreme_bid,
+        "extreme_ask_volume": extreme_ask,
+        "extreme_delta": extreme_ask - extreme_bid,
+        "extreme_aggression_ratio": extreme_ratio,
         "exit_reason": exit_reason,
         "net_usd": net_usd,
     }
