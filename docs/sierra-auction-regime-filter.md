@@ -53,6 +53,17 @@ Rolling walk-forward:
   --minimum-train-trades 4
 ```
 
+Non-overlapping holdout-date audit:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_filter_walk_forward_sweep.py \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-holdout1-large-sample.csv \
+  --train-date-count 8 \
+  --holdout-date-count 1 \
+  --minimum-train-trades 4
+```
+
 Default tested grids:
 
 - direction filters: `all,long,short`
@@ -85,6 +96,15 @@ Rolling walk-forward guard:
   reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
   reports/sierra-signal-log-auction-regime-filter-walk-forward-large-sample.csv \
   reports/sierra-signal-log-auction-regime-guard-walk-forward-large-sample.csv
+```
+
+Non-overlapping holdout-date guard:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_guard_report.py \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-holdout1-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-guard-walk-forward-holdout1-large-sample.csv
 ```
 
 ## Auction Guard Plus Health Gate
@@ -125,6 +145,23 @@ Rolling walk-forward stack:
   reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
   reports/sierra-signal-log-auction-regime-filter-walk-forward-large-sample.csv \
   reports/sierra-signal-log-auction-regime-target-r-walk-forward-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --direction-filters all,long,short
+```
+
+Non-overlapping holdout-date target-R stack:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_target_r_report.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-holdout1-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-target-r-walk-forward-holdout1-large-sample.csv \
   --symbol ESU26-CME \
   --chart-number 2 \
   --session-phase rth \
@@ -177,6 +214,7 @@ Guard accepted/skipped holdout result:
 | --- | ---: | ---: | ---: | ---: |
 | Train/holdout | `2` | `-282.00` | `9` | `-1881.50` |
 | Rolling walk-forward | `2` | `-257.00` | `17` | `-3634.50` |
+| Rolling walk-forward, holdout `1` | `1` | `-128.50` | `10` | `-2035.00` |
 
 Auction guard plus health-gate rolling holdout result:
 
@@ -186,9 +224,10 @@ Auction guard plus health-gate rolling holdout result:
 
 Auction guard plus target-R rolling holdout result:
 
-| Evaluated Trades | Target Hits | Losses | Selected Target R Values | Accepted Net USD | Auction-Skipped Trades | Auction-Skipped Net USD |
-| ---: | ---: | ---: | --- | ---: | ---: | ---: |
-| `2` | `2` | `0` | `2R`, `2.5R` | `393.00` | `17` | `-3634.50` |
+| Split | Evaluated Trades | Target Hits | Losses | Selected Target R Values | Accepted Net USD | Auction-Skipped Trades | Auction-Skipped Net USD |
+| --- | ---: | ---: | ---: | --- | ---: | ---: | ---: |
+| Rolling walk-forward | `2` | `2` | `0` | `2R`, `2.5R` | `393.00` | `17` | `-3634.50` |
+| Rolling walk-forward, holdout `1` | `1` | `1` | `0` | `2.5R` | `221.50` | `10` | `-2035.00` |
 
 Interpretation: auction-regime filters are useful as an explanation and
 damage-control clue, but not as a validated entry edge. The filter avoided most
@@ -199,5 +238,6 @@ one eligible trade in the losing holdout windows; a closed-trade health gate
 cannot skip the first loss of a new day. The target-R stack is the first
 positive holdout result after the auction guard, because the surviving June 17
 long reached `3.75R` favorable before stopping while the original target was
-`4.625R`. This is still only two overlapping holdout evaluations, so treat it
-as an exit hypothesis to test on a larger export, not as automation approval.
+`4.625R`. The non-overlapping holdout-date audit reduces that to one unique
+holdout trade for `+221.50`, so treat it as an exit hypothesis to test on a
+larger export, not as automation approval.

@@ -270,6 +270,39 @@ This applies the selected auction-regime guard first, then selects a
 replacement target R on the auction-eligible training rows and evaluates the
 same target policy on auction-eligible holdout rows.
 
+To avoid overlapping holdout-date double counting, rerun the auction-regime
+selection with one holdout date:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_filter_walk_forward_sweep.py \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-holdout1-large-sample.csv \
+  --train-date-count 8 \
+  --holdout-date-count 1 \
+  --minimum-train-trades 4
+```
+
+Then run the target-R stack against that selection:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_target_r_report.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-holdout1-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-target-r-walk-forward-holdout1-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --direction-filters all,long,short
+```
+
+Current non-overlapping result: `1` evaluated holdout trade, `1` target hit,
+`0` losses, `+221.50` net USD, with `10` auction-skipped holdout candidates for
+`-2035.00` net USD.
+
 ## Run Quality Plus Health Gate Walk-Forward
 
 Manual help needed: **No after the quality diagnostics CSV exists**.
