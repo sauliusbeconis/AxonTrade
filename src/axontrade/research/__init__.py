@@ -19,6 +19,11 @@ from axontrade.research.signal_log import (
     validate_signal_log_rows,
     validate_signal_log_schema,
 )
+from axontrade.research.session_clock_alignment import (
+    SESSION_CLOCK_ALIGNMENT_HEADER,
+    SessionClockAlignmentError,
+    run_session_clock_alignment_diagnostics,
+)
 from axontrade.research.signal_news_exclusion import (
     NEWS_ANNOTATION_FIELDS,
     NEWS_EVENT_CSV_HEADER,
@@ -183,6 +188,7 @@ __all__ = [
     "NEWS_EVENT_CSV_HEADER",
     "PRICE_ONLY_PARAMETER_SWEEP_HEADER",
     "PRICE_ONLY_TRAIN_HOLDOUT_SWEEP_HEADER",
+    "SESSION_CLOCK_ALIGNMENT_HEADER",
     "SignalLogError",
     "SIGNAL_AUCTION_REGIME_DIAGNOSTIC_HEADER",
     "SIGNAL_AUCTION_REGIME_FILTER_SWEEP_HEADER",
@@ -211,6 +217,7 @@ __all__ = [
     "VAP_ABSORPTION_THRESHOLD_SWEEP_HEADER",
     "VAP_TRAP_FILTER_SWEEP_HEADER",
     "PriceOnlyExperimentError",
+    "SessionClockAlignmentError",
     "SignalAuctionRegimeDiagnosticError",
     "SignalAuctionRegimeFilterExperimentError",
     "SignalAuctionRegimeGuardReportError",
@@ -258,6 +265,7 @@ __all__ = [
     "run_absorption_reward_risk_walk_forward_sweep",
     "run_price_only_train_holdout_sweep",
     "run_price_only_walk_forward_sweep",
+    "run_session_clock_alignment_diagnostics",
     "run_signal_auction_regime_diagnostics",
     "run_signal_auction_regime_filter_sweep",
     "run_signal_auction_regime_filter_train_holdout_sweep",

@@ -80,6 +80,40 @@ required to re-export the correct chart window:
 7. Click `Edit >> Export Bar and Study Data to Text File`.
 8. Save again as `C:\SierraChart\Data\AxonTrade_ES_BarStudyExport.txt`.
 
+## Run Session Clock Alignment
+
+Manual help needed: **No after the Sierra export exists**.
+
+Use this when checking whether Sierra timestamps line up with the intended New
+York RTH clock, especially around daylight-saving changes.
+
+```bash
+.venv/bin/python scripts/run_sierra_session_clock_alignment.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  reports/sierra-session-clock-alignment-large-sample.csv \
+  --expected-timezone America/New_York \
+  --local-timezone Europe/Vilnius \
+  --session-start-time 09:30:00 \
+  --session-end-time 16:15:00 \
+  --check-time 16:30:00
+```
+
+Current large-sample result:
+
+- covered dates: `22`, from `2026-05-21` through `2026-06-19`
+- New York offset on every covered date: `UTC-4`, DST active
+- local equivalent of `09:30:00 EDT`: `16:30:00 EEST`
+- dates with first exported bar aligned within two minutes of `09:30:00 EDT`:
+  `22`
+- rows at `16:30:00` New York time: `0`
+- first 30 minutes contained `5.7%` to `24.2%` of each date's exported volume
+- first 60 minutes contained `11.9%` to `47.6%` of each date's exported volume
+
+Interpretation: the current export is aligned to the New York RTH open. If your
+local clock reads `16:30` in Vilnius, that corresponds to `09:30` New York on
+these May/June 2026 dates. A Sierra session start literally set to `16:30` New
+York time would not match this RTH export.
+
 ## Run The Baseline
 
 Manual help is not needed after the export file exists.
