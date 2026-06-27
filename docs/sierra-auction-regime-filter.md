@@ -107,6 +107,32 @@ Rolling walk-forward stack:
   --minimum-train-accepted-trades 4
 ```
 
+## Auction Guard Plus Target R
+
+This report applies the selected auction-regime rule first, then selects a
+replacement target R on the auction-eligible training rows. The selected target
+R is applied to auction-eligible holdout rows using the logged entry and stop.
+
+Manual help needed: **No** after the large Sierra export, signal log,
+auction-regime diagnostics CSV, and selected-rule CSV exist.
+
+Rolling walk-forward stack:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_target_r_report.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-target-r-walk-forward-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --direction-filters all,long,short
+```
+
 ## Current Large Sierra Signal Sample
 
 Diagnostic separation:
@@ -158,11 +184,20 @@ Auction guard plus health-gate rolling holdout result:
 | ---: | ---: | ---: | ---: | ---: | ---: |
 | `2` | `0` | `17` | `-257.00` | `0.00` | `-3634.50` |
 
+Auction guard plus target-R rolling holdout result:
+
+| Evaluated Trades | Target Hits | Losses | Selected Target R Values | Accepted Net USD | Auction-Skipped Trades | Auction-Skipped Net USD |
+| ---: | ---: | ---: | --- | ---: | ---: | ---: |
+| `2` | `2` | `0` | `2R`, `2.5R` | `393.00` | `17` | `-3634.50` |
+
 Interpretation: auction-regime filters are useful as an explanation and
 damage-control clue, but not as a validated entry edge. The filter avoided most
 later losing holdout candidates by rejecting high-stretch directional sessions,
 yet the trades it still accepted were also losers. The stacked health gate did
 not improve the current holdout result because the auction guard left at most
 one eligible trade in the losing holdout windows; a closed-trade health gate
-cannot skip the first loss of a new day. This supports researching a future
-no-trade regime guard, not enabling automation.
+cannot skip the first loss of a new day. The target-R stack is the first
+positive holdout result after the auction guard, because the surviving June 17
+long reached `3.75R` favorable before stopping while the original target was
+`4.625R`. This is still only two overlapping holdout evaluations, so treat it
+as an exit hypothesis to test on a larger export, not as automation approval.

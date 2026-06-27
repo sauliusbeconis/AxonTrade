@@ -246,6 +246,30 @@ This applies the selected auction-regime guard first, then selects a
 closed-trade health gate on the auction-eligible training rows and evaluates the
 same health gate on auction-eligible holdout rows.
 
+## Run Auction-Regime Plus Target R Report
+
+Manual help needed: **No after the large Sierra export, signal log,
+auction-regime diagnostics CSV, and selected-rule CSV exist**.
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_target_r_report.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-target-r-walk-forward-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --direction-filters all,long,short
+```
+
+This applies the selected auction-regime guard first, then selects a
+replacement target R on the auction-eligible training rows and evaluates the
+same target policy on auction-eligible holdout rows.
+
 ## Run Quality Plus Health Gate Walk-Forward
 
 Manual help needed: **No after the quality diagnostics CSV exists**.

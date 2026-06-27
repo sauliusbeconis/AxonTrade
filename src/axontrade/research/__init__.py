@@ -48,6 +48,11 @@ from axontrade.research.signal_auction_regime_health_gate_report import (
     SignalAuctionRegimeHealthGateReportError,
     report_signal_auction_regime_health_gate,
 )
+from axontrade.research.signal_auction_regime_target_r_report import (
+    SIGNAL_AUCTION_REGIME_TARGET_R_REPORT_HEADER,
+    SignalAuctionRegimeTargetReportError,
+    report_signal_auction_regime_target_r,
+)
 from axontrade.research.signal_context_diagnostics import (
     SIGNAL_CONTEXT_DIAGNOSTIC_HEADER,
     SignalContextDiagnosticError,
@@ -183,6 +188,7 @@ __all__ = [
     "SIGNAL_AUCTION_REGIME_FILTER_SWEEP_HEADER",
     "SIGNAL_AUCTION_REGIME_GUARD_REPORT_HEADER",
     "SIGNAL_AUCTION_REGIME_HEALTH_GATE_REPORT_HEADER",
+    "SIGNAL_AUCTION_REGIME_TARGET_R_REPORT_HEADER",
     "SIGNAL_CONTEXT_DIAGNOSTIC_HEADER",
     "SIGNAL_CONTEXT_FILTER_SWEEP_HEADER",
     "SIGNAL_CONTEXT_FILTER_WALK_FORWARD_HEADER",
@@ -209,6 +215,7 @@ __all__ = [
     "SignalAuctionRegimeFilterExperimentError",
     "SignalAuctionRegimeGuardReportError",
     "SignalAuctionRegimeHealthGateReportError",
+    "SignalAuctionRegimeTargetReportError",
     "SignalContextDiagnosticError",
     "SignalContextFilterExperimentError",
     "SignalDynamicExitExperimentError",
@@ -257,6 +264,7 @@ __all__ = [
     "run_signal_auction_regime_filter_walk_forward_sweep",
     "report_signal_auction_regime_guard",
     "report_signal_auction_regime_health_gate",
+    "report_signal_auction_regime_target_r",
     "run_signal_context_diagnostics",
     "run_signal_context_filter_sweep",
     "run_signal_context_filter_walk_forward_sweep",
