@@ -36,6 +36,11 @@ from axontrade.research.signal_auction_regime_diagnostics import (
     SignalAuctionRegimeDiagnosticError,
     run_signal_auction_regime_diagnostics,
 )
+from axontrade.research.signal_auction_regime_breakeven_report import (
+    SIGNAL_AUCTION_REGIME_BREAKEVEN_REPORT_HEADER,
+    SignalAuctionRegimeBreakevenReportError,
+    report_signal_auction_regime_breakeven,
+)
 from axontrade.research.signal_auction_regime_filter_experiments import (
     SIGNAL_AUCTION_REGIME_FILTER_SWEEP_HEADER,
     SignalAuctionRegimeFilterExperimentError,
@@ -190,6 +195,7 @@ __all__ = [
     "PRICE_ONLY_TRAIN_HOLDOUT_SWEEP_HEADER",
     "SESSION_CLOCK_ALIGNMENT_HEADER",
     "SignalLogError",
+    "SIGNAL_AUCTION_REGIME_BREAKEVEN_REPORT_HEADER",
     "SIGNAL_AUCTION_REGIME_DIAGNOSTIC_HEADER",
     "SIGNAL_AUCTION_REGIME_FILTER_SWEEP_HEADER",
     "SIGNAL_AUCTION_REGIME_GUARD_REPORT_HEADER",
@@ -218,6 +224,7 @@ __all__ = [
     "VAP_TRAP_FILTER_SWEEP_HEADER",
     "PriceOnlyExperimentError",
     "SessionClockAlignmentError",
+    "SignalAuctionRegimeBreakevenReportError",
     "SignalAuctionRegimeDiagnosticError",
     "SignalAuctionRegimeFilterExperimentError",
     "SignalAuctionRegimeGuardReportError",
@@ -266,6 +273,7 @@ __all__ = [
     "run_price_only_train_holdout_sweep",
     "run_price_only_walk_forward_sweep",
     "run_session_clock_alignment_diagnostics",
+    "report_signal_auction_regime_breakeven",
     "run_signal_auction_regime_diagnostics",
     "run_signal_auction_regime_filter_sweep",
     "run_signal_auction_regime_filter_train_holdout_sweep",

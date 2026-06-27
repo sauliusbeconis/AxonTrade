@@ -303,6 +303,58 @@ Current non-overlapping result: `1` evaluated holdout trade, `1` target hit,
 `0` losses, `+221.50` net USD, with `10` auction-skipped holdout candidates for
 `-2035.00` net USD.
 
+## Run Auction-Regime Plus Breakeven Stop Report
+
+Manual help needed: **No after the large Sierra export, signal log,
+auction-regime diagnostics CSV, and selected-rule CSV exist**.
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_breakeven_report.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-breakeven-walk-forward-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.25,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --breakeven-trigger-r-multiples 0.5,0.75,1,1.25,1.5,2,2.5 \
+  --direction-filters all,long,short
+```
+
+This applies the selected auction-regime guard first, then selects a
+replacement target R plus a breakeven-stop trigger on the auction-eligible
+training rows. The selected exit pair is evaluated on auction-eligible holdout
+rows.
+
+For the non-overlapping holdout-date audit, run the same report against the
+holdout `1` selected-rule file:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_breakeven_report.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-holdout1-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-breakeven-walk-forward-holdout1-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.25,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --breakeven-trigger-r-multiples 0.5,0.75,1,1.25,1.5,2,2.5 \
+  --direction-filters all,long,short
+```
+
+Current result: the overlapping walk-forward has `2` evaluated holdout trades,
+`2` target hits, `0` losses, `0` breakeven exits, and `+393.00` net USD. The
+non-overlapping audit has `1` evaluated holdout trade, `1` target hit, `0`
+losses, `0` breakeven exits, and `+221.50` net USD. This matches the target-R
+stack on the held-out rows, so the breakeven stop is not yet proven to add
+out-of-sample value.
+
 ## Run Quality Plus Health Gate Walk-Forward
 
 Manual help needed: **No after the quality diagnostics CSV exists**.

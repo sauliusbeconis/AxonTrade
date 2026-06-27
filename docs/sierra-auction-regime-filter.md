@@ -170,6 +170,52 @@ Non-overlapping holdout-date target-R stack:
   --direction-filters all,long,short
 ```
 
+## Auction Guard Plus Breakeven Stop
+
+This report applies the selected auction-regime rule first, then selects a
+replacement target R plus a stop move to breakeven after a favorable R trigger.
+The selected exit pair is applied to auction-eligible holdout rows using the
+logged entry and stop.
+
+Manual help needed: **No** after the large Sierra export, signal log,
+auction-regime diagnostics CSV, and selected-rule CSV exist.
+
+Rolling walk-forward stack:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_breakeven_report.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-breakeven-walk-forward-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.25,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --breakeven-trigger-r-multiples 0.5,0.75,1,1.25,1.5,2,2.5 \
+  --direction-filters all,long,short
+```
+
+Non-overlapping holdout-date breakeven stack:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_breakeven_report.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-holdout1-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-breakeven-walk-forward-holdout1-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.25,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --breakeven-trigger-r-multiples 0.5,0.75,1,1.25,1.5,2,2.5 \
+  --direction-filters all,long,short
+```
+
 ## Current Large Sierra Signal Sample
 
 Diagnostic separation:
@@ -229,6 +275,13 @@ Auction guard plus target-R rolling holdout result:
 | Rolling walk-forward | `2` | `2` | `0` | `2R`, `2.5R` | `393.00` | `17` | `-3634.50` |
 | Rolling walk-forward, holdout `1` | `1` | `1` | `0` | `2.5R` | `221.50` | `10` | `-2035.00` |
 
+Auction guard plus breakeven-stop rolling holdout result:
+
+| Split | Evaluated Trades | Target Hits | Losses | Breakeven Exits | Selected Target R Values | Selected Breakeven Trigger Values | Accepted Net USD | Auction-Skipped Trades | Auction-Skipped Net USD |
+| --- | ---: | ---: | ---: | ---: | --- | --- | ---: | ---: | ---: |
+| Rolling walk-forward | `2` | `2` | `0` | `0` | `2R`, `2.5R` | `1.25R` | `393.00` | `17` | `-3634.50` |
+| Rolling walk-forward, holdout `1` | `1` | `1` | `0` | `0` | `2.5R` | `1.25R` | `221.50` | `10` | `-2035.00` |
+
 Interpretation: auction-regime filters are useful as an explanation and
 damage-control clue, but not as a validated entry edge. The filter avoided most
 later losing holdout candidates by rejecting high-stretch directional sessions,
@@ -238,6 +291,9 @@ one eligible trade in the losing holdout windows; a closed-trade health gate
 cannot skip the first loss of a new day. The target-R stack is the first
 positive holdout result after the auction guard, because the surviving June 17
 long reached `3.75R` favorable before stopping while the original target was
-`4.625R`. The non-overlapping holdout-date audit reduces that to one unique
-holdout trade for `+221.50`, so treat it as an exit hypothesis to test on a
-larger export, not as automation approval.
+`4.625R`. Adding a breakeven stop after a favorable R trigger did not improve
+the current held-out net beyond target-R alone; the held-out accepted trades
+hit target and recorded `0` breakeven exits. The non-overlapping holdout-date
+audit reduces the positive result to one unique holdout trade for `+221.50`,
+so treat the target-R/breakeven stack as an exit hypothesis to test on a larger
+export, not as automation approval.
