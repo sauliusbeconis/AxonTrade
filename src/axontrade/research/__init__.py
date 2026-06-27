@@ -26,6 +26,18 @@ from axontrade.research.signal_news_exclusion import (
     annotate_rows_with_news_blackouts,
     filter_news_blackout_rows,
 )
+from axontrade.research.signal_auction_regime_diagnostics import (
+    SIGNAL_AUCTION_REGIME_DIAGNOSTIC_HEADER,
+    SignalAuctionRegimeDiagnosticError,
+    run_signal_auction_regime_diagnostics,
+)
+from axontrade.research.signal_auction_regime_filter_experiments import (
+    SIGNAL_AUCTION_REGIME_FILTER_SWEEP_HEADER,
+    SignalAuctionRegimeFilterExperimentError,
+    run_signal_auction_regime_filter_sweep,
+    run_signal_auction_regime_filter_train_holdout_sweep,
+    run_signal_auction_regime_filter_walk_forward_sweep,
+)
 from axontrade.research.signal_context_diagnostics import (
     SIGNAL_CONTEXT_DIAGNOSTIC_HEADER,
     SignalContextDiagnosticError,
@@ -157,6 +169,8 @@ __all__ = [
     "PRICE_ONLY_PARAMETER_SWEEP_HEADER",
     "PRICE_ONLY_TRAIN_HOLDOUT_SWEEP_HEADER",
     "SignalLogError",
+    "SIGNAL_AUCTION_REGIME_DIAGNOSTIC_HEADER",
+    "SIGNAL_AUCTION_REGIME_FILTER_SWEEP_HEADER",
     "SIGNAL_CONTEXT_DIAGNOSTIC_HEADER",
     "SIGNAL_CONTEXT_FILTER_SWEEP_HEADER",
     "SIGNAL_CONTEXT_FILTER_WALK_FORWARD_HEADER",
@@ -179,6 +193,8 @@ __all__ = [
     "VAP_ABSORPTION_THRESHOLD_SWEEP_HEADER",
     "VAP_TRAP_FILTER_SWEEP_HEADER",
     "PriceOnlyExperimentError",
+    "SignalAuctionRegimeDiagnosticError",
+    "SignalAuctionRegimeFilterExperimentError",
     "SignalContextDiagnosticError",
     "SignalContextFilterExperimentError",
     "SignalDynamicExitExperimentError",
@@ -221,6 +237,10 @@ __all__ = [
     "run_absorption_reward_risk_walk_forward_sweep",
     "run_price_only_train_holdout_sweep",
     "run_price_only_walk_forward_sweep",
+    "run_signal_auction_regime_diagnostics",
+    "run_signal_auction_regime_filter_sweep",
+    "run_signal_auction_regime_filter_train_holdout_sweep",
+    "run_signal_auction_regime_filter_walk_forward_sweep",
     "run_signal_context_diagnostics",
     "run_signal_context_filter_sweep",
     "run_signal_context_filter_walk_forward_sweep",

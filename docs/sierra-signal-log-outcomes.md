@@ -944,6 +944,45 @@ than the broad VAP threshold filter, but it is still not an edge. It selected
 fewer holdout trades and every selected holdout trade lost. Do not automate from
 this result.
 
+Auction-regime filter validation:
+
+This tests whether failed fades are associated with directional session stretch:
+wider session range, entry deeper at the fade edge, larger distance from VWAP,
+and larger distance from the session open.
+
+Diagnostic separation:
+
+| Field | Winner Median | Loser Median |
+| --- | ---: | ---: |
+| Session range points | `33.50` | `48.25` |
+| Fade edge score | `0.65079365` | `0.80310881` |
+| VWAP stretch points | `4.05` | `12.57` |
+| Open stretch points | `5.00` | `16.75` |
+| Original reward/risk | `1.74` | `4.20` |
+
+Train/holdout selected rule:
+
+| Sample | Direction | Max RR | Max Session Range | Max Fade Edge | Max VWAP Stretch | Max Open Stretch | Trades | Target Hits | Losses | Net USD |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `train` | `all` | `3.5` | `50` | `1` | `10` | `20` | `9` | `7` | `2` | `2018.50` |
+| `holdout` | `all` | `3.5` | `50` | `1` | `10` | `20` | `2` | `0` | `2` | `-282.00` |
+
+Auction-regime rolling walk-forward validation:
+
+- train date count: `8`
+- holdout date count: `2`
+- minimum selected train trades: `4`
+- holdout windows: `6`
+- selected holdout trades: `2`
+- selected holdout target hits: `0`
+- selected holdout losses: `2`
+- selected holdout net USD: `-257.00`
+
+Interpretation: auction-regime filters explain much of the later failure mode
+and avoided most losing holdout candidates, but they still did not produce a
+validated entry edge. Treat this as a future no-trade regime guard candidate,
+not as permission to automate entries.
+
 Implementation note: Sierra exports sub-second bar timestamps, while the signal
 log stores whole-second bar times. Outcome preflight therefore validates matching
 entries by same-day `bar_index` first, then falls back to nearest timestamp.
