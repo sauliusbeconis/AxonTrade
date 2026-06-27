@@ -87,6 +87,26 @@ Rolling walk-forward guard:
   reports/sierra-signal-log-auction-regime-guard-walk-forward-large-sample.csv
 ```
 
+## Auction Guard Plus Health Gate
+
+This report applies the selected auction-regime rule first, then selects a
+closed-trade health gate on the auction-eligible training rows. The selected
+health gate is applied to auction-eligible holdout rows with state warmed from
+the training rows.
+
+Manual help needed: **No** after the auction-regime diagnostics CSV and
+selected-rule CSV exist.
+
+Rolling walk-forward stack:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_health_gate_report.py \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-health-gate-walk-forward-large-sample.csv \
+  --minimum-train-accepted-trades 4
+```
+
 ## Current Large Sierra Signal Sample
 
 Diagnostic separation:
@@ -132,8 +152,17 @@ Guard accepted/skipped holdout result:
 | Train/holdout | `2` | `-282.00` | `9` | `-1881.50` |
 | Rolling walk-forward | `2` | `-257.00` | `17` | `-3634.50` |
 
+Auction guard plus health-gate rolling holdout result:
+
+| Accepted Trades | Health-Skipped Trades | Auction-Skipped Trades | Accepted Net USD | Health-Skipped Net USD | Auction-Skipped Net USD |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| `2` | `0` | `17` | `-257.00` | `0.00` | `-3634.50` |
+
 Interpretation: auction-regime filters are useful as an explanation and
 damage-control clue, but not as a validated entry edge. The filter avoided most
 later losing holdout candidates by rejecting high-stretch directional sessions,
-yet the trades it still accepted were also losers. This supports researching a
-future no-trade regime guard, not enabling automation.
+yet the trades it still accepted were also losers. The stacked health gate did
+not improve the current holdout result because the auction guard left at most
+one eligible trade in the losing holdout windows; a closed-trade health gate
+cannot skip the first loss of a new day. This supports researching a future
+no-trade regime guard, not enabling automation.

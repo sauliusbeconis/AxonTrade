@@ -229,6 +229,23 @@ This selects health-gate parameters on each training window, then applies the
 selected gate to the next holdout dates with health state warmed by the
 training window.
 
+## Run Auction-Regime Plus Health Gate Report
+
+Manual help needed: **No after the auction-regime diagnostics CSV and
+selected-rule CSV exist**.
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_health_gate_report.py \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-health-gate-walk-forward-large-sample.csv \
+  --minimum-train-accepted-trades 4
+```
+
+This applies the selected auction-regime guard first, then selects a
+closed-trade health gate on the auction-eligible training rows and evaluates the
+same health gate on auction-eligible holdout rows.
+
 ## Run Quality Plus Health Gate Walk-Forward
 
 Manual help needed: **No after the quality diagnostics CSV exists**.
