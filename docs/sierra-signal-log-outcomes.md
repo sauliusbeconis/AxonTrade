@@ -978,6 +978,13 @@ Auction-regime rolling walk-forward validation:
 - selected holdout losses: `2`
 - selected holdout net USD: `-257.00`
 
+Auction-regime guard accepted/skipped holdout result:
+
+| Split | Accepted Trades | Accepted Net USD | Skipped Trades | Skipped Net USD |
+| --- | ---: | ---: | ---: | ---: |
+| Train/holdout | `2` | `-282.00` | `9` | `-1881.50` |
+| Rolling walk-forward | `2` | `-257.00` | `17` | `-3634.50` |
+
 Interpretation: auction-regime filters explain much of the later failure mode
 and avoided most losing holdout candidates, but they still did not produce a
 validated entry edge. Treat this as a future no-trade regime guard candidate,

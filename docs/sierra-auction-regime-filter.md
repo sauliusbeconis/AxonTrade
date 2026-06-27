@@ -64,6 +64,29 @@ Default tested grids:
 - max direction-aware VWAP stretch: `3,6,10,20,999`
 - max direction-aware open stretch: `3,6,10,20,999`
 
+## Guard Report
+
+The filter reports accepted trades only. The guard report replays the selected
+rules and shows both accepted and skipped candidate outcomes.
+
+Train/holdout guard:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_guard_report.py \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-sweep-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-guard-sweep-large-sample.csv
+```
+
+Rolling walk-forward guard:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_guard_report.py \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-guard-walk-forward-large-sample.csv
+```
+
 ## Current Large Sierra Signal Sample
 
 Diagnostic separation:
@@ -102,8 +125,15 @@ Rolling walk-forward selected holdout result:
 - losses: `2`
 - net result after default costs: `-257.00` USD
 
+Guard accepted/skipped holdout result:
+
+| Split | Accepted Trades | Accepted Net USD | Skipped Trades | Skipped Net USD |
+| --- | ---: | ---: | ---: | ---: |
+| Train/holdout | `2` | `-282.00` | `9` | `-1881.50` |
+| Rolling walk-forward | `2` | `-257.00` | `17` | `-3634.50` |
+
 Interpretation: auction-regime filters are useful as an explanation and
 damage-control clue, but not as a validated entry edge. The filter avoided most
 later losing holdout candidates by rejecting high-stretch directional sessions,
-yet the trades it still accepted were also losers. This supports adding a
+yet the trades it still accepted were also losers. This supports researching a
 future no-trade regime guard, not enabling automation.
