@@ -1492,3 +1492,33 @@ trades, or `$11.90` per trade before slippage, which is still less than half a
 tick per ES contract on the two-contract model. Do not turn this into a bot
 until real limit-order fill quality is validated or a slower setup family shows
 a larger walk-forward edge.
+
+Slower synthetic-entry update:
+
+The next branch tested less frequent entries with wider exits. New time-based
+session-structure generators were added for opening-range breakouts, opening
+range sweep fades, VWAP reclaims, and VWAP pullback continuations. The
+walk-forward engine also gained `window_step_date_count`, allowing
+non-overlapping holdout checks.
+
+The new session-structure entries did not survive costs:
+
+| Entry set | Slippage model | Holdout windows | Holdout trades | Holdout net USD | Avg/trade |
+| --- | --- | ---: | ---: | ---: | ---: |
+| session structure | zero | `68` | `244` | `367.00` | `1.50` |
+| session structure | default one tick/side | `68` | `244` | `-11833.00` | `-48.50` |
+
+The useful lead came from existing high-threshold entries with `900` second
+spacing and larger exits. In a non-overlapping two-day holdout check, the lead
+set remained positive after default ES costs:
+
+| Entry family | Holdout trades | Net USD | Avg/trade | Full stops | First target hits | Runner targets |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `delta_impulse_continue_10bar_2.5pt_50d` | `56` | `2608.00` | `46.57` | `18` | `38` | `18` |
+| `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `12` | `-84.00` | `-7.00` | `2` | `10` | `2` |
+
+Read: this is the first less-thin synthetic lead, but not a bot yet. One
+non-overlapping holdout block lost `-$1434.00`, the sample is still only `22`
+trade dates, and selected exits vary by window. Next step is a trade-level
+audit of `delta_impulse_continue_10bar_2.5pt_50d` with the selected
+walk-forward exits.

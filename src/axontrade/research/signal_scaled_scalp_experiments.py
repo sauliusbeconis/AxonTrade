@@ -257,6 +257,7 @@ def run_signal_scaled_scalp_walk_forward_sweep(
     runner_stop_modes: Iterable[str] = ("breakeven",),
     direction_filters: Iterable[str] = ("all",),
     minimum_train_trades: int = 1,
+    window_step_date_count: int = 1,
     instrument_root: str | None = None,
     slippage_ticks_per_side: int | None = None,
     slippage_ticks_per_contract: float | None = None,
@@ -273,6 +274,8 @@ def run_signal_scaled_scalp_walk_forward_sweep(
         raise SignalScaledScalpExperimentError("holdout_date_count must be positive")
     if minimum_train_trades <= 0:
         raise SignalScaledScalpExperimentError("minimum_train_trades must be positive")
+    if window_step_date_count <= 0:
+        raise SignalScaledScalpExperimentError("window_step_date_count must be positive")
     if train_date_count + holdout_date_count > len(dates):
         raise SignalScaledScalpExperimentError(
             "train_date_count plus holdout_date_count must not exceed "
@@ -296,7 +299,7 @@ def run_signal_scaled_scalp_walk_forward_sweep(
     )
     split_rows: list[dict[str, Any]] = []
     max_start = len(dates) - train_date_count - holdout_date_count + 1
-    for window_index in range(max_start):
+    for window_index in range(0, max_start, window_step_date_count):
         train_dates = dates[window_index:window_index + train_date_count]
         holdout_dates = dates[
             window_index + train_date_count:

@@ -67,6 +67,12 @@ def main() -> int:
         help="Minimum selected training trades required in each window.",
     )
     parser.add_argument(
+        "--window-step-date-count",
+        type=int,
+        default=1,
+        help="Trade-date step between walk-forward windows; use holdout count for non-overlap.",
+    )
+    parser.add_argument(
         "--first-target-points",
         default="0.75,1,1.25,1.5",
         help="Comma-separated fixed first-target point distances to test.",
@@ -138,6 +144,7 @@ def main() -> int:
             runner_stop_modes=_parse_string_list(args.runner_stop_modes),
             direction_filters=_parse_string_list(args.direction_filters),
             minimum_train_trades=args.minimum_train_trades,
+            window_step_date_count=args.window_step_date_count,
             instrument_root=args.instrument_root,
             slippage_ticks_per_side=args.slippage_ticks_per_side,
             slippage_ticks_per_contract=args.slippage_ticks_per_contract,

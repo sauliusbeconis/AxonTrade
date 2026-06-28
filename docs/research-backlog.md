@@ -57,6 +57,9 @@ Every research source should be documented with a link and retrieval date.
 - Add walk-forward validation for fast passive synthetic scalp candidates. Done.
 - Add perfect-fill and half-tick walk-forward cost threshold checks for synthetic scalp entries. Done.
 - Add larger-target/larger-stop walk-forward checks for synthetic scalp entries. Done.
+- Add time-based session-structure synthetic entry families. Done.
+- Add non-overlapping step control for scaled-scalp walk-forward windows. Done.
+- Add trade-level audit for the spaced delta-impulse continuation lead.
 - Add entry-quality filter sweeps and walk-forward validation for logged Sierra overlay diagnostics. Done.
 - Add volatility/activity-normalized sweep features for logged Sierra overlay diagnostics. Done.
 - Add trade-level audits for selected auction-regime target/breakeven stacks. Done.

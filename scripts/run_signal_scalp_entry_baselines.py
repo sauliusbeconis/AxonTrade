@@ -31,6 +31,10 @@ DEFAULT_EXPORT_CONFIG = "config/research/sierra_outcome_bar_export.yaml"
 DEFAULT_RANDOM_SEED = 20260628
 DEFAULT_MARKET_START = time(9, 45)
 DEFAULT_MARKET_END = time(15, 45)
+DEFAULT_SESSION_ENTRY_START = time(10, 0)
+DEFAULT_SESSION_ENTRY_END = time(15, 15)
+DEFAULT_OPENING_RANGE_START = time(9, 30)
+DEFAULT_OPENING_RANGE_END = time(10, 0)
 
 
 def main() -> int:
@@ -83,6 +87,15 @@ def main() -> int:
         help="Comma-separated generated strategy IDs to include. Defaults to all.",
     )
     parser.add_argument(
+        "--entry-family-set",
+        choices=("scalp", "session", "all"),
+        default="scalp",
+        help=(
+            "Generated entry families to include. 'scalp' preserves the original "
+            "short-horizon rules; 'session' adds time-based OR/VWAP structure rules."
+        ),
+    )
+    parser.add_argument(
         "--output-mode",
         choices=("sweep", "walk_forward"),
         default="sweep",
@@ -105,6 +118,12 @@ def main() -> int:
         type=int,
         default=4,
         help="Minimum selected training trades required for each generated strategy.",
+    )
+    parser.add_argument(
+        "--window-step-date-count",
+        type=int,
+        default=1,
+        help="Trade-date step between walk-forward windows; use holdout count for non-overlap.",
     )
     parser.add_argument(
         "--first-target-points",
@@ -180,6 +199,7 @@ def main() -> int:
             random_per_day=args.random_per_day,
             max_rule_entries_per_day=args.max_rule_entries_per_day,
             minimum_spacing_seconds=args.minimum_spacing_seconds,
+            entry_family_set=args.entry_family_set,
         )
         signals_by_strategy = _apply_entry_fill_mode(
             signals_by_strategy,
@@ -206,6 +226,7 @@ def main() -> int:
             train_date_count=args.train_date_count,
             holdout_date_count=args.holdout_date_count,
             minimum_train_trades=args.minimum_train_trades,
+            window_step_date_count=args.window_step_date_count,
         )
     except (
         SierraExportError,
@@ -255,6 +276,7 @@ def _run_output_mode(
     train_date_count: int,
     holdout_date_count: int,
     minimum_train_trades: int,
+    window_step_date_count: int,
 ) -> list[dict[str, Any]]:
     rows = []
     for signals in signals_by_strategy.values():
@@ -288,6 +310,7 @@ def _run_output_mode(
                 runner_stop_modes=runner_stop_modes,
                 direction_filters=["all"],
                 minimum_train_trades=minimum_train_trades,
+                window_step_date_count=window_step_date_count,
                 instrument_root=instrument_root,
                 slippage_ticks_per_side=slippage_ticks_per_side,
                 slippage_ticks_per_contract=slippage_ticks_per_contract,
@@ -361,7 +384,17 @@ def _generate_strategy_signals(
     random_per_day: int,
     max_rule_entries_per_day: int,
     minimum_spacing_seconds: int,
+    entry_family_set: str = "scalp",
 ) -> dict[str, list[dict[str, Any]]]:
+    if entry_family_set == "session":
+        return _generate_session_structure_signals(
+            feature_rows,
+            max_rule_entries_per_day=max_rule_entries_per_day,
+            minimum_spacing_seconds=minimum_spacing_seconds,
+        )
+    if entry_family_set not in {"scalp", "all"}:
+        raise ValueError("entry_family_set must be one of: scalp, session, all")
+
     rows_by_date = _eligible_rows_by_date(feature_rows)
     signals_by_strategy: dict[str, list[dict[str, Any]]] = defaultdict(list)
     rng = random.Random(random_seed)
@@ -522,6 +555,168 @@ def _generate_strategy_signals(
                 ),
             )
 
+    if entry_family_set == "all":
+        signals_by_strategy.update(
+            _generate_session_structure_signals(
+                feature_rows,
+                max_rule_entries_per_day=max_rule_entries_per_day,
+                minimum_spacing_seconds=minimum_spacing_seconds,
+            ),
+        )
+
+    return dict(signals_by_strategy)
+
+
+def _generate_session_structure_signals(
+    feature_rows: list[dict[str, Any]],
+    *,
+    max_rule_entries_per_day: int,
+    minimum_spacing_seconds: int,
+) -> dict[str, list[dict[str, Any]]]:
+    rows_by_date = _rows_by_date(feature_rows)
+    signals_by_strategy: dict[str, list[dict[str, Any]]] = defaultdict(list)
+
+    for buffer_points in (0.5, 1.0, 2.0):
+        strategy_id = f"opening_range_breakout_continue_30m_{buffer_points:g}pt"
+        for rows in rows_by_date.values():
+            opening_range = _opening_range(rows)
+            if opening_range is None:
+                continue
+            or_high, or_low = opening_range
+            high_break = or_high + buffer_points
+            low_break = or_low - buffer_points
+            candidates = []
+            previous_close = None
+            for row in rows:
+                row_time = row["parsed_timestamp"].time()
+                if previous_close is not None and _is_session_entry_time(row_time):
+                    if previous_close < high_break <= row["close_float"]:
+                        candidates.append((row, "long"))
+                    elif previous_close > low_break >= row["close_float"]:
+                        candidates.append((row, "short"))
+                previous_close = row["close_float"]
+            signals_by_strategy[strategy_id].extend(
+                _spaced_signals(
+                    candidates,
+                    strategy_id=strategy_id,
+                    minimum_spacing_seconds=minimum_spacing_seconds,
+                    max_per_day=max_rule_entries_per_day,
+                ),
+            )
+
+    for sweep_points in (0.5, 1.0, 2.0, 3.0):
+        strategy_id = f"opening_range_sweep_fade_30m_{sweep_points:g}pt"
+        for rows in rows_by_date.values():
+            opening_range = _opening_range(rows)
+            if opening_range is None:
+                continue
+            or_high, or_low = opening_range
+            candidates = []
+            for row in rows:
+                if not _is_session_entry_time(row["parsed_timestamp"].time()):
+                    continue
+                if (
+                    row["high_float"] >= or_high + sweep_points
+                    and row["close_float"] <= or_high
+                    and row["close_location"] <= 0.45
+                ):
+                    candidates.append((row, "short"))
+                elif (
+                    row["low_float"] <= or_low - sweep_points
+                    and row["close_float"] >= or_low
+                    and row["close_location"] >= 0.55
+                ):
+                    candidates.append((row, "long"))
+            signals_by_strategy[strategy_id].extend(
+                _spaced_signals(
+                    candidates,
+                    strategy_id=strategy_id,
+                    minimum_spacing_seconds=minimum_spacing_seconds,
+                    max_per_day=max_rule_entries_per_day,
+                ),
+            )
+
+    for lookback_minutes, stretch_points in ((15, 2.0), (30, 3.0), (60, 4.0)):
+        strategy_id = f"vwap_reclaim_continue_{lookback_minutes}m_{stretch_points:g}pt"
+        for rows in rows_by_date.values():
+            candidates = []
+            for index in range(1, len(rows)):
+                row = rows[index]
+                if not _is_session_entry_time(row["parsed_timestamp"].time()):
+                    continue
+                previous_row = rows[index - 1]
+                previous_distance = previous_row["close_float"] - previous_row["vwap"]
+                current_distance = row["close_float"] - row["vwap"]
+                lookback_rows = _lookback_rows(
+                    rows,
+                    index=index,
+                    lookback_seconds=lookback_minutes * 60,
+                )
+                if not lookback_rows:
+                    continue
+                min_distance = min(
+                    lookback_row["close_float"] - lookback_row["vwap"]
+                    for lookback_row in lookback_rows
+                )
+                max_distance = max(
+                    lookback_row["close_float"] - lookback_row["vwap"]
+                    for lookback_row in lookback_rows
+                )
+                if (
+                    min_distance <= -stretch_points
+                    and previous_distance <= 0 < current_distance
+                    and row["delta"] >= 0
+                ):
+                    candidates.append((row, "long"))
+                elif (
+                    max_distance >= stretch_points
+                    and previous_distance >= 0 > current_distance
+                    and row["delta"] <= 0
+                ):
+                    candidates.append((row, "short"))
+            signals_by_strategy[strategy_id].extend(
+                _spaced_signals(
+                    candidates,
+                    strategy_id=strategy_id,
+                    minimum_spacing_seconds=minimum_spacing_seconds,
+                    max_per_day=max_rule_entries_per_day,
+                ),
+            )
+
+    for stretch_points, pullback_buffer_points in ((3.0, 1.0), (5.0, 1.5), (8.0, 2.0)):
+        strategy_id = (
+            f"vwap_pullback_continue_{stretch_points:g}pt_"
+            f"pb{pullback_buffer_points:g}pt"
+        )
+        for rows in rows_by_date.values():
+            candidates = []
+            for row in rows:
+                if not _is_session_entry_time(row["parsed_timestamp"].time()):
+                    continue
+                distance_from_vwap = row["close_float"] - row["vwap"]
+                if (
+                    distance_from_vwap >= stretch_points
+                    and row["low_float"] <= row["vwap"] + pullback_buffer_points
+                    and row["close_location"] >= 0.6
+                    and row["delta"] >= 0
+                ):
+                    candidates.append((row, "long"))
+                elif (
+                    distance_from_vwap <= -stretch_points
+                    and row["high_float"] >= row["vwap"] - pullback_buffer_points
+                    and row["close_location"] <= 0.4
+                    and row["delta"] <= 0
+                ):
+                    candidates.append((row, "short"))
+            signals_by_strategy[strategy_id].extend(
+                _spaced_signals(
+                    candidates,
+                    strategy_id=strategy_id,
+                    minimum_spacing_seconds=minimum_spacing_seconds,
+                    max_per_day=max_rule_entries_per_day,
+                ),
+            )
+
     return dict(signals_by_strategy)
 
 
@@ -632,6 +827,40 @@ def _rows_by_date(
     for row in feature_rows:
         rows_by_date[row["trade_date"]].append(row)
     return dict(sorted(rows_by_date.items()))
+
+
+def _opening_range(rows: list[dict[str, Any]]) -> tuple[float, float] | None:
+    opening_rows = [
+        row
+        for row in rows
+        if DEFAULT_OPENING_RANGE_START <= row["parsed_timestamp"].time() < DEFAULT_OPENING_RANGE_END
+    ]
+    if not opening_rows:
+        return None
+    return (
+        max(row["high_float"] for row in opening_rows),
+        min(row["low_float"] for row in opening_rows),
+    )
+
+
+def _is_session_entry_time(value: time) -> bool:
+    return DEFAULT_SESSION_ENTRY_START <= value <= DEFAULT_SESSION_ENTRY_END
+
+
+def _lookback_rows(
+    rows: list[dict[str, Any]],
+    *,
+    index: int,
+    lookback_seconds: int,
+) -> list[dict[str, Any]]:
+    current_timestamp = rows[index]["parsed_timestamp"]
+    selected_rows = []
+    for previous_row in reversed(rows[:index]):
+        seconds_back = (current_timestamp - previous_row["parsed_timestamp"]).total_seconds()
+        if seconds_back > lookback_seconds:
+            break
+        selected_rows.append(previous_row)
+    return selected_rows
 
 
 def _spaced_signals(

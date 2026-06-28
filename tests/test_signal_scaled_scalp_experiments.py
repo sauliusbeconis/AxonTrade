@@ -209,6 +209,45 @@ def test_runs_signal_scaled_scalp_walk_forward_sweep() -> None:
     assert split_rows[1]["net_usd"] == "93"
 
 
+def test_scaled_scalp_walk_forward_can_step_windows() -> None:
+    bars = []
+    signals = []
+    for trade_date in (
+        "2026-06-10",
+        "2026-06-11",
+        "2026-06-12",
+        "2026-06-13",
+        "2026-06-14",
+    ):
+        bars.extend(
+            [
+                _bar(0, timestamp=f"{trade_date} 10:00:00", high=100, low=99.75, close=100),
+                _bar(1, timestamp=f"{trade_date} 10:01:00", high=101.25, low=100.5, close=101),
+                _bar(2, timestamp=f"{trade_date} 10:02:00", high=102.25, low=100.5, close=102),
+            ],
+        )
+        signals.append(_candidate_on(trade_date))
+
+    split_rows = run_signal_scaled_scalp_walk_forward_sweep(
+        bars,
+        signals,
+        train_date_count=2,
+        holdout_date_count=1,
+        window_step_date_count=2,
+        first_target_points_values=[1],
+        stop_points_values=[2],
+        runner_target_points_values=[2],
+        runner_stop_modes=["breakeven"],
+        minimum_train_trades=2,
+    )
+
+    holdout_rows = [row for row in split_rows if row["sample"] == "holdout"]
+    assert [row["trade_dates"] for row in holdout_rows] == [
+        "2026-06-12",
+        "2026-06-14",
+    ]
+
+
 def test_runs_signal_scaled_scalp_sweep_header() -> None:
     rows = run_signal_scaled_scalp_sweep(
         [],
