@@ -101,6 +101,14 @@ def main() -> int:
         help="Override default slippage assumption from config/research/default_costs.yaml.",
     )
     parser.add_argument(
+        "--slippage-ticks-per-contract",
+        type=float,
+        help=(
+            "Override total slippage ticks per contract for the whole trade; "
+            "use 1 to model passive entry plus one-tick market exit."
+        ),
+    )
+    parser.add_argument(
         "--entry-match-mode",
         choices=("bar_index", "timestamp", "auto"),
         default="auto",
@@ -132,6 +140,7 @@ def main() -> int:
             minimum_train_trades=args.minimum_train_trades,
             instrument_root=args.instrument_root,
             slippage_ticks_per_side=args.slippage_ticks_per_side,
+            slippage_ticks_per_contract=args.slippage_ticks_per_contract,
             entry_match_mode=args.entry_match_mode,
         )
     except (

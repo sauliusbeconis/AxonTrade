@@ -19,8 +19,10 @@ from axontrade.data import (
 )
 from axontrade.research import (
     SIGNAL_SCALED_SCALP_SWEEP_HEADER,
+    SIGNAL_SCALED_SCALP_WALK_FORWARD_HEADER,
     SignalScaledScalpExperimentError,
     run_signal_scaled_scalp_sweep,
+    run_signal_scaled_scalp_walk_forward_sweep,
 )
 from axontrade.research.trade_outcomes import _parse_timestamp
 
@@ -77,6 +79,34 @@ def main() -> int:
         help="Minimum spacing between generated rule entries.",
     )
     parser.add_argument(
+        "--strategy-ids",
+        help="Comma-separated generated strategy IDs to include. Defaults to all.",
+    )
+    parser.add_argument(
+        "--output-mode",
+        choices=("sweep", "walk_forward"),
+        default="sweep",
+        help="Write aggregate sweep rows or rolling walk-forward rows.",
+    )
+    parser.add_argument(
+        "--train-date-count",
+        type=int,
+        default=8,
+        help="Number of consecutive generated-signal trade dates per training window.",
+    )
+    parser.add_argument(
+        "--holdout-date-count",
+        type=int,
+        default=1,
+        help="Number of consecutive generated-signal trade dates per holdout window.",
+    )
+    parser.add_argument(
+        "--minimum-train-trades",
+        type=int,
+        default=4,
+        help="Minimum selected training trades required for each generated strategy.",
+    )
+    parser.add_argument(
         "--first-target-points",
         default="0.5,1,1.5",
         help="Comma-separated fixed first-target point distances to test.",
@@ -104,6 +134,14 @@ def main() -> int:
         "--slippage-ticks-per-side",
         type=int,
         help="Override default slippage assumption from config/research/default_costs.yaml.",
+    )
+    parser.add_argument(
+        "--slippage-ticks-per-contract",
+        type=float,
+        help=(
+            "Override total slippage ticks per contract for the whole trade; "
+            "use 1 to model passive entry plus one-tick market exit."
+        ),
     )
     parser.add_argument(
         "--entry-match-mode",
@@ -149,22 +187,26 @@ def main() -> int:
             entry_fill_mode=args.entry_fill_mode,
             maximum_passive_fill_seconds=args.maximum_passive_fill_seconds,
         )
-        experiment_rows = []
-        for signals in signals_by_strategy.values():
-            experiment_rows.extend(
-                run_signal_scaled_scalp_sweep(
-                    normalized_rows,
-                    signals,
-                    first_target_points_values=_parse_float_list(args.first_target_points),
-                    stop_points_values=_parse_float_list(args.stop_points),
-                    runner_target_points_values=_parse_float_list(args.runner_target_points),
-                    runner_stop_modes=_parse_string_list(args.runner_stop_modes),
-                    direction_filters=["all"],
-                    instrument_root=args.instrument_root,
-                    slippage_ticks_per_side=args.slippage_ticks_per_side,
-                    entry_match_mode=args.entry_match_mode,
-                ),
-            )
+        signals_by_strategy = _filter_strategy_signals(
+            signals_by_strategy,
+            strategy_ids=_parse_optional_string_list(args.strategy_ids),
+        )
+        experiment_rows = _run_output_mode(
+            args.output_mode,
+            normalized_rows=normalized_rows,
+            signals_by_strategy=signals_by_strategy,
+            first_target_points_values=_parse_float_list(args.first_target_points),
+            stop_points_values=_parse_float_list(args.stop_points),
+            runner_target_points_values=_parse_float_list(args.runner_target_points),
+            runner_stop_modes=_parse_string_list(args.runner_stop_modes),
+            instrument_root=args.instrument_root,
+            slippage_ticks_per_side=args.slippage_ticks_per_side,
+            slippage_ticks_per_contract=args.slippage_ticks_per_contract,
+            entry_match_mode=args.entry_match_mode,
+            train_date_count=args.train_date_count,
+            holdout_date_count=args.holdout_date_count,
+            minimum_train_trades=args.minimum_train_trades,
+        )
     except (
         SierraExportError,
         SignalScaledScalpExperimentError,
@@ -176,24 +218,102 @@ def main() -> int:
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", newline="", encoding="utf-8") as handle:
+        fieldnames = (
+            SIGNAL_SCALED_SCALP_WALK_FORWARD_HEADER
+            if args.output_mode == "walk_forward"
+            else SIGNAL_SCALED_SCALP_SWEEP_HEADER
+        )
         writer = csv.DictWriter(
             handle,
-            fieldnames=SIGNAL_SCALED_SCALP_SWEEP_HEADER,
+            fieldnames=fieldnames,
             lineterminator="\n",
         )
         writer.writeheader()
         writer.writerows(experiment_rows)
 
-    best_rows = _best_rows_by_strategy(experiment_rows)
+    best_summary = _output_summary(args.output_mode, experiment_rows)
+    print(
+        f"wrote {len(experiment_rows)} scalp-entry baseline {args.output_mode} rows "
+        f"to {output_path}; strategies={len(signals_by_strategy)}, {best_summary}",
+    )
+    return 0
+
+
+def _run_output_mode(
+    output_mode: str,
+    *,
+    normalized_rows: list[dict[str, Any]],
+    signals_by_strategy: dict[str, list[dict[str, Any]]],
+    first_target_points_values: list[float],
+    stop_points_values: list[float],
+    runner_target_points_values: list[float],
+    runner_stop_modes: list[str],
+    instrument_root: str | None,
+    slippage_ticks_per_side: int | None,
+    slippage_ticks_per_contract: float | None,
+    entry_match_mode: str,
+    train_date_count: int,
+    holdout_date_count: int,
+    minimum_train_trades: int,
+) -> list[dict[str, Any]]:
+    rows = []
+    for signals in signals_by_strategy.values():
+        if output_mode == "sweep":
+            rows.extend(
+                run_signal_scaled_scalp_sweep(
+                    normalized_rows,
+                    signals,
+                    first_target_points_values=first_target_points_values,
+                    stop_points_values=stop_points_values,
+                    runner_target_points_values=runner_target_points_values,
+                    runner_stop_modes=runner_stop_modes,
+                    direction_filters=["all"],
+                    instrument_root=instrument_root,
+                    slippage_ticks_per_side=slippage_ticks_per_side,
+                    slippage_ticks_per_contract=slippage_ticks_per_contract,
+                    entry_match_mode=entry_match_mode,
+                ),
+            )
+            continue
+
+        rows.extend(
+            run_signal_scaled_scalp_walk_forward_sweep(
+                normalized_rows,
+                signals,
+                train_date_count=train_date_count,
+                holdout_date_count=holdout_date_count,
+                first_target_points_values=first_target_points_values,
+                stop_points_values=stop_points_values,
+                runner_target_points_values=runner_target_points_values,
+                runner_stop_modes=runner_stop_modes,
+                direction_filters=["all"],
+                minimum_train_trades=minimum_train_trades,
+                instrument_root=instrument_root,
+                slippage_ticks_per_side=slippage_ticks_per_side,
+                slippage_ticks_per_contract=slippage_ticks_per_contract,
+                entry_match_mode=entry_match_mode,
+            ),
+        )
+    return rows
+
+
+def _output_summary(output_mode: str, rows: list[dict[str, Any]]) -> str:
+    if output_mode == "walk_forward":
+        holdout_rows = [row for row in rows if row["sample"] == "holdout"]
+        holdout_trades = sum(int(row["evaluated_trades"]) for row in holdout_rows)
+        holdout_net = sum(float(row["net_usd"]) for row in holdout_rows)
+        return (
+            f"holdout_windows={len(holdout_rows)}, "
+            f"holdout_trades={holdout_trades}, "
+            f"holdout_net_usd={holdout_net:.2f}"
+        )
+
+    best_rows = _best_rows_by_strategy(rows)
     best_summary = ", ".join(
         f"{row['strategy_id']}={float(row['net_usd']):.2f}/{row['evaluated_trades']}"
         for row in best_rows[:3]
     )
-    print(
-        f"wrote {len(experiment_rows)} scalp-entry baseline rows to {output_path}; "
-        f"strategies={len(signals_by_strategy)}, best={best_summary}",
-    )
-    return 0
+    return f"best={best_summary}"
 
 
 def _feature_rows(
@@ -405,6 +525,24 @@ def _generate_strategy_signals(
     return dict(signals_by_strategy)
 
 
+def _filter_strategy_signals(
+    signals_by_strategy: dict[str, list[dict[str, Any]]],
+    *,
+    strategy_ids: list[str] | None,
+) -> dict[str, list[dict[str, Any]]]:
+    if strategy_ids is None:
+        return signals_by_strategy
+    filtered = {
+        strategy_id: signals
+        for strategy_id, signals in signals_by_strategy.items()
+        if strategy_id in set(strategy_ids)
+    }
+    missing_ids = sorted(set(strategy_ids) - set(filtered))
+    if missing_ids:
+        raise ValueError("unknown strategy IDs: " + ", ".join(missing_ids))
+    return filtered
+
+
 def _apply_entry_fill_mode(
     signals_by_strategy: dict[str, list[dict[str, Any]]],
     feature_rows: list[dict[str, Any]],
@@ -574,6 +712,12 @@ def _parse_float_list(value: str) -> list[float]:
 
 def _parse_string_list(value: str) -> list[str]:
     return [part.strip() for part in value.split(",") if part.strip()]
+
+
+def _parse_optional_string_list(value: str | None) -> list[str] | None:
+    if value is None:
+        return None
+    return _parse_string_list(value)
 
 
 if __name__ == "__main__":

@@ -771,6 +771,18 @@ and write to:
 
 `reports/sierra-signal-log-scalp-entry-baselines-passive-touch-slip0-large-sample.csv`
 
+For passive entry plus one-tick market-exit sensitivity, use:
+
+```bash
+  --slippage-ticks-per-contract 1 \
+  --entry-fill-mode passive_touch \
+  --maximum-passive-fill-seconds 10
+```
+
+and write to:
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-10s-exit1tick-large-sample.csv`
+
 ## Output
 
 Outcome rows are written to:
@@ -953,6 +965,28 @@ Synthetic scalp entry passive-touch wait-window sensitivity:
 
 `reports/sierra-signal-log-scalp-entry-baselines-passive-touch-300s-large-sample.csv`
 
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-1s-exit1tick-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-5s-exit1tick-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-10s-exit1tick-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-15s-exit1tick-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-30s-exit1tick-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-60s-exit1tick-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-120s-exit1tick-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-300s-exit1tick-large-sample.csv`
+
+Synthetic scalp entry passive-touch exit-one-tick walk-forward:
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-5s-exit1tick-walk-forward-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-10s-exit1tick-walk-forward-large-sample.csv`
+
 Synthetic scalp entry baseline report:
 
 `reports/sierra-signal-log-scalp-entry-baselines-large-sample.md`
@@ -1105,13 +1139,19 @@ Synthetic scalp entry baseline result:
   `impulse_continue_3bar_1.5pt`, `262` filled trades, `+3966.00` net USD
 - passive-touch wait-window sweep: zero-slippage stays positive from `10` to
   `300` seconds, but normal one-tick slippage is negative at every wait window
+- passive entry plus one-tick market-exit sensitivity: positive only for fast
+  `1` to `15` second fills; best `10` second row is
+  `vwap_delta_exhaustion_fade_4pt_30d_cl0.55`, `76` trades, `+1793.00`
+- walk-forward check of the fast passive candidates failed: `5` second
+  holdouts `-1750.00`; `10` second holdouts `-1732.00`
 
 Interpretation: random entries were not better after current ES two-contract
 cost assumptions. Order-flow proxies improved the regular-cost baseline but
 were still negative. With zero slippage, several families turn positive, so the
 scalp question is now primarily about fill quality and passive/limit execution,
-not just target/stop distances. The next fill model should split passive entry
-slippage from market exit slippage.
+not just target/stop distances. The aggregate fast passive VWAP/delta
+exhaustion fade did not survive chronological validation, so do not implement
+it as a bot rule yet.
 
 Context diagnostic observations:
 

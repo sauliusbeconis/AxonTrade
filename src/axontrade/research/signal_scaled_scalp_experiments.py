@@ -103,6 +103,7 @@ def evaluate_signal_scaled_scalp_outcomes(
     direction_filter: str = "all",
     instrument_root: str | None = None,
     slippage_ticks_per_side: int | None = None,
+    slippage_ticks_per_contract: float | None = None,
     entry_match_mode: str = "auto",
 ) -> list[dict[str, Any]]:
     """Evaluate logged candidates as a two-contract scalp with one runner."""
@@ -120,6 +121,10 @@ def evaluate_signal_scaled_scalp_outcomes(
         )
     runner_mode = _normalize_runner_stop_mode(runner_stop_mode)
     direction = _normalize_direction_filter(direction_filter)
+    slippage_ticks = _normalize_optional_nonnegative_value(
+        slippage_ticks_per_contract,
+        "slippage_ticks_per_contract",
+    )
 
     normalized_bars = _normalize_bars(bars)
     candidate_signals = _candidate_signals(list(signal_rows), direction_filter=direction)
@@ -146,6 +151,7 @@ def evaluate_signal_scaled_scalp_outcomes(
         stop_points=stop,
         runner_target_points=runner_target,
         runner_stop_mode=runner_mode,
+        slippage_ticks_per_contract=slippage_ticks,
     )
 
 
@@ -160,6 +166,7 @@ def run_signal_scaled_scalp_sweep(
     direction_filters: Iterable[str] = ("all",),
     instrument_root: str | None = None,
     slippage_ticks_per_side: int | None = None,
+    slippage_ticks_per_contract: float | None = None,
     entry_match_mode: str = "auto",
 ) -> list[dict[str, Any]]:
     """Sweep two-contract scalp exit parameters over logged candidates."""
@@ -173,6 +180,10 @@ def run_signal_scaled_scalp_sweep(
         runner_stop_modes,
     )
     directions = _normalize_direction_filters(direction_filters)
+    slippage_ticks = _normalize_optional_nonnegative_value(
+        slippage_ticks_per_contract,
+        "slippage_ticks_per_contract",
+    )
     all_candidates = _candidate_signals(rows, direction_filter="all")
     candidate_signals_by_direction = {
         direction: _candidate_signals(rows, direction_filter=direction)
@@ -215,6 +226,7 @@ def run_signal_scaled_scalp_sweep(
                 stop_points=stop,
                 runner_target_points=runner_target,
                 runner_stop_mode=runner_mode,
+                slippage_ticks_per_contract=slippage_ticks,
             )
             if selected_candidates and costs is not None
             else []
@@ -247,6 +259,7 @@ def run_signal_scaled_scalp_walk_forward_sweep(
     minimum_train_trades: int = 1,
     instrument_root: str | None = None,
     slippage_ticks_per_side: int | None = None,
+    slippage_ticks_per_contract: float | None = None,
     entry_match_mode: str = "auto",
 ) -> list[dict[str, Any]]:
     """Run rolling selection of two-contract scalp exit parameters."""
@@ -277,6 +290,10 @@ def run_signal_scaled_scalp_walk_forward_sweep(
     )
     runner_modes = _normalize_runner_stop_modes(runner_stop_modes)
     directions = _normalize_direction_filters(direction_filters)
+    slippage_ticks = _normalize_optional_nonnegative_value(
+        slippage_ticks_per_contract,
+        "slippage_ticks_per_contract",
+    )
     split_rows: list[dict[str, Any]] = []
     max_start = len(dates) - train_date_count - holdout_date_count + 1
     for window_index in range(max_start):
@@ -295,6 +312,7 @@ def run_signal_scaled_scalp_walk_forward_sweep(
             direction_filters=directions,
             instrument_root=instrument_root,
             slippage_ticks_per_side=slippage_ticks_per_side,
+            slippage_ticks_per_contract=slippage_ticks,
             entry_match_mode=entry_match_mode,
         )
         best_train = _select_best_train_row(
@@ -311,6 +329,7 @@ def run_signal_scaled_scalp_walk_forward_sweep(
             direction_filters=directions,
             instrument_root=instrument_root,
             slippage_ticks_per_side=slippage_ticks_per_side,
+            slippage_ticks_per_contract=slippage_ticks,
             entry_match_mode=entry_match_mode,
         )
         matching_holdout = _find_matching_selection_row(holdout_sweep, best_train)
@@ -350,6 +369,7 @@ def _evaluate_one_signal_with_scaled_scalp(
     runner_target_points: float,
     runner_stop_mode: str,
     entry_match_mode: str,
+    slippage_ticks_per_contract: float | None = None,
 ) -> dict[str, Any]:
     context = _prepare_one_scaled_scalp_signal_context(
         signal,
@@ -363,6 +383,7 @@ def _evaluate_one_signal_with_scaled_scalp(
         stop_points=stop_points,
         runner_target_points=runner_target_points,
         runner_stop_mode=runner_stop_mode,
+        slippage_ticks_per_contract=slippage_ticks_per_contract,
     )
 
 
@@ -374,6 +395,7 @@ def _evaluate_prepared_scaled_scalp_context(
     stop_points: float,
     runner_target_points: float,
     runner_stop_mode: str,
+    slippage_ticks_per_contract: float | None,
 ) -> dict[str, Any]:
     stop_price = _price_at_offset(
         context.direction,
@@ -422,7 +444,11 @@ def _evaluate_prepared_scaled_scalp_context(
     gross_points = leg1_points + runner_points
     gross_usd = gross_points * costs.point_value_usd
     commission_usd = costs.commission_round_turn_usd * 2
-    slippage_usd = costs.slippage_round_turn_usd * 2
+    slippage_usd = _scaled_scalp_slippage_usd(
+        costs,
+        contract_count=2,
+        slippage_ticks_per_contract=slippage_ticks_per_contract,
+    )
     net_usd = gross_usd - commission_usd - slippage_usd
 
     signal = context.signal
@@ -458,6 +484,8 @@ def _evaluate_prepared_scaled_scalp_context(
             f"stop_points={_format_number(stop_points)}; "
             f"runner_target_points={_format_number(runner_target_points)}; "
             f"runner_stop_mode={runner_stop_mode}; "
+            f"slippage_ticks_per_contract="
+            f"{_format_optional_number(slippage_ticks_per_contract)}; "
             f"entry_match_mode={context.resolved_match_mode}"
         ),
     }
@@ -471,6 +499,7 @@ def _evaluate_prepared_scaled_scalp_contexts(
     stop_points: float,
     runner_target_points: float,
     runner_stop_mode: str,
+    slippage_ticks_per_contract: float | None,
 ) -> list[dict[str, Any]]:
     return [
         _evaluate_prepared_scaled_scalp_context(
@@ -480,6 +509,7 @@ def _evaluate_prepared_scaled_scalp_contexts(
             stop_points=stop_points,
             runner_target_points=runner_target_points,
             runner_stop_mode=runner_stop_mode,
+            slippage_ticks_per_contract=slippage_ticks_per_contract,
         )
         for context in prepared_signals
     ]
@@ -804,6 +834,17 @@ def _scaled_scalp_outcome_summary(outcomes: list[dict[str, Any]]) -> dict[str, A
     }
 
 
+def _scaled_scalp_slippage_usd(
+    costs: OutcomeCosts,
+    *,
+    contract_count: int,
+    slippage_ticks_per_contract: float | None,
+) -> float:
+    if slippage_ticks_per_contract is None:
+        return costs.slippage_round_turn_usd * contract_count
+    return slippage_ticks_per_contract * costs.tick_value_usd * contract_count
+
+
 def _strategy_id(signal_rows: list[dict[str, Any]]) -> str:
     strategy_ids = sorted(
         {
@@ -938,6 +979,18 @@ def _normalize_positive_grid(values: Iterable[float], field_name: str) -> list[f
     return grid
 
 
+def _normalize_optional_nonnegative_value(
+    value: float | None,
+    field_name: str,
+) -> float | None:
+    if value is None:
+        return None
+    numeric_value = float(value)
+    if numeric_value < 0:
+        raise SignalScaledScalpExperimentError(f"{field_name} must be nonnegative")
+    return numeric_value
+
+
 def _normalize_direction_filter(value: str) -> str:
     direction = value.strip().lower()
     if direction not in _ALLOWED_DIRECTION_FILTERS:
@@ -978,3 +1031,9 @@ def _normalize_runner_stop_modes(values: Iterable[str]) -> list[str]:
             "runner_stop_modes contains unsupported values: " + ", ".join(invalid),
         )
     return modes
+
+
+def _format_optional_number(value: float | None) -> str:
+    if value is None:
+        return "round_turn_default"
+    return _format_number(value)

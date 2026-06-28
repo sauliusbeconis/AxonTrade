@@ -111,18 +111,26 @@ Best passive-touch zero-slippage rows:
 
 Passive-touch wait-window sweep:
 
-| Max wait seconds | Slippage ticks/side | Best family | Filled trades | Net USD | Avg/trade | Best exit |
-| ---: | ---: | --- | ---: | ---: | ---: | --- |
-| `10` | `0` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `76` | `3693.00` | `48.59` | `1.5 / 1.5 / 5 / initial` |
-| `30` | `0` | `impulse_continue_3bar_1.5pt` | `220` | `4010.00` | `18.23` | `1.5 / 1 / 5 / initial` |
-| `60` | `0` | `impulse_continue_3bar_1.5pt` | `262` | `3966.00` | `15.14` | `1.5 / 1 / 5 / initial` |
-| `120` | `0` | `impulse_continue_3bar_1.5pt` | `323` | `2814.00` | `8.71` | `1.5 / 1 / 5 / initial` |
-| `300` | `0` | `impulse_continue_3bar_1.5pt` | `369` | `1467.00` | `3.98` | `1.5 / 1 / 5 / initial` |
-| `10` | `1` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `76` | `-107.00` | `-1.41` | `1.5 / 1.5 / 5 / initial` |
-| `30` | `1` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `115` | `-4005.00` | `-34.83` | `1.5 / 2 / 5 / initial` |
-| `60` | `1` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `125` | `-5125.00` | `-41.00` | `1.5 / 1.5 / 5 / initial` |
-| `120` | `1` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `132` | `-5799.00` | `-43.93` | `1.5 / 1.5 / 5 / initial` |
-| `300` | `1` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `137` | `-5734.00` | `-41.85` | `1.5 / 1.5 / 5 / initial` |
+| Max wait seconds | Slippage model | Best family | Filled trades | Net USD | Avg/trade | Best exit |
+| ---: | --- | --- | ---: | ---: | ---: | --- |
+| `10` | `zero` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `76` | `3693.00` | `48.59` | `1.5 / 1.5 / 5 / initial` |
+| `30` | `zero` | `impulse_continue_3bar_1.5pt` | `220` | `4010.00` | `18.23` | `1.5 / 1 / 5 / initial` |
+| `60` | `zero` | `impulse_continue_3bar_1.5pt` | `262` | `3966.00` | `15.14` | `1.5 / 1 / 5 / initial` |
+| `120` | `zero` | `impulse_continue_3bar_1.5pt` | `323` | `2814.00` | `8.71` | `1.5 / 1 / 5 / initial` |
+| `300` | `zero` | `impulse_continue_3bar_1.5pt` | `369` | `1467.00` | `3.98` | `1.5 / 1 / 5 / initial` |
+| `1` | `exit 1 tick` | `vwap_delta_exhaustion_fade_3pt_20d_cl0.5` | `14` | `627.00` | `44.79` | `1.5 / 1 / 2 / initial` |
+| `5` | `exit 1 tick` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `46` | `1578.00` | `34.30` | `1.5 / 2 / 5 / initial` |
+| `10` | `exit 1 tick` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `76` | `1793.00` | `23.59` | `1.5 / 1.5 / 5 / initial` |
+| `15` | `exit 1 tick` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `94` | `717.00` | `7.63` | `1.5 / 1.5 / 5 / initial` |
+| `30` | `exit 1 tick` | `vwap_delta_exhaustion_fade_3pt_20d_cl0.5` | `129` | `-953.00` | `-7.39` | `1.5 / 2 / 5 / breakeven` |
+| `60` | `exit 1 tick` | `vwap_delta_exhaustion_fade_3pt_20d_cl0.5` | `141` | `-1737.00` | `-12.32` | `1.5 / 2 / 5 / initial` |
+| `120` | `exit 1 tick` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `132` | `-2499.00` | `-18.93` | `1.5 / 1.5 / 5 / initial` |
+| `300` | `exit 1 tick` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `137` | `-2309.00` | `-16.85` | `1.5 / 1.5 / 5 / initial` |
+| `10` | `round turn 1 tick/side` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `76` | `-107.00` | `-1.41` | `1.5 / 1.5 / 5 / initial` |
+| `30` | `round turn 1 tick/side` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `115` | `-4005.00` | `-34.83` | `1.5 / 2 / 5 / initial` |
+| `60` | `round turn 1 tick/side` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `125` | `-5125.00` | `-41.00` | `1.5 / 1.5 / 5 / initial` |
+| `120` | `round turn 1 tick/side` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `132` | `-5799.00` | `-43.93` | `1.5 / 1.5 / 5 / initial` |
+| `300` | `round turn 1 tick/side` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `137` | `-5734.00` | `-41.85` | `1.5 / 1.5 / 5 / initial` |
 
 ## Read
 
@@ -145,7 +153,45 @@ partial-fill behavior.
 
 The wait-window sweep sharpens this. The zero-slippage passive model remains
 positive from `10` to `300` seconds, but expectancy decays as stale fills are
-allowed. With the current one-tick slippage model, every wait window is
-negative, and the `10` second best row is only near breakeven. The next model
-should separate entry slippage from exit slippage because passive entry and
-market exit should not be treated as the same fill process.
+allowed. Splitting slippage into passive entry plus a one-tick market exit
+keeps only the fast `1` to `15` second fills positive. With the current
+one-tick-per-side round-turn slippage model, every wait window is negative, and
+the `10` second best row is only near breakeven.
+
+The strongest practical hypothesis is now a fast passive VWAP/delta exhaustion
+fade: require a limit touch inside about `5` to `10` seconds, assume no entry
+slippage, and pay one tick on exits. This is still aggregate/in-sample and must
+be validated chronologically before bot implementation.
+
+Chronological validation of the fast passive candidates:
+
+```bash
+.venv/bin/python scripts/run_signal_scalp_entry_baselines.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  reports/sierra-signal-log-scalp-entry-baselines-passive-touch-10s-exit1tick-walk-forward-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --slippage-ticks-per-contract 1 \
+  --entry-fill-mode passive_touch \
+  --maximum-passive-fill-seconds 10 \
+  --strategy-ids vwap_delta_exhaustion_fade_4pt_30d_cl0.55,vwap_delta_exhaustion_fade_3pt_20d_cl0.5,impulse_continue_3bar_1.5pt \
+  --output-mode walk_forward \
+  --train-date-count 8 \
+  --holdout-date-count 1 \
+  --minimum-train-trades 4
+```
+
+Walk-forward result:
+
+| Wait seconds | Holdout windows | Holdout trades | Holdout net USD | Read |
+| ---: | ---: | ---: | ---: | --- |
+| `5` | `12` | `75` | `-1750.00` | failed |
+| `10` | `17` | `151` | `-1732.00` | failed |
+
+The aggregate-positive fast passive idea did not survive chronological
+selection. The `10` second VWAP/delta exhaustion rows were close to breakeven
+by strategy, but not validated: `vwap_delta_exhaustion_fade_3pt_20d_cl0.5`
+made `+20.00` over `15` holdout trades, and
+`vwap_delta_exhaustion_fade_4pt_30d_cl0.55` lost `-127.00` over `11` holdout
+trades. This is too small and unstable for bot implementation.

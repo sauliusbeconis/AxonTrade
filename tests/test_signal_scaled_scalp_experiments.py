@@ -77,6 +77,29 @@ def test_scaled_scalp_hits_runner_target_after_first_target() -> None:
     assert outcomes[0]["net_usd"] == "93"
 
 
+def test_scaled_scalp_can_model_total_slippage_ticks_per_contract() -> None:
+    bars = [
+        _bar(0, timestamp="2026-06-19 10:00:00", high=100, low=99.75, close=100),
+        _bar(1, timestamp="2026-06-19 10:01:00", high=101.25, low=100.5, close=101),
+        _bar(2, timestamp="2026-06-19 10:02:00", high=102.25, low=100.5, close=102),
+    ]
+
+    outcomes = evaluate_signal_scaled_scalp_outcomes(
+        bars,
+        [_candidate()],
+        first_target_points=1,
+        stop_points=2,
+        runner_target_points=2,
+        runner_stop_mode="breakeven",
+        slippage_ticks_per_contract=1,
+    )
+
+    assert outcomes[0]["gross_usd"] == "150"
+    assert outcomes[0]["commission_usd"] == "7"
+    assert outcomes[0]["slippage_usd"] == "25"
+    assert outcomes[0]["net_usd"] == "118"
+
+
 def test_scaled_scalp_moves_runner_stop_to_breakeven_after_first_target() -> None:
     bars = [
         _bar(0, timestamp="2026-06-19 10:00:00", high=100, low=99.75, close=100),
@@ -134,6 +157,18 @@ def test_scaled_scalp_sweep_rejects_runner_target_at_or_below_first_target() -> 
             first_target_points_values=[2],
             stop_points_values=[2],
             runner_target_points_values=[1],
+        )
+
+
+def test_scaled_scalp_rejects_negative_total_slippage_ticks_per_contract() -> None:
+    with pytest.raises(SignalScaledScalpExperimentError, match="nonnegative"):
+        evaluate_signal_scaled_scalp_outcomes(
+            [],
+            [],
+            first_target_points=1,
+            stop_points=2,
+            runner_target_points=3,
+            slippage_ticks_per_contract=-1,
         )
 
 
