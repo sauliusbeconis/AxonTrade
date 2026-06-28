@@ -109,6 +109,21 @@ Best passive-touch zero-slippage rows:
 | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `125` | `1125.00` | `9.00` | `1.5 / 1.5 / 5 / initial` |
 | `delta_absorption_fade_10d_cl0.35` | `176` | `843.00` | `4.79` | `1.5 / 2 / 5 / initial` |
 
+Passive-touch wait-window sweep:
+
+| Max wait seconds | Slippage ticks/side | Best family | Filled trades | Net USD | Avg/trade | Best exit |
+| ---: | ---: | --- | ---: | ---: | ---: | --- |
+| `10` | `0` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `76` | `3693.00` | `48.59` | `1.5 / 1.5 / 5 / initial` |
+| `30` | `0` | `impulse_continue_3bar_1.5pt` | `220` | `4010.00` | `18.23` | `1.5 / 1 / 5 / initial` |
+| `60` | `0` | `impulse_continue_3bar_1.5pt` | `262` | `3966.00` | `15.14` | `1.5 / 1 / 5 / initial` |
+| `120` | `0` | `impulse_continue_3bar_1.5pt` | `323` | `2814.00` | `8.71` | `1.5 / 1 / 5 / initial` |
+| `300` | `0` | `impulse_continue_3bar_1.5pt` | `369` | `1467.00` | `3.98` | `1.5 / 1 / 5 / initial` |
+| `10` | `1` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `76` | `-107.00` | `-1.41` | `1.5 / 1.5 / 5 / initial` |
+| `30` | `1` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `115` | `-4005.00` | `-34.83` | `1.5 / 2 / 5 / initial` |
+| `60` | `1` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `125` | `-5125.00` | `-41.00` | `1.5 / 1.5 / 5 / initial` |
+| `120` | `1` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `132` | `-5799.00` | `-43.93` | `1.5 / 1.5 / 5 / initial` |
+| `300` | `1` | `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `137` | `-5734.00` | `-41.85` | `1.5 / 1.5 / 5 / initial` |
+
 ## Read
 
 Random entries were not better after normal ES two-contract costs. The
@@ -127,3 +142,10 @@ smaller than immediate zero-slippage entry. That makes `impulse_continue_3bar`
 the current lead hypothesis for a future limit-order scalp prototype, with the
 main open question being whether Sierra live/replay data can validate queue and
 partial-fill behavior.
+
+The wait-window sweep sharpens this. The zero-slippage passive model remains
+positive from `10` to `300` seconds, but expectancy decays as stale fills are
+allowed. With the current one-tick slippage model, every wait window is
+negative, and the `10` second best row is only near breakeven. The next model
+should separate entry slippage from exit slippage because passive entry and
+market exit should not be treated as the same fill process.

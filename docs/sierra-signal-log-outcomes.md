@@ -933,6 +933,26 @@ Synthetic scalp entry passive-touch zero-slippage sensitivity:
 
 `reports/sierra-signal-log-scalp-entry-baselines-passive-touch-slip0-large-sample.csv`
 
+Synthetic scalp entry passive-touch wait-window sensitivity:
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-10s-slip0-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-30s-slip0-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-120s-slip0-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-300s-slip0-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-10s-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-30s-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-60s-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-120s-large-sample.csv`
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-300s-large-sample.csv`
+
 Synthetic scalp entry baseline report:
 
 `reports/sierra-signal-log-scalp-entry-baselines-large-sample.md`
@@ -1083,12 +1103,15 @@ Synthetic scalp entry baseline result:
   `433` trades, `+11769.00` net USD; random baseline `+2000.00`
 - passive-touch zero-slippage sensitivity: best row
   `impulse_continue_3bar_1.5pt`, `262` filled trades, `+3966.00` net USD
+- passive-touch wait-window sweep: zero-slippage stays positive from `10` to
+  `300` seconds, but normal one-tick slippage is negative at every wait window
 
 Interpretation: random entries were not better after current ES two-contract
 cost assumptions. Order-flow proxies improved the regular-cost baseline but
 were still negative. With zero slippage, several families turn positive, so the
 scalp question is now primarily about fill quality and passive/limit execution,
-not just target/stop distances.
+not just target/stop distances. The next fill model should split passive entry
+slippage from market exit slippage.
 
 Context diagnostic observations:
 

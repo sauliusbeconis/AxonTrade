@@ -52,6 +52,7 @@ Every research source should be documented with a link and retrieval date.
 - Add fixed two-contract scaled-scalp exit sweeps and walk-forward validation for logged Sierra overlay candidates. Done.
 - Add random/VWAP/impulse synthetic scalp-entry baselines for logged Sierra overlay bars. Done.
 - Add order-flow proxy and passive-touch sensitivity baselines for synthetic scalp entries. Done.
+- Add passive-touch wait-window sensitivity for synthetic scalp entries. Done.
 - Add entry-quality filter sweeps and walk-forward validation for logged Sierra overlay diagnostics. Done.
 - Add volatility/activity-normalized sweep features for logged Sierra overlay diagnostics. Done.
 - Add trade-level audits for selected auction-regime target/breakeven stacks. Done.
