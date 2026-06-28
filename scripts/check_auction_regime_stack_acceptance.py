@@ -12,6 +12,7 @@ from axontrade.research import (
     auction_regime_stack_acceptance_passed,
     evaluate_auction_regime_stack_acceptance,
     load_auction_regime_stack_acceptance_config,
+    summarize_auction_regime_stack_sample,
     write_auction_regime_stack_acceptance_report,
 )
 
@@ -43,15 +44,15 @@ def main() -> int:
         "audit": args.audit,
         "config": args.config,
     }
-    findings = evaluate_auction_regime_stack_acceptance(
-        _read_csv(Path(args.audit)),
-        config=config,
-    )
+    audit_rows = _read_csv(Path(args.audit))
+    findings = evaluate_auction_regime_stack_acceptance(audit_rows, config=config)
+    sample_summary = summarize_auction_regime_stack_sample(audit_rows, config=config)
     write_auction_regime_stack_acceptance_report(
         args.report,
         findings,
         config=config,
         sources=sources,
+        sample_summary=sample_summary,
     )
     status = "PASS" if auction_regime_stack_acceptance_passed(findings) else "FAIL"
     print(f"wrote auction-regime stack acceptance report to {args.report}; status={status}")

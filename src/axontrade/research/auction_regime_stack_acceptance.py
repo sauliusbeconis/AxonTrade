@@ -38,6 +38,23 @@ class AuctionRegimeStackAcceptanceFinding:
     notes: str
 
 
+@dataclass(frozen=True)
+class AuctionRegimeStackSampleSummary:
+    """Sample coverage metrics for an auction-regime stack audit."""
+
+    holdout_evaluated_rows: int
+    unique_holdout_evaluated_signals: int
+    unique_holdout_trade_dates: int
+    duplicate_holdout_evaluated_rows: int
+    unique_holdout_net_usd: float
+    positive_unique_holdout_net_usd: float
+    largest_signal_net_usd: float
+    largest_signal_net_share: float
+    additional_unique_signals_required: int
+    additional_trade_dates_required: int
+    duplicate_rows_to_remove: int
+
+
 def load_auction_regime_stack_acceptance_config(
     path: str | Path = DEFAULT_AUCTION_REGIME_STACK_ACCEPTANCE_CONFIG_PATH,
 ) -> dict[str, Any]:
@@ -115,6 +132,61 @@ def evaluate_auction_regime_stack_acceptance(
     return findings
 
 
+def summarize_auction_regime_stack_sample(
+    audit_rows: Iterable[dict[str, Any]],
+    *,
+    config: dict[str, Any] | None = None,
+) -> AuctionRegimeStackSampleSummary:
+    """Summarize sample coverage and remaining evidence gaps."""
+
+    acceptance_config = (
+        load_auction_regime_stack_acceptance_config() if config is None else config
+    )
+    validate_auction_regime_stack_acceptance_config(acceptance_config)
+    gates = acceptance_config["gates"]
+    holdout_evaluated = _holdout_evaluated_rows(list(audit_rows))
+    unique_rows = _unique_signal_rows(holdout_evaluated)
+    trade_dates = {
+        str(row.get("trade_date", "")).strip()
+        for row in unique_rows
+        if str(row.get("trade_date", "")).strip()
+    }
+    duplicate_rows = _duplicate_holdout_evaluated_rows(holdout_evaluated)
+    unique_net = _unique_holdout_net(holdout_evaluated)
+    positive_unique_net = sum(
+        max(0.0, _to_float(row.get("selected_net_usd", 0), "selected_net_usd"))
+        for row in unique_rows
+    )
+    largest_signal_net = _largest_positive_signal_net(unique_rows)
+    largest_share = (
+        largest_signal_net / positive_unique_net
+        if positive_unique_net > 0
+        else 1.0
+    )
+    return AuctionRegimeStackSampleSummary(
+        holdout_evaluated_rows=len(holdout_evaluated),
+        unique_holdout_evaluated_signals=len(unique_rows),
+        unique_holdout_trade_dates=len(trade_dates),
+        duplicate_holdout_evaluated_rows=duplicate_rows,
+        unique_holdout_net_usd=unique_net,
+        positive_unique_holdout_net_usd=positive_unique_net,
+        largest_signal_net_usd=largest_signal_net,
+        largest_signal_net_share=largest_share,
+        additional_unique_signals_required=max(
+            0,
+            int(gates["minimum_unique_holdout_evaluated_signals"]) - len(unique_rows),
+        ),
+        additional_trade_dates_required=max(
+            0,
+            int(gates["minimum_unique_holdout_trade_dates"]) - len(trade_dates),
+        ),
+        duplicate_rows_to_remove=max(
+            0,
+            duplicate_rows - int(gates["maximum_duplicate_holdout_evaluated_rows"]),
+        ),
+    )
+
+
 def auction_regime_stack_acceptance_passed(
     findings: Iterable[AuctionRegimeStackAcceptanceFinding],
 ) -> bool:
@@ -128,6 +200,7 @@ def render_auction_regime_stack_acceptance_report(
     *,
     config: dict[str, Any],
     sources: dict[str, str],
+    sample_summary: AuctionRegimeStackSampleSummary | None = None,
 ) -> str:
     """Render a deterministic Markdown acceptance report."""
 
@@ -178,6 +251,43 @@ def render_auction_regime_stack_acceptance_report(
             + " |",
         )
 
+    if sample_summary is not None:
+        lines.extend(
+            [
+                "",
+                "## Sample Coverage",
+                "",
+                "| Metric | Value |",
+                "| --- | ---: |",
+                f"| Holdout evaluated rows | {sample_summary.holdout_evaluated_rows} |",
+                (
+                    "| Unique evaluated holdout signals | "
+                    f"{sample_summary.unique_holdout_evaluated_signals} |"
+                ),
+                f"| Unique holdout trade dates | {sample_summary.unique_holdout_trade_dates} |",
+                (
+                    "| Duplicate evaluated holdout rows | "
+                    f"{sample_summary.duplicate_holdout_evaluated_rows} |"
+                ),
+                f"| Unique holdout net USD | {_format_usd(sample_summary.unique_holdout_net_usd)} |",
+                (
+                    "| Positive unique holdout net USD | "
+                    f"{_format_usd(sample_summary.positive_unique_holdout_net_usd)} |"
+                ),
+                f"| Largest signal net USD | {_format_usd(sample_summary.largest_signal_net_usd)} |",
+                f"| Largest signal share | {_format_ratio(sample_summary.largest_signal_net_share)} |",
+                (
+                    "| Additional unique signals required | "
+                    f"{sample_summary.additional_unique_signals_required} |"
+                ),
+                (
+                    "| Additional trade dates required | "
+                    f"{sample_summary.additional_trade_dates_required} |"
+                ),
+                f"| Duplicate rows to remove | {sample_summary.duplicate_rows_to_remove} |",
+            ],
+        )
+
     lines.extend(
         [
             "",
@@ -196,6 +306,7 @@ def write_auction_regime_stack_acceptance_report(
     *,
     config: dict[str, Any],
     sources: dict[str, str],
+    sample_summary: AuctionRegimeStackSampleSummary | None = None,
 ) -> str:
     """Render and write an auction-regime stack acceptance report."""
 
@@ -203,6 +314,7 @@ def write_auction_regime_stack_acceptance_report(
         findings,
         config=config,
         sources=sources,
+        sample_summary=sample_summary,
     )
     report_path = Path(path)
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -248,7 +360,7 @@ def _maximum_duplicate_holdout_evaluated_rows(
     rows: list[dict[str, Any]],
     maximum_duplicates: int,
 ) -> AuctionRegimeStackAcceptanceFinding:
-    duplicate_rows = sum(_is_true(row.get("sample_duplicate_signal")) for row in rows)
+    duplicate_rows = _duplicate_holdout_evaluated_rows(rows)
     return AuctionRegimeStackAcceptanceFinding(
         gate_id="maximum_duplicate_holdout_evaluated_rows",
         passed=duplicate_rows <= maximum_duplicates,
@@ -280,13 +392,7 @@ def _maximum_single_signal_net_share(
         max(0.0, _to_float(row.get("selected_net_usd", 0), "selected_net_usd"))
         for row in unique_rows
     )
-    largest_signal_net = max(
-        (
-            max(0.0, _to_float(row.get("selected_net_usd", 0), "selected_net_usd"))
-            for row in unique_rows
-        ),
-        default=0.0,
-    )
+    largest_signal_net = _largest_positive_signal_net(unique_rows)
     observed_share = largest_signal_net / positive_net if positive_net > 0 else 1.0
     return AuctionRegimeStackAcceptanceFinding(
         gate_id="maximum_single_signal_net_share",
@@ -322,6 +428,20 @@ def _unique_holdout_net(rows: list[dict[str, Any]]) -> float:
     return sum(
         _to_float(row.get("selected_net_usd", 0), "selected_net_usd")
         for row in _unique_signal_rows(rows)
+    )
+
+
+def _duplicate_holdout_evaluated_rows(rows: list[dict[str, Any]]) -> int:
+    return sum(_is_true(row.get("sample_duplicate_signal")) for row in rows)
+
+
+def _largest_positive_signal_net(rows: list[dict[str, Any]]) -> float:
+    return max(
+        (
+            max(0.0, _to_float(row.get("selected_net_usd", 0), "selected_net_usd"))
+            for row in rows
+        ),
+        default=0.0,
     )
 
 

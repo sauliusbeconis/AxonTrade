@@ -26,6 +26,22 @@ cancel, or route orders.
 | PASS | positive_unique_holdout_net | 221.50 | > 0.00 | Net USD after de-duplicating evaluated holdout signals by first occurrence. |
 | FAIL | maximum_single_signal_net_share | 100.00% | <= 25.00% | Largest unique winning signal as a share of total positive unique holdout net. |
 
+## Sample Coverage
+
+| Metric | Value |
+| --- | ---: |
+| Holdout evaluated rows | 1 |
+| Unique evaluated holdout signals | 1 |
+| Unique holdout trade dates | 1 |
+| Duplicate evaluated holdout rows | 0 |
+| Unique holdout net USD | 221.50 |
+| Positive unique holdout net USD | 221.50 |
+| Largest signal net USD | 221.50 |
+| Largest signal share | 100.00% |
+| Additional unique signals required | 29 |
+| Additional trade dates required | 14 |
+| Duplicate rows to remove | 0 |
+
 ## Interpretation
 
 One or more evidence gates failed: minimum_unique_holdout_evaluated_signals, minimum_unique_holdout_trade_dates, maximum_single_signal_net_share. Do not treat the selected auction-regime stack as automation-ready.

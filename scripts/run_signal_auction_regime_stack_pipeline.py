@@ -36,6 +36,7 @@ from axontrade.research import (
     report_signal_auction_regime_target_r,
     run_signal_auction_regime_diagnostics,
     run_signal_auction_regime_filter_walk_forward_sweep,
+    summarize_auction_regime_stack_sample,
     validate_signal_entries_against_bars,
     write_auction_regime_stack_acceptance_report,
 )
@@ -400,6 +401,10 @@ def _write_audit_and_acceptance(
         audit_rows,
         config=acceptance_config,
     )
+    sample_summary = summarize_auction_regime_stack_sample(
+        audit_rows,
+        config=acceptance_config,
+    )
     write_auction_regime_stack_acceptance_report(
         acceptance_path,
         findings,
@@ -408,6 +413,7 @@ def _write_audit_and_acceptance(
             "audit": str(audit_path),
             "config": acceptance_config_path,
         },
+        sample_summary=sample_summary,
     )
     _log(f"wrote audit to {audit_path}")
     _log(f"wrote acceptance report to {acceptance_path}")

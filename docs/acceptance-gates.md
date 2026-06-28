@@ -60,6 +60,11 @@ The command writes a Markdown report. By default it returns exit code `0` even
 when the research sample fails. Add `--fail-on-reject` when a CI-style nonzero
 failure is desired.
 
+The report includes a `Sample Coverage` section. For the current holdout `1`
+audit this states the practical gap directly: `29` additional unique evaluated
+holdout signals and `14` additional trade dates are required before the stack
+can pass the minimum evidence-count gates.
+
 ## Risk Gates
 
 - Average holding time is comfortably above microscalping thresholds.

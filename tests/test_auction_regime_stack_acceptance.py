@@ -9,6 +9,7 @@ from axontrade.research import (
     evaluate_auction_regime_stack_acceptance,
     load_auction_regime_stack_acceptance_config,
     render_auction_regime_stack_acceptance_report,
+    summarize_auction_regime_stack_sample,
     validate_auction_regime_stack_acceptance_config,
 )
 
@@ -31,23 +32,25 @@ def test_acceptance_passes_when_all_gates_pass() -> None:
 
 
 def test_acceptance_fails_underpowered_single_survivor() -> None:
+    audit_rows = [
+        _audit_row(
+            "signal-1",
+            trade_date="2026-06-17",
+            net_usd=171.50,
+            duplicate=True,
+        ),
+        _audit_row(
+            "signal-1",
+            trade_date="2026-06-17",
+            net_usd=221.50,
+            duplicate=True,
+        ),
+    ]
     findings = evaluate_auction_regime_stack_acceptance(
-        [
-            _audit_row(
-                "signal-1",
-                trade_date="2026-06-17",
-                net_usd=171.50,
-                duplicate=True,
-            ),
-            _audit_row(
-                "signal-1",
-                trade_date="2026-06-17",
-                net_usd=221.50,
-                duplicate=True,
-            ),
-        ],
+        audit_rows,
         config=_config(),
     )
+    summary = summarize_auction_regime_stack_sample(audit_rows, config=_config())
 
     by_gate = {finding.gate_id: finding for finding in findings}
 
@@ -57,23 +60,31 @@ def test_acceptance_fails_underpowered_single_survivor() -> None:
     assert by_gate["maximum_duplicate_holdout_evaluated_rows"].passed is False
     assert by_gate["positive_unique_holdout_net"].passed is True
     assert by_gate["maximum_single_signal_net_share"].passed is False
+    assert summary.unique_holdout_evaluated_signals == 1
+    assert summary.unique_holdout_trade_dates == 1
+    assert summary.additional_unique_signals_required == 29
+    assert summary.additional_trade_dates_required == 14
+    assert summary.duplicate_rows_to_remove == 2
 
 
 def test_renders_auction_regime_stack_acceptance_report() -> None:
-    findings = evaluate_auction_regime_stack_acceptance(
-        [_audit_row("signal-1", trade_date="2026-06-17", net_usd=221.50)],
-        config=_config(),
-    )
+    audit_rows = [_audit_row("signal-1", trade_date="2026-06-17", net_usd=221.50)]
+    findings = evaluate_auction_regime_stack_acceptance(audit_rows, config=_config())
+    summary = summarize_auction_regime_stack_sample(audit_rows, config=_config())
 
     report = render_auction_regime_stack_acceptance_report(
         findings,
         config=_config(),
         sources={"audit": "audit.csv"},
+        sample_summary=summary,
     )
 
     assert "# Auction-Regime Stack Acceptance Report" in report
     assert "| Overall status | FAIL |" in report
     assert "| FAIL | minimum_unique_holdout_evaluated_signals | 1 | >= 30 |" in report
+    assert "## Sample Coverage" in report
+    assert "| Additional unique signals required | 29 |" in report
+    assert "| Additional trade dates required | 14 |" in report
 
 
 def test_rejects_invalid_acceptance_config() -> None:
