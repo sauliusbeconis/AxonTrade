@@ -35,6 +35,16 @@ and writes candidate/rejection rows using
 Build and load instructions are documented in
 `docs/sierra-liquidity-sweep-signal-overlay.md`.
 
+## Delta Impulse Continuation Overlay
+
+`AxonTradeDeltaImpulseContinuationOverlay.cpp` evaluates the fixed-exit
+`delta_impulse_continue_10bar_2.5pt_50d` research lead on the active chart,
+draws candidate markers and fixed stop/target lines, and writes
+candidate/rejection rows using `config/research/signal_log_schema.yaml`.
+
+Build and load instructions are documented in
+`docs/sierra-delta-impulse-continuation-overlay.md`.
+
 ## Build Workflow
 
 1. Sync sources with `bash scripts/sync_to_sierra.sh`.
