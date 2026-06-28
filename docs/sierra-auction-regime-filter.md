@@ -30,6 +30,32 @@ Entry-known fields:
 - direction-aware distance from session open
 - opening-range edge/outside distance
 
+## Full Stack Pipeline
+
+This command regenerates the auction-regime diagnostics, rolling selected
+rules, target-R stack, breakeven stack, trade-level audits, and acceptance
+reports from the current large Sierra export.
+
+Manual help needed: **No** after the large Sierra export, signal log, and
+quality diagnostics CSV exist.
+
+Audit-grade full run:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_stack_pipeline.py
+```
+
+Non-overlapping holdout-date only:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_stack_pipeline.py \
+  --samples holdout1
+```
+
+Use `--fail-on-reject` if the command should return a nonzero exit code when
+the generated acceptance reports fail. The current checked sample is expected
+to fail the acceptance gate.
+
 ## Filter Sweeps
 
 Train/holdout:

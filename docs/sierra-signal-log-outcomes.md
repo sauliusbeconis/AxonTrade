@@ -114,6 +114,26 @@ minutes after RTH open, original target/risk distance, sweep-to-entry bar gap,
 sweep delta, sweep aggression ratio, and confirmation close location. Optional
 MFE/MAE fields are included for post-trade diagnosis, not for entry filtering.
 
+## Run Auction-Regime Stack Pipeline
+
+Manual help needed: **No after the large Sierra export, signal log, and quality
+diagnostics CSV exist**.
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_stack_pipeline.py
+```
+
+For non-overlapping holdout-date outputs only:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_stack_pipeline.py \
+  --samples holdout1
+```
+
+This regenerates auction-regime diagnostics, selected rolling rules, target-R
+and breakeven stack reports, trade-level audits, and acceptance reports. The
+current checked sample is expected to finish with acceptance status `FAIL`.
+
 ## Run Context Diagnostics
 
 Manual help needed: **No after the orderflow export and quality diagnostics CSV
