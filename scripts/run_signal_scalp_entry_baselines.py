@@ -34,8 +34,8 @@ DEFAULT_MARKET_END = time(15, 45)
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Generate random, VWAP-extension, and impulse scalp-entry "
-            "baselines, then test scaled two-contract exits."
+            "Generate random, VWAP-extension, impulse, and order-flow-proxy "
+            "scalp-entry baselines, then test scaled two-contract exits."
         ),
     )
     parser.add_argument("bars_export", help="Path to Sierra exported bar/study text or CSV file.")
@@ -111,6 +111,18 @@ def main() -> int:
         default="auto",
         help="How to find bars after each generated entry.",
     )
+    parser.add_argument(
+        "--entry-fill-mode",
+        choices=("immediate", "passive_touch"),
+        default="immediate",
+        help="Use generated entry immediately, or require a later passive limit touch.",
+    )
+    parser.add_argument(
+        "--maximum-passive-fill-seconds",
+        type=int,
+        default=60,
+        help="Maximum seconds to wait for passive_touch entry fills.",
+    )
     args = parser.parse_args()
 
     try:
@@ -130,6 +142,12 @@ def main() -> int:
             random_per_day=args.random_per_day,
             max_rule_entries_per_day=args.max_rule_entries_per_day,
             minimum_spacing_seconds=args.minimum_spacing_seconds,
+        )
+        signals_by_strategy = _apply_entry_fill_mode(
+            signals_by_strategy,
+            feature_rows,
+            entry_fill_mode=args.entry_fill_mode,
+            maximum_passive_fill_seconds=args.maximum_passive_fill_seconds,
         )
         experiment_rows = []
         for signals in signals_by_strategy.values():
@@ -195,8 +213,23 @@ def _feature_rows(
                 "high_float": float(normalized_row["high"]),
                 "low_float": float(normalized_row["low"]),
                 "close_float": close,
+                "bar_range": float(normalized_row["high"]) - float(normalized_row["low"]),
                 "vwap": _to_float(raw_row.get("VWAP"), close),
+                "volume": _to_float(raw_row.get("Volume"), 0.0),
+                "trades": _to_float(raw_row.get("# of Trades"), 0.0),
+                "bid_volume": _to_float(raw_row.get("Bid Volume"), 0.0),
+                "ask_volume": _to_float(raw_row.get("Ask Volume"), 0.0),
+                "delta": _to_float(raw_row.get("Ask Volume Bid Volume Difference"), 0.0),
+                "delta_change": _to_float(
+                    raw_row.get("Ask Volume Bid Volume Difference Change"),
+                    0.0,
+                ),
             },
+        )
+        rows[-1]["close_location"] = _close_location(
+            low=rows[-1]["low_float"],
+            high=rows[-1]["high_float"],
+            close=rows[-1]["close_float"],
         )
     return rows
 
@@ -274,7 +307,174 @@ def _generate_strategy_signals(
                 ),
             )
 
+    for lookback, price_threshold, delta_threshold in (
+        (3, 1.0, 20.0),
+        (5, 1.5, 30.0),
+        (10, 2.5, 50.0),
+    ):
+        strategy_id = (
+            f"delta_impulse_continue_{lookback}bar_"
+            f"{price_threshold:g}pt_{delta_threshold:g}d"
+        )
+        for rows in rows_by_date.values():
+            candidates = []
+            for index in range(lookback, len(rows)):
+                row = rows[index]
+                move = row["close_float"] - rows[index - lookback]["close_float"]
+                delta_sum = sum(
+                    previous_row["delta"]
+                    for previous_row in rows[index - lookback + 1:index + 1]
+                )
+                if move >= price_threshold and delta_sum >= delta_threshold:
+                    candidates.append((row, "long"))
+                elif move <= -price_threshold and delta_sum <= -delta_threshold:
+                    candidates.append((row, "short"))
+            signals_by_strategy[strategy_id].extend(
+                _spaced_signals(
+                    candidates,
+                    strategy_id=strategy_id,
+                    minimum_spacing_seconds=minimum_spacing_seconds,
+                    max_per_day=max_rule_entries_per_day,
+                ),
+            )
+
+    for delta_threshold, close_location_threshold in (
+        (10.0, 0.35),
+        (20.0, 0.35),
+        (30.0, 0.4),
+    ):
+        strategy_id = (
+            f"delta_absorption_fade_{delta_threshold:g}d_"
+            f"cl{close_location_threshold:g}"
+        )
+        for rows in rows_by_date.values():
+            candidates = []
+            for row in rows:
+                close_location = row["close_location"]
+                if row["delta"] >= delta_threshold and close_location <= close_location_threshold:
+                    candidates.append((row, "short"))
+                elif (
+                    row["delta"] <= -delta_threshold
+                    and close_location >= 1 - close_location_threshold
+                ):
+                    candidates.append((row, "long"))
+            signals_by_strategy[strategy_id].extend(
+                _spaced_signals(
+                    candidates,
+                    strategy_id=strategy_id,
+                    minimum_spacing_seconds=minimum_spacing_seconds,
+                    max_per_day=max_rule_entries_per_day,
+                ),
+            )
+
+    for vwap_threshold, delta_threshold, close_location_threshold in (
+        (2.0, 10.0, 0.5),
+        (3.0, 20.0, 0.5),
+        (4.0, 30.0, 0.55),
+    ):
+        strategy_id = (
+            f"vwap_delta_exhaustion_fade_{vwap_threshold:g}pt_"
+            f"{delta_threshold:g}d_cl{close_location_threshold:g}"
+        )
+        for rows in rows_by_date.values():
+            candidates = []
+            for row in rows:
+                distance_from_vwap = row["close_float"] - row["vwap"]
+                close_location = row["close_location"]
+                if (
+                    distance_from_vwap >= vwap_threshold
+                    and row["delta"] >= delta_threshold
+                    and close_location <= close_location_threshold
+                ):
+                    candidates.append((row, "short"))
+                elif (
+                    distance_from_vwap <= -vwap_threshold
+                    and row["delta"] <= -delta_threshold
+                    and close_location >= 1 - close_location_threshold
+                ):
+                    candidates.append((row, "long"))
+            signals_by_strategy[strategy_id].extend(
+                _spaced_signals(
+                    candidates,
+                    strategy_id=strategy_id,
+                    minimum_spacing_seconds=minimum_spacing_seconds,
+                    max_per_day=max_rule_entries_per_day,
+                ),
+            )
+
     return dict(signals_by_strategy)
+
+
+def _apply_entry_fill_mode(
+    signals_by_strategy: dict[str, list[dict[str, Any]]],
+    feature_rows: list[dict[str, Any]],
+    *,
+    entry_fill_mode: str,
+    maximum_passive_fill_seconds: int,
+) -> dict[str, list[dict[str, Any]]]:
+    if entry_fill_mode == "immediate":
+        return signals_by_strategy
+    if entry_fill_mode != "passive_touch":
+        raise ValueError(f"unsupported entry_fill_mode: {entry_fill_mode}")
+    if maximum_passive_fill_seconds <= 0:
+        raise ValueError("maximum_passive_fill_seconds must be positive")
+
+    rows_by_date = _rows_by_date(feature_rows)
+    filled_signals_by_strategy = {}
+    for strategy_id, signals in signals_by_strategy.items():
+        filled_signals_by_strategy[strategy_id] = [
+            filled_signal
+            for signal in signals
+            if (
+                filled_signal := _passive_touch_signal(
+                    signal,
+                    rows_by_date,
+                    maximum_passive_fill_seconds=maximum_passive_fill_seconds,
+                )
+            )
+            is not None
+        ]
+    return filled_signals_by_strategy
+
+
+def _passive_touch_signal(
+    signal: dict[str, Any],
+    rows_by_date: dict[str, list[dict[str, Any]]],
+    *,
+    maximum_passive_fill_seconds: int,
+) -> dict[str, Any] | None:
+    signal_timestamp = _parse_timestamp(str(signal["bar_start_time"]))
+    trade_date = signal_timestamp.date().isoformat()
+    entry_price = float(signal["signal_price"])
+    direction = str(signal["direction"])
+    for row in rows_by_date.get(trade_date, []):
+        row_timestamp = row["parsed_timestamp"]
+        seconds_after_signal = (row_timestamp - signal_timestamp).total_seconds()
+        if seconds_after_signal <= 0:
+            continue
+        if seconds_after_signal > maximum_passive_fill_seconds:
+            break
+        if _entry_limit_touched(row, direction=direction, entry_price=entry_price):
+            filled_signal = dict(signal)
+            filled_signal["bar_index"] = row["bar_index"]
+            filled_signal["bar_start_time"] = row["timestamp"]
+            filled_signal["event_key"] = f"{signal['event_key']}:passive_fill:{row['bar_index']}"
+            filled_signal["signal_id"] = f"{signal['signal_id']}_passive_fill_{row['bar_index']}"
+            return filled_signal
+    return None
+
+
+def _entry_limit_touched(
+    row: dict[str, Any],
+    *,
+    direction: str,
+    entry_price: float,
+) -> bool:
+    if direction == "long":
+        return row["low_float"] <= entry_price
+    if direction == "short":
+        return row["high_float"] >= entry_price
+    raise ValueError(f"unsupported direction: {direction}")
 
 
 def _eligible_rows_by_date(
@@ -284,6 +484,15 @@ def _eligible_rows_by_date(
     for row in feature_rows:
         if DEFAULT_MARKET_START <= row["parsed_timestamp"].time() <= DEFAULT_MARKET_END:
             rows_by_date[row["trade_date"]].append(row)
+    return dict(sorted(rows_by_date.items()))
+
+
+def _rows_by_date(
+    feature_rows: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    rows_by_date: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in feature_rows:
+        rows_by_date[row["trade_date"]].append(row)
     return dict(sorted(rows_by_date.items()))
 
 
@@ -351,6 +560,12 @@ def _to_float(value: str | None, default: float) -> float:
     if value is None or not str(value).strip():
         return default
     return float(value)
+
+
+def _close_location(*, low: float, high: float, close: float) -> float:
+    if high <= low:
+        return 0.5
+    return (close - low) / (high - low)
 
 
 def _parse_float_list(value: str) -> list[float]:

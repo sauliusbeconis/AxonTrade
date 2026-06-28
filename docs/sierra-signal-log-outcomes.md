@@ -744,9 +744,32 @@ Manual help needed: **No after the fresh export exists**.
 ```
 
 This generates random, VWAP-extension fade, short impulse fade, and short
-impulse continuation entries from the exported Sierra bars, then tests the
+impulse continuation entries from the exported Sierra bars, plus order-flow
+proxy rules using exported delta and close-location fields. It then tests the
 same two-contract scaled scalp exit grid. It is a baseline for whether the
 logged setup is better or worse than simple synthetic entries.
+
+For zero-slippage sensitivity, add:
+
+```bash
+  --slippage-ticks-per-side 0
+```
+
+and write to:
+
+`reports/sierra-signal-log-scalp-entry-baselines-slip0-large-sample.csv`
+
+For passive-touch zero-slippage sensitivity, use:
+
+```bash
+  --slippage-ticks-per-side 0 \
+  --entry-fill-mode passive_touch \
+  --maximum-passive-fill-seconds 60
+```
+
+and write to:
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-slip0-large-sample.csv`
 
 ## Output
 
@@ -902,6 +925,14 @@ Synthetic scalp entry baselines:
 
 `reports/sierra-signal-log-scalp-entry-baselines-large-sample.csv`
 
+Synthetic scalp entry zero-slippage sensitivity:
+
+`reports/sierra-signal-log-scalp-entry-baselines-slip0-large-sample.csv`
+
+Synthetic scalp entry passive-touch zero-slippage sensitivity:
+
+`reports/sierra-signal-log-scalp-entry-baselines-passive-touch-slip0-large-sample.csv`
+
 Synthetic scalp entry baseline report:
 
 `reports/sierra-signal-log-scalp-entry-baselines-large-sample.md`
@@ -1040,17 +1071,24 @@ level-specific absorption evidence, not more aggressive stop/target tuning.
 
 Synthetic scalp entry baseline result:
 
-- generated entries: `4869` across random, VWAP-extension fade, impulse fade,
-  and impulse continuation families
+- generated entries: `6654` across random, VWAP-extension fade, impulse fade,
+  impulse continuation, delta impulse, delta absorption, and VWAP/delta
+  exhaustion families
 - entry window: `09:45` to `15:45` New York time
-- best synthetic family: `impulse_continue_3bar_1.5pt`, `433` trades,
-  `-9881.00` net USD, `-22.82` average net per trade
+- best regular-cost synthetic family: `delta_absorption_fade_20d_cl0.35`,
+  `187` trades, `-3484.00` net USD, `-18.63` average net per trade
 - random baseline: `550` trades, `-25500.00` net USD, `-46.36` average net per
   trade
+- zero-slippage sensitivity: best row `impulse_continue_3bar_1.5pt`,
+  `433` trades, `+11769.00` net USD; random baseline `+2000.00`
+- passive-touch zero-slippage sensitivity: best row
+  `impulse_continue_3bar_1.5pt`, `262` filled trades, `+3966.00` net USD
 
 Interpretation: random entries were not better after current ES two-contract
-cost assumptions. The least bad simple baseline was short-term impulse
-continuation, but it was still negative.
+cost assumptions. Order-flow proxies improved the regular-cost baseline but
+were still negative. With zero slippage, several families turn positive, so the
+scalp question is now primarily about fill quality and passive/limit execution,
+not just target/stop distances.
 
 Context diagnostic observations:
 
