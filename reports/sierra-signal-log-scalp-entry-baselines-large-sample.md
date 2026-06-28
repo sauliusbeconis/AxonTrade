@@ -184,14 +184,25 @@ Chronological validation of the fast passive candidates:
 
 Walk-forward result:
 
-| Wait seconds | Holdout windows | Holdout trades | Holdout net USD | Read |
-| ---: | ---: | ---: | ---: | --- |
-| `5` | `12` | `75` | `-1750.00` | failed |
-| `10` | `17` | `151` | `-1732.00` | failed |
+| Entry mode | Slippage model | Holdout windows | Holdout trades | Holdout net USD | Avg/trade | Read |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| passive-touch `5s` | zero | `12` | `75` | `125.00` | `1.67` | too thin |
+| passive-touch `5s` | half tick total/contract | `12` | `75` | `-812.50` | `-10.83` | failed |
+| passive-touch `5s` | one tick total/contract | `12` | `75` | `-1750.00` | `-23.33` | failed |
+| passive-touch `10s` | zero | `17` | `151` | `2043.00` | `13.53` | positive |
+| passive-touch `10s` | half tick total/contract | `17` | `151` | `155.50` | `1.03` | too thin |
+| passive-touch `10s` | one tick total/contract | `17` | `151` | `-1732.00` | `-11.47` | failed |
+| immediate | zero | `53` | `1006` | `13883.00` | `13.80` | positive before costs |
+| immediate | half tick total/contract | `53` | `1006` | `1308.00` | `1.30` | too thin |
 
-The aggregate-positive fast passive idea did not survive chronological
-selection. The `10` second VWAP/delta exhaustion rows were close to breakeven
-by strategy, but not validated: `vwap_delta_exhaustion_fade_3pt_20d_cl0.5`
-made `+20.00` over `15` holdout trades, and
-`vwap_delta_exhaustion_fade_4pt_30d_cl0.55` lost `-127.00` over `11` holdout
-trades. This is too small and unstable for bot implementation.
+The aggregate-positive fast passive idea only partly survived chronological
+selection. With perfect fills, passive-touch `10s` and immediate entries are
+positive, but the edge is small relative to execution cost. Half a tick total
+slippage per contract leaves only a thin result, and one tick total slippage
+per contract fails.
+
+Cost threshold: the passive-touch `10s` walk-forward makes about `$13.53` per
+trade before slippage. With two ES contracts, one total tick per contract costs
+`$25.00` per trade, so the break-even execution budget is about `0.54` ticks
+total slippage per contract. This is too tight for market-order execution and
+still not strong enough for bot implementation on this sample.
