@@ -355,6 +355,59 @@ losses, `0` breakeven exits, and `+221.50` net USD. This matches the target-R
 stack on the held-out rows, so the breakeven stop is not yet proven to add
 out-of-sample value.
 
+## Run Auction-Regime Trade-Level Audit
+
+Manual help needed: **No after the large Sierra export, signal log,
+auction-regime diagnostics CSV, and selected-rule CSV exist**.
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_trade_audit.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-target-r-trade-audit-large-sample.csv \
+  --stack-type target_r \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --direction-filters all,long,short
+```
+
+For the non-overlapping audit, change the selected-rule and output paths:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_trade_audit.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-holdout1-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-target-r-trade-audit-holdout1-large-sample.csv \
+  --stack-type target_r \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --direction-filters all,long,short
+```
+
+Use `--stack-type breakeven` plus the breakeven grid to audit the breakeven
+stack:
+
+```bash
+  --target-r-multiples 0.5,1,1.25,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --breakeven-trigger-r-multiples 0.5,0.75,1,1.25,1.5,2,2.5
+```
+
+Current trade-level result: the overlapping target-R and breakeven audits each
+show `2` evaluated holdout rows but only `1` unique evaluated holdout signal.
+That duplicate signal is
+`liquidity_sweep_absorption_reversal_ESU26-CME_32971` on `2026-06-17`. The
+non-overlapping holdout-1 audit keeps it once at `2.5R` for `+221.50`.
+
 ## Run Quality Plus Health Gate Walk-Forward
 
 Manual help needed: **No after the quality diagnostics CSV exists**.

@@ -216,6 +216,90 @@ Non-overlapping holdout-date breakeven stack:
   --direction-filters all,long,short
 ```
 
+## Trade-Level Audit
+
+This report reconstructs the selected rolling stack one candidate at a time. It
+marks rows as `evaluated`, `auction_skipped`, or `exit_direction_skipped`, and
+adds duplicate markers when the same signal appears in multiple rolling
+holdout windows.
+
+Manual help needed: **No** after the large Sierra export, signal log,
+auction-regime diagnostics CSV, and selected-rule CSV exist.
+
+Target-R stack, rolling walk-forward:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_trade_audit.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-target-r-trade-audit-large-sample.csv \
+  --stack-type target_r \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --direction-filters all,long,short
+```
+
+Target-R stack, non-overlapping holdout-date audit:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_trade_audit.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-holdout1-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-target-r-trade-audit-holdout1-large-sample.csv \
+  --stack-type target_r \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --direction-filters all,long,short
+```
+
+Breakeven stack, rolling walk-forward:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_trade_audit.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-breakeven-trade-audit-large-sample.csv \
+  --stack-type breakeven \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.25,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --breakeven-trigger-r-multiples 0.5,0.75,1,1.25,1.5,2,2.5 \
+  --direction-filters all,long,short
+```
+
+Breakeven stack, non-overlapping holdout-date audit:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_trade_audit.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-auction-regime-diagnostics-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-filter-walk-forward-holdout1-large-sample.csv \
+  reports/sierra-signal-log-auction-regime-breakeven-trade-audit-holdout1-large-sample.csv \
+  --stack-type breakeven \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --minimum-train-trades 4 \
+  --target-r-multiples 0.5,1,1.25,1.5,2,2.5,3,3.5,4,4.5,5 \
+  --breakeven-trigger-r-multiples 0.5,0.75,1,1.25,1.5,2,2.5 \
+  --direction-filters all,long,short
+```
+
 ## Current Large Sierra Signal Sample
 
 Diagnostic separation:
@@ -282,6 +366,15 @@ Auction guard plus breakeven-stop rolling holdout result:
 | Rolling walk-forward | `2` | `2` | `0` | `0` | `2R`, `2.5R` | `1.25R` | `393.00` | `17` | `-3634.50` |
 | Rolling walk-forward, holdout `1` | `1` | `1` | `0` | `0` | `2.5R` | `1.25R` | `221.50` | `10` | `-2035.00` |
 
+Trade-level audit result:
+
+| Stack | Holdout Evaluated Rows | Unique Evaluated Holdout Signals | Duplicate Evaluated Rows | Evaluated Net USD |
+| --- | ---: | ---: | ---: | ---: |
+| Target-R rolling walk-forward | `2` | `1` | `1` | `393.00` |
+| Target-R holdout `1` | `1` | `1` | `0` | `221.50` |
+| Breakeven rolling walk-forward | `2` | `1` | `1` | `393.00` |
+| Breakeven holdout `1` | `1` | `1` | `0` | `221.50` |
+
 Interpretation: auction-regime filters are useful as an explanation and
 damage-control clue, but not as a validated entry edge. The filter avoided most
 later losing holdout candidates by rejecting high-stretch directional sessions,
@@ -295,5 +388,7 @@ long reached `3.75R` favorable before stopping while the original target was
 the current held-out net beyond target-R alone; the held-out accepted trades
 hit target and recorded `0` breakeven exits. The non-overlapping holdout-date
 audit reduces the positive result to one unique holdout trade for `+221.50`,
-so treat the target-R/breakeven stack as an exit hypothesis to test on a larger
-export, not as automation approval.
+signal `liquidity_sweep_absorption_reversal_ESU26-CME_32971` on `2026-06-17`.
+The overlapping audit counts that same signal twice with two selected exits
+(`2R` and `2.5R`). Treat the target-R/breakeven stack as an exit hypothesis to
+test on a larger export, not as automation approval.
