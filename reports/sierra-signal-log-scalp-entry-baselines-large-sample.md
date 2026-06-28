@@ -206,3 +206,57 @@ trade before slippage. With two ES contracts, one total tick per contract costs
 `$25.00` per trade, so the break-even execution budget is about `0.54` ticks
 total slippage per contract. This is too tight for market-order execution and
 still not strong enough for bot implementation on this sample.
+
+Larger-exit walk-forward check:
+
+```bash
+.venv/bin/python scripts/run_signal_scalp_entry_baselines.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  reports/sierra-signal-log-scalp-entry-baselines-passive-touch-10s-exit1tick-larger-exit-walk-forward-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --slippage-ticks-per-contract 1 \
+  --entry-fill-mode passive_touch \
+  --maximum-passive-fill-seconds 10 \
+  --strategy-ids vwap_delta_exhaustion_fade_4pt_30d_cl0.55,vwap_delta_exhaustion_fade_3pt_20d_cl0.5,impulse_continue_3bar_1.5pt,delta_absorption_fade_20d_cl0.35 \
+  --output-mode walk_forward \
+  --train-date-count 8 \
+  --holdout-date-count 1 \
+  --minimum-train-trades 4 \
+  --first-target-points 1.5,2,2.5,3 \
+  --stop-points 1.5,2,2.5,3,4 \
+  --runner-target-points 3,4,5,6,8,10,12,15 \
+  --runner-stop-modes breakeven,initial
+```
+
+This tested whether the scalp could become less execution-thin by using larger
+first targets, wider stops, and larger runners on the lead passive-entry
+families.
+
+| Entry mode | Slippage model | Holdout windows | Holdout trades | Holdout net USD | Avg/trade | Read |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| passive-touch `5s` | zero | `16` | `89` | `-1073.00` | `-12.06` | failed |
+| passive-touch `5s` | half tick total/contract | `16` | `89` | `-2185.50` | `-24.56` | failed |
+| passive-touch `5s` | one tick total/contract | `16` | `89` | `-3298.00` | `-37.06` | failed |
+| passive-touch `10s` | zero | `22` | `191` | `-649.50` | `-3.40` | failed |
+| passive-touch `10s` | half tick total/contract | `22` | `191` | `-3037.00` | `-15.90` | failed |
+| passive-touch `10s` | one tick total/contract | `22` | `191` | `-5424.50` | `-28.40` | failed |
+
+Best-looking larger-exit slice was only the `10s` perfect-fill
+`impulse_continue_3bar_1.5pt` subgroup:
+
+| Entry family | Holdout trades | Net USD | Avg/trade | Full stops | First target hits | Runner targets | Runner stops |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `impulse_continue_3bar_1.5pt` | `125` | `1487.50` | `11.90` | `77` | `48` | `14` | `33` |
+| `vwap_delta_exhaustion_fade_3pt_20d_cl0.5` | `15` | `120.00` | `8.00` | `6` | `9` | `1` | `8` |
+| `vwap_delta_exhaustion_fade_4pt_30d_cl0.55` | `11` | `-477.00` | `-43.36` | `4` | `7` | `2` | `5` |
+| `delta_absorption_fade_20d_cl0.35` | `40` | `-1780.00` | `-44.50` | `20` | `20` | `0` | `20` |
+
+Interpretation: widening the exits did not solve the execution problem. Even
+the best subgroup made only `$11.90` per trade before slippage, which is less
+than half a tick per ES contract on a two-contract scalp. This keeps the
+current synthetic scalp research in the microstructure/fill-quality bucket
+rather than a robust discretionary-style scalp setup. The next research branch
+should either validate true limit-order queue/partial-fill behavior or move to
+a different, slower setup family with larger expected movement.

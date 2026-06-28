@@ -1466,3 +1466,29 @@ not as permission to automate entries.
 Implementation note: Sierra exports sub-second bar timestamps, while the signal
 log stores whole-second bar times. Outcome preflight therefore validates matching
 entries by same-day `bar_index` first, then falls back to nearest timestamp.
+
+Synthetic scalp baseline update:
+
+The fast passive synthetic scalp branch remains execution-thin. The original
+walk-forward test found passive-touch `10s` positive with perfect fills
+(`151` holdout trades, `$2043.00`, `$13.53` per trade), barely positive with
+half a tick total slippage per contract (`$155.50`), and negative with one tick
+total slippage per contract (`-$1732.00`).
+
+A larger-exit follow-up tested first targets `1.5,2,2.5,3`, stops
+`1.5,2,2.5,3,4`, runner targets `3,4,5,6,8,10,12,15`, and both breakeven and
+initial runner stops on the lead passive-entry families. It failed even before
+costs:
+
+| Entry mode | Slippage model | Holdout windows | Holdout trades | Holdout net USD | Avg/trade |
+| --- | --- | ---: | ---: | ---: | ---: |
+| passive-touch `5s` | zero | `16` | `89` | `-1073.00` | `-12.06` |
+| passive-touch `10s` | zero | `22` | `191` | `-649.50` | `-3.40` |
+| passive-touch `10s` | one tick total/contract | `22` | `191` | `-5424.50` | `-28.40` |
+
+Read: widening exits did not produce a less-thin scalp. The best subgroup was
+`impulse_continue_3bar_1.5pt` at `$1487.50` over `125` perfect-fill holdout
+trades, or `$11.90` per trade before slippage, which is still less than half a
+tick per ES contract on the two-contract model. Do not turn this into a bot
+until real limit-order fill quality is validated or a slower setup family shows
+a larger walk-forward edge.
