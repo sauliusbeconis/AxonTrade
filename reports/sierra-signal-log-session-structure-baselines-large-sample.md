@@ -122,3 +122,71 @@ one non-overlapping holdout block lost `-$1434.00`, and the selected exit
 parameters still move between windows. The next step is a trade-level audit of
 the `delta_impulse_continue_10bar_2.5pt_50d` lead and then a dedicated overlay
 rule, not broker work or live execution.
+
+## Trade-Level Audit
+
+Command:
+
+```bash
+.venv/bin/python scripts/run_signal_scalp_entry_audit.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  reports/sierra-signal-log-scalp-entry-baselines-spaced-leads-defaultcost-walk-forward-holdout2-step2-large-sample.csv \
+  reports/sierra-signal-log-scalp-entry-baselines-spaced-delta-impulse-trade-audit-holdout2-step2-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --max-rule-entries-per-day 6 \
+  --minimum-spacing-seconds 900 \
+  --strategy-ids delta_impulse_continue_10bar_2.5pt_50d \
+  --samples holdout
+```
+
+Audit reconciliation:
+
+| Metric | Value |
+| --- | ---: |
+| Holdout trades | `56` |
+| Unique holdout signals | `56` |
+| Duplicate holdout signals | `0` |
+| Net USD | `2608.00` |
+| Average/trade | `46.57` |
+| Positive trades | `32` |
+| Win rate | `57.14%` |
+| Gross wins | `15176.00` |
+| Gross losses | `-12568.00` |
+| Profit factor | `1.21` |
+| Max trade-sequence drawdown | `-2797.00` |
+| Max consecutive losses | `3` |
+
+Daily audit:
+
+| Date | Trades | Net USD | Avg/trade | Full stops | First target hits |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `2026-06-05` | `4` | `-528.00` | `-132.00` | `2` | `2` |
+| `2026-06-08` | `4` | `1122.00` | `280.50` | `1` | `3` |
+| `2026-06-09` | `6` | `1758.00` | `293.00` | `0` | `6` |
+| `2026-06-10` | `6` | `-42.00` | `-7.00` | `0` | `6` |
+| `2026-06-11` | `6` | `458.00` | `76.33` | `2` | `4` |
+| `2026-06-12` | `6` | `958.00` | `159.67` | `2` | `4` |
+| `2026-06-15` | `6` | `-342.00` | `-57.00` | `3` | `3` |
+| `2026-06-16` | `6` | `-1092.00` | `-182.00` | `4` | `2` |
+| `2026-06-17` | `6` | `408.00` | `68.00` | `1` | `5` |
+| `2026-06-18` | `6` | `-92.00` | `-15.33` | `3` | `3` |
+
+Selected-exit breakdown:
+
+| First target | Stop | Runner target | Runner stop | Trades | Net USD | Avg/trade | Full stops | Runner targets |
+| ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| `3` | `8` | `10` | `initial` | `12` | `1716.00` | `143.00` | `0` | `6` |
+| `5` | `6` | `10` | `breakeven` | `12` | `1416.00` | `118.00` | `4` | `5` |
+| `5` | `6` | `8` | `breakeven` | `8` | `594.00` | `74.25` | `3` | `4` |
+| `5` | `5` | `20` | `breakeven` | `12` | `316.00` | `26.33` | `4` | `1` |
+| `5` | `5` | `15` | `breakeven` | `12` | `-1434.00` | `-119.50` | `7` | `2` |
+
+Audit read: the lead is real enough to keep researching because it survived
+default costs with no duplicate holdout signals. It is not stable enough for a
+bot. Profit factor is only `1.21`, the worst trade-sequence drawdown is larger
+than the total net, and the losing `5 / 5 / 15 / breakeven` selected exit block
+gave back most of the prior progress. The next useful test is a stability
+filter for the selected exit family or a fixed-exit version of the same entry,
+not live execution.

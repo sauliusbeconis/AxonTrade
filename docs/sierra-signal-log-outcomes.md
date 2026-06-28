@@ -1522,3 +1522,28 @@ non-overlapping holdout block lost `-$1434.00`, the sample is still only `22`
 trade dates, and selected exits vary by window. Next step is a trade-level
 audit of `delta_impulse_continue_10bar_2.5pt_50d` with the selected
 walk-forward exits.
+
+Spaced delta-impulse trade-level audit:
+
+The holdout audit regenerated `delta_impulse_continue_10bar_2.5pt_50d` entries
+with `900` second spacing, applied the non-overlapping walk-forward selected
+exits, and wrote one row per evaluated holdout trade.
+
+| Metric | Value |
+| --- | ---: |
+| Holdout trades | `56` |
+| Unique holdout signals | `56` |
+| Duplicate holdout signals | `0` |
+| Net USD | `2608.00` |
+| Average/trade | `46.57` |
+| Win rate | `57.14%` |
+| Profit factor | `1.21` |
+| Max trade-sequence drawdown | `-2797.00` |
+| Worst day | `2026-06-16`, `-1092.00` |
+
+Read: the audit confirms the summary was not inflated by duplicate holdout
+signals. It also weakens the case for automation: profit factor is low, the
+trade-sequence drawdown is larger than total net profit, and one selected exit
+block (`5 / 5 / 15 / breakeven`) lost `-$1434.00`. Keep this lead, but the next
+test should be exit-stability or fixed-exit validation before any Sierra bot
+rule is built.
