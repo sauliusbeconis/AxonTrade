@@ -52,6 +52,14 @@ Non-overlapping holdout-date only:
   --samples holdout1
 ```
 
+Fast target-R-only holdout-date check:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_stack_pipeline.py \
+  --samples holdout1 \
+  --stacks target_r
+```
+
 Use `--fail-on-reject` if the command should return a nonzero exit code when
 the generated acceptance reports fail. The current checked sample is expected
 to fail the acceptance gate.

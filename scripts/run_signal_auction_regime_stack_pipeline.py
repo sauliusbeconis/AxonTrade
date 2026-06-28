@@ -70,6 +70,12 @@ def main() -> int:
         default="all",
         help="Which rolling selections to regenerate.",
     )
+    parser.add_argument(
+        "--stacks",
+        choices=("all", "target_r", "breakeven"),
+        default="all",
+        help="Which exit stacks to regenerate.",
+    )
     parser.add_argument("--symbol", default="ESU26-CME")
     parser.add_argument("--chart-number", type=int, default=2)
     parser.add_argument("--session-phase", default="rth")
@@ -114,6 +120,7 @@ def main() -> int:
 
     try:
         outputs = _output_paths(Path(args.reports_dir), args.output_tag)
+        _log(f"loading Sierra export from {args.bars_export}")
         bars = normalize_sierra_bar_study_file(
             args.bars_export,
             symbol=args.symbol,
@@ -122,17 +129,19 @@ def main() -> int:
             config=load_sierra_export_config(args.export_config),
             compute_opening_range=True,
         )
+        _log(f"loaded {len(bars)} normalized bars")
         signal_rows = load_signal_log_rows_csv(args.signal_log)
         validate_signal_entries_against_bars(bars, signal_rows)
         quality_rows = _read_csv(Path(args.quality_diagnostics))
         acceptance_config = load_auction_regime_stack_acceptance_config(args.acceptance_config)
 
+        _log("computing auction-regime diagnostics")
         regime_rows = run_signal_auction_regime_diagnostics(
             bar_rows=bars,
             quality_diagnostic_rows=quality_rows,
         )
         _write_csv(outputs["diagnostics"], SIGNAL_AUCTION_REGIME_DIAGNOSTIC_HEADER, regime_rows)
-        print(f"wrote {len(regime_rows)} diagnostics to {outputs['diagnostics']}")
+        _log(f"wrote {len(regime_rows)} diagnostics to {outputs['diagnostics']}")
 
         selected_rules = _selected_rule_sets(args, regime_rows)
         for sample_key, rule_rows in selected_rules.items():
@@ -141,7 +150,7 @@ def main() -> int:
                 SIGNAL_AUCTION_REGIME_FILTER_SWEEP_HEADER,
                 rule_rows,
             )
-            print(
+            _log(
                 f"wrote {sample_key} selected auction-regime rules to "
                 f"{outputs[f'filter_{sample_key}']}",
             )
@@ -173,7 +182,7 @@ def main() -> int:
         TradeOutcomeError,
         OSError,
     ) as exc:
-        print(f"error: {exc}")
+        _log(f"error: {exc}")
         return 2
 
     if args.fail_on_reject and not all(acceptance_passes):
@@ -235,6 +244,54 @@ def _run_stacks(
     acceptance_config: dict[str, object],
     acceptance_config_path: str,
 ) -> list[bool]:
+    stack_results: dict[str, bool] = {}
+    if args.stacks in {"all", "target_r"}:
+        stack_results["target_r"] = _run_target_stack(
+            args=args,
+            bars=bars,
+            signal_rows=signal_rows,
+            regime_rows=regime_rows,
+            selection_rows=selection_rows,
+            outputs=outputs,
+            sample_key=sample_key,
+            acceptance_config=acceptance_config,
+            acceptance_config_path=acceptance_config_path,
+        )
+    if args.stacks in {"all", "breakeven"}:
+        stack_results["breakeven"] = _run_breakeven_stack(
+            args=args,
+            bars=bars,
+            signal_rows=signal_rows,
+            regime_rows=regime_rows,
+            selection_rows=selection_rows,
+            outputs=outputs,
+            sample_key=sample_key,
+            acceptance_config=acceptance_config,
+            acceptance_config_path=acceptance_config_path,
+        )
+    _log(
+        f"{sample_key}: "
+        + ", ".join(
+            f"{stack}_acceptance={'PASS' if passed else 'FAIL'}"
+            for stack, passed in stack_results.items()
+        ),
+    )
+    return list(stack_results.values())
+
+
+def _run_target_stack(
+    *,
+    args: argparse.Namespace,
+    bars: list[dict[str, object]],
+    signal_rows: list[dict[str, object]],
+    regime_rows: list[dict[str, object]],
+    selection_rows: list[dict[str, object]],
+    outputs: dict[str, Path],
+    sample_key: str,
+    acceptance_config: dict[str, object],
+    acceptance_config_path: str,
+) -> bool:
+    _log(f"{sample_key}: running target-R stack")
     target_report_rows = report_signal_auction_regime_target_r(
         bars=bars,
         signal_rows=signal_rows,
@@ -252,6 +309,7 @@ def _run_stacks(
         SIGNAL_AUCTION_REGIME_TARGET_R_REPORT_HEADER,
         target_report_rows,
     )
+    _log(f"{sample_key}: wrote target-R report to {outputs[f'target_report_{sample_key}']}")
     target_audit_rows = audit_signal_auction_regime_trades(
         bars=bars,
         signal_rows=signal_rows,
@@ -265,7 +323,7 @@ def _run_stacks(
         slippage_ticks_per_side=args.slippage_ticks_per_side,
         entry_match_mode=args.entry_match_mode,
     )
-    target_passed = _write_audit_and_acceptance(
+    return _write_audit_and_acceptance(
         audit_rows=target_audit_rows,
         audit_path=outputs[f"target_audit_{sample_key}"],
         acceptance_path=outputs[f"target_acceptance_{sample_key}"],
@@ -273,6 +331,20 @@ def _run_stacks(
         acceptance_config_path=acceptance_config_path,
     )
 
+
+def _run_breakeven_stack(
+    *,
+    args: argparse.Namespace,
+    bars: list[dict[str, object]],
+    signal_rows: list[dict[str, object]],
+    regime_rows: list[dict[str, object]],
+    selection_rows: list[dict[str, object]],
+    outputs: dict[str, Path],
+    sample_key: str,
+    acceptance_config: dict[str, object],
+    acceptance_config_path: str,
+) -> bool:
+    _log(f"{sample_key}: running breakeven stack")
     breakeven_report_rows = report_signal_auction_regime_breakeven(
         bars=bars,
         signal_rows=signal_rows,
@@ -291,6 +363,7 @@ def _run_stacks(
         SIGNAL_AUCTION_REGIME_BREAKEVEN_REPORT_HEADER,
         breakeven_report_rows,
     )
+    _log(f"{sample_key}: wrote breakeven report to {outputs[f'breakeven_report_{sample_key}']}")
     breakeven_audit_rows = audit_signal_auction_regime_trades(
         bars=bars,
         signal_rows=signal_rows,
@@ -305,18 +378,13 @@ def _run_stacks(
         slippage_ticks_per_side=args.slippage_ticks_per_side,
         entry_match_mode=args.entry_match_mode,
     )
-    breakeven_passed = _write_audit_and_acceptance(
+    return _write_audit_and_acceptance(
         audit_rows=breakeven_audit_rows,
         audit_path=outputs[f"breakeven_audit_{sample_key}"],
         acceptance_path=outputs[f"breakeven_acceptance_{sample_key}"],
         acceptance_config=acceptance_config,
         acceptance_config_path=acceptance_config_path,
     )
-    print(
-        f"{sample_key}: target_acceptance={'PASS' if target_passed else 'FAIL'}, "
-        f"breakeven_acceptance={'PASS' if breakeven_passed else 'FAIL'}",
-    )
-    return [target_passed, breakeven_passed]
 
 
 def _write_audit_and_acceptance(
@@ -341,6 +409,8 @@ def _write_audit_and_acceptance(
             "config": acceptance_config_path,
         },
     )
+    _log(f"wrote audit to {audit_path}")
+    _log(f"wrote acceptance report to {acceptance_path}")
     return auction_regime_stack_acceptance_passed(findings)
 
 
@@ -404,6 +474,10 @@ def _parse_float_list(value: str) -> list[float]:
 
 def _parse_string_list(value: str) -> list[str]:
     return [part.strip() for part in value.split(",") if part.strip()]
+
+
+def _log(message: str) -> None:
+    print(message, flush=True)
 
 
 if __name__ == "__main__":

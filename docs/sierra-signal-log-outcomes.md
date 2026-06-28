@@ -130,6 +130,14 @@ For non-overlapping holdout-date outputs only:
   --samples holdout1
 ```
 
+For a faster target-R-only holdout-date check:
+
+```bash
+.venv/bin/python scripts/run_signal_auction_regime_stack_pipeline.py \
+  --samples holdout1 \
+  --stacks target_r
+```
+
 This regenerates auction-regime diagnostics, selected rolling rules, target-R
 and breakeven stack reports, trade-level audits, and acceptance reports. The
 current checked sample is expected to finish with acceptance status `FAIL`.
