@@ -1547,3 +1547,20 @@ trade-sequence drawdown is larger than total net profit, and one selected exit
 block (`5 / 5 / 15 / breakeven`) lost `-$1434.00`. Keep this lead, but the next
 test should be exit-stability or fixed-exit validation before any Sierra bot
 rule is built.
+
+Fixed-exit stability result:
+
+Retesting each selected exit as a fixed rule showed that train-window exit
+selection was overfitting. On the same non-overlapping holdout trades,
+fixed `5 / 5 / 15 / breakeven` was strongest:
+
+| Exit | Trades | Net USD | Avg/trade | Profit factor | Max drawdown |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| train-selected exits | `56` | `2608.00` | `46.57` | `1.21` | `-2797.00` |
+| fixed `5 / 5 / 15 / breakeven` | `56` | `6308.00` | `112.64` | `1.57` | `-2035.00` |
+| fixed `5 / 5 / 15 / breakeven`, stress two ticks/side | `56` | `3508.00` | `62.64` | n/a | n/a |
+
+Read: fixed exits are better than adaptive train-selected exits for this sample.
+This is now the lead Sierra overlay candidate, but still needs more dates before
+bot work because `2026-06-16` lost `-$1092.00` and the sample is only `56`
+holdout trades.

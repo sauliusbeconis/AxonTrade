@@ -60,7 +60,8 @@ Every research source should be documented with a link and retrieval date.
 - Add time-based session-structure synthetic entry families. Done.
 - Add non-overlapping step control for scaled-scalp walk-forward windows. Done.
 - Add trade-level audit for the spaced delta-impulse continuation lead. Done.
-- Add exit-stability or fixed-exit validation for the spaced delta-impulse continuation lead.
+- Add exit-stability or fixed-exit validation for the spaced delta-impulse continuation lead. Done.
+- Build a dedicated Sierra overlay candidate for fixed-exit spaced delta-impulse continuation.
 - Add entry-quality filter sweeps and walk-forward validation for logged Sierra overlay diagnostics. Done.
 - Add volatility/activity-normalized sweep features for logged Sierra overlay diagnostics. Done.
 - Add trade-level audits for selected auction-regime target/breakeven stacks. Done.

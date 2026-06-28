@@ -190,3 +190,86 @@ than the total net, and the losing `5 / 5 / 15 / breakeven` selected exit block
 gave back most of the prior progress. The next useful test is a stability
 filter for the selected exit family or a fixed-exit version of the same entry,
 not live execution.
+
+## Fixed-Exit Stability
+
+The selected-exit audit showed that changing exits by train window was unstable,
+so each selected exit was retested as one fixed rule across the same
+non-overlapping holdout dates.
+
+Example command:
+
+```bash
+.venv/bin/python scripts/run_signal_scalp_entry_baselines.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  reports/sierra-signal-log-scalp-entry-baselines-spaced-delta-impulse-fixed-5-5-15-breakeven-walk-forward-holdout2-step2-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --max-rule-entries-per-day 6 \
+  --minimum-spacing-seconds 900 \
+  --strategy-ids delta_impulse_continue_10bar_2.5pt_50d \
+  --output-mode walk_forward \
+  --train-date-count 8 \
+  --holdout-date-count 2 \
+  --window-step-date-count 2 \
+  --minimum-train-trades 4 \
+  --first-target-points 5 \
+  --stop-points 5 \
+  --runner-target-points 15 \
+  --runner-stop-modes breakeven
+```
+
+Fixed-exit comparison after default ES costs:
+
+| Fixed exit | Holdout windows | Trades | Net USD | Avg/trade | Full stops | First target hits | Runner targets | Runner stops |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| train-selected exits | `5` | `56` | `2608.00` | `46.57` | `18` | `38` | `18` | `20` |
+| `3 / 8 / 10 / initial` | `5` | `56` | `1408.00` | `25.14` | `12` | `44` | `28` | `16` |
+| `5 / 6 / 8 / breakeven` | `5` | `56` | `5108.00` | `91.21` | `18` | `38` | `24` | `14` |
+| `5 / 6 / 10 / breakeven` | `5` | `56` | `6008.00` | `107.29` | `18` | `38` | `21` | `17` |
+| `5 / 5 / 20 / breakeven` | `5` | `56` | `5808.00` | `103.71` | `20` | `36` | `10` | `26` |
+| `5 / 5 / 15 / breakeven` | `5` | `56` | `6308.00` | `112.64` | `20` | `36` | `14` | `22` |
+
+Stress cost check:
+
+| Fixed exit | Slippage model | Trades | Net USD | Avg/trade |
+| --- | --- | ---: | ---: | ---: |
+| `5 / 5 / 15 / breakeven` | default one tick/side | `56` | `6308.00` | `112.64` |
+| `5 / 5 / 15 / breakeven` | stress two ticks/side | `56` | `3508.00` | `62.64` |
+
+Trade-level audit of fixed `5 / 5 / 15 / breakeven`:
+
+| Metric | Value |
+| --- | ---: |
+| Holdout trades | `56` |
+| Unique holdout signals | `56` |
+| Duplicate holdout signals | `0` |
+| Net USD | `6308.00` |
+| Average/trade | `112.64` |
+| Win rate | `64.29%` |
+| Profit factor | `1.57` |
+| Max trade-sequence drawdown | `-2035.00` |
+| Max consecutive losses | `3` |
+
+Daily fixed-exit audit:
+
+| Date | Trades | Net USD | Avg/trade | Full stops | First target hits |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `2026-06-05` | `4` | `22.00` | `5.50` | `2` | `2` |
+| `2026-06-08` | `4` | `22.00` | `5.50` | `1` | `3` |
+| `2026-06-09` | `6` | `3408.00` | `568.00` | `0` | `6` |
+| `2026-06-10` | `6` | `1158.00` | `193.00` | `2` | `4` |
+| `2026-06-11` | `6` | `1158.00` | `193.00` | `2` | `4` |
+| `2026-06-12` | `6` | `408.00` | `68.00` | `2` | `4` |
+| `2026-06-15` | `6` | `-342.00` | `-57.00` | `3` | `3` |
+| `2026-06-16` | `6` | `-1092.00` | `-182.00` | `4` | `2` |
+| `2026-06-17` | `6` | `1908.00` | `318.00` | `1` | `5` |
+| `2026-06-18` | `6` | `-342.00` | `-57.00` | `3` | `3` |
+
+Fixed-exit read: the exit-selection process was overfitting. The fixed
+`5 / 5 / 15 / breakeven` exit outperformed the train-selected exits by
+`$3700.00` on the same holdout trades and still survived two ticks of slippage
+per side. This is now the lead candidate for a dedicated Sierra overlay rule,
+but it still needs more dates because one day, `2026-06-16`, lost `-$1092.00`
+and the sample remains small.
