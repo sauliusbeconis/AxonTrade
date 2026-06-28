@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import dataclass
 from datetime import datetime
 from itertools import product
 from typing import Any, Iterable
@@ -78,6 +79,19 @@ class SignalScaledScalpExperimentError(ValueError):
     """Raised when a scaled scalp experiment cannot be evaluated."""
 
 
+@dataclass(frozen=True)
+class _PreparedScaledScalpSignal:
+    signal: dict[str, Any]
+    symbol: str
+    direction: str
+    entry_bar_index: int
+    entry_time: str
+    entry_timestamp: datetime
+    entry_price: float
+    following_bars: list[OutcomeBar]
+    resolved_match_mode: str
+
+
 def evaluate_signal_scaled_scalp_outcomes(
     bars: Iterable[dict[str, Any]],
     signal_rows: Iterable[dict[str, Any]],
@@ -120,15 +134,18 @@ def evaluate_signal_scaled_scalp_outcomes(
         instrument_config=None,
     )
     bars_by_symbol = _bars_by_symbol(normalized_bars)
-    return _evaluate_prepared_scaled_scalp_outcomes(
+    prepared_signals = _prepare_scaled_scalp_signal_contexts(
         candidate_signals,
         bars_by_symbol,
+        entry_match_mode=entry_match_mode,
+    )
+    return _evaluate_prepared_scaled_scalp_contexts(
+        prepared_signals,
         costs,
         first_target_points=first_target,
         stop_points=stop,
         runner_target_points=runner_target,
         runner_stop_mode=runner_mode,
-        entry_match_mode=entry_match_mode,
     )
 
 
@@ -173,6 +190,16 @@ def run_signal_scaled_scalp_sweep(
         else None
     )
     bars_by_symbol = _bars_by_symbol(normalized_bars)
+    all_contexts = _prepare_scaled_scalp_signal_contexts(
+        all_candidates,
+        bars_by_symbol,
+        entry_match_mode=entry_match_mode,
+    )
+    contexts_by_direction = {
+        "all": all_contexts,
+        "long": [context for context in all_contexts if context.direction == "long"],
+        "short": [context for context in all_contexts if context.direction == "short"],
+    }
 
     experiment_rows: list[dict[str, Any]] = []
     for (first_target, stop, runner_target, runner_mode), direction_filter in product(
@@ -181,15 +208,13 @@ def run_signal_scaled_scalp_sweep(
     ):
         selected_candidates = candidate_signals_by_direction[direction_filter]
         outcomes = (
-            _evaluate_prepared_scaled_scalp_outcomes(
-                selected_candidates,
-                bars_by_symbol,
+            _evaluate_prepared_scaled_scalp_contexts(
+                contexts_by_direction[direction_filter],
                 costs,
                 first_target_points=first_target,
                 stop_points=stop,
                 runner_target_points=runner_target,
                 runner_stop_mode=runner_mode,
-                entry_match_mode=entry_match_mode,
             )
             if selected_candidates and costs is not None
             else []
@@ -326,78 +351,94 @@ def _evaluate_one_signal_with_scaled_scalp(
     runner_stop_mode: str,
     entry_match_mode: str,
 ) -> dict[str, Any]:
-    symbol = str(signal.get("symbol", ""))
-    direction = str(signal.get("direction", ""))
-    if direction not in {"long", "short"}:
-        raise SignalScaledScalpExperimentError(
-            f"Unsupported candidate direction: {direction!r}",
-        )
+    context = _prepare_one_scaled_scalp_signal_context(
+        signal,
+        bars_by_symbol,
+        entry_match_mode=entry_match_mode,
+    )
+    return _evaluate_prepared_scaled_scalp_context(
+        context,
+        costs,
+        first_target_points=first_target_points,
+        stop_points=stop_points,
+        runner_target_points=runner_target_points,
+        runner_stop_mode=runner_stop_mode,
+    )
 
-    entry_bar_index = _to_int(signal.get("bar_index"), "bar_index")
-    entry_time = str(signal.get("bar_start_time") or signal.get("generated_at") or "")
-    entry_timestamp = _parse_timestamp(entry_time)
-    entry_price = _to_float(signal.get("signal_price"), "signal_price")
+
+def _evaluate_prepared_scaled_scalp_context(
+    context: _PreparedScaledScalpSignal,
+    costs: OutcomeCosts,
+    *,
+    first_target_points: float,
+    stop_points: float,
+    runner_target_points: float,
+    runner_stop_mode: str,
+) -> dict[str, Any]:
     stop_price = _price_at_offset(
-        direction,
-        entry_price=entry_price,
+        context.direction,
+        entry_price=context.entry_price,
         points=-stop_points,
     )
     first_target_price = _price_at_offset(
-        direction,
-        entry_price=entry_price,
+        context.direction,
+        entry_price=context.entry_price,
         points=first_target_points,
     )
     runner_target_price = _price_at_offset(
-        direction,
-        entry_price=entry_price,
+        context.direction,
+        entry_price=context.entry_price,
         points=runner_target_points,
     )
 
-    following_bars, resolved_match_mode = _following_bars_for_signal(
-        bars_by_symbol.get(symbol, []),
-        entry_bar_index=entry_bar_index,
-        entry_timestamp=entry_timestamp,
-        entry_match_mode=entry_match_mode,
-    )
     exit_bar, leg1_exit_price, runner_exit_price, exit_reason, first_hit = (
         _find_scaled_scalp_exit(
-            following_bars,
-            direction=direction,
-            entry_price=entry_price,
+            context.following_bars,
+            direction=context.direction,
+            entry_price=context.entry_price,
             stop_price=stop_price,
             first_target_price=first_target_price,
             runner_target_price=runner_target_price,
             runner_stop_mode=runner_stop_mode,
         )
     )
-    exit_bar_index = exit_bar.bar_index if exit_bar is not None else entry_bar_index
-    exit_time = exit_bar.timestamp if exit_bar is not None else entry_time
-    if resolved_match_mode == "timestamp" and exit_bar is not None:
-        holding_bars = following_bars.index(exit_bar) + 1
+    exit_bar_index = (
+        exit_bar.bar_index
+        if exit_bar is not None
+        else context.entry_bar_index
+    )
+    exit_time = exit_bar.timestamp if exit_bar is not None else context.entry_time
+    if context.resolved_match_mode == "timestamp" and exit_bar is not None:
+        holding_bars = context.following_bars.index(exit_bar) + 1
     else:
-        holding_bars = max(0, exit_bar_index - entry_bar_index)
+        holding_bars = max(0, exit_bar_index - context.entry_bar_index)
 
-    leg1_points = _gross_points(direction, entry_price, leg1_exit_price)
-    runner_points = _gross_points(direction, entry_price, runner_exit_price)
+    leg1_points = _gross_points(context.direction, context.entry_price, leg1_exit_price)
+    runner_points = _gross_points(
+        context.direction,
+        context.entry_price,
+        runner_exit_price,
+    )
     gross_points = leg1_points + runner_points
     gross_usd = gross_points * costs.point_value_usd
     commission_usd = costs.commission_round_turn_usd * 2
     slippage_usd = costs.slippage_round_turn_usd * 2
     net_usd = gross_usd - commission_usd - slippage_usd
 
+    signal = context.signal
     outcome_id = f"{signal['signal_id']}:{exit_reason}:{exit_bar_index}"
     return {
         "schema_version": 1,
         "outcome_id": outcome_id,
         "event_key": signal["event_key"],
         "signal_id": signal["signal_id"],
-        "symbol": symbol,
-        "direction": direction,
-        "entry_bar_index": entry_bar_index,
+        "symbol": context.symbol,
+        "direction": context.direction,
+        "entry_bar_index": context.entry_bar_index,
         "exit_bar_index": exit_bar_index,
-        "entry_time": entry_time,
+        "entry_time": context.entry_time,
         "exit_time": exit_time,
-        "entry_price": _format_number(entry_price),
+        "entry_price": _format_number(context.entry_price),
         "stop_price": _format_number(stop_price),
         "first_target_price": _format_number(first_target_price),
         "runner_target_price": _format_number(runner_target_price),
@@ -417,35 +458,82 @@ def _evaluate_one_signal_with_scaled_scalp(
             f"stop_points={_format_number(stop_points)}; "
             f"runner_target_points={_format_number(runner_target_points)}; "
             f"runner_stop_mode={runner_stop_mode}; "
-            f"entry_match_mode={resolved_match_mode}"
+            f"entry_match_mode={context.resolved_match_mode}"
         ),
     }
 
 
-def _evaluate_prepared_scaled_scalp_outcomes(
-    candidate_signals: list[dict[str, Any]],
-    bars_by_symbol: dict[str, list[OutcomeBar]],
+def _evaluate_prepared_scaled_scalp_contexts(
+    prepared_signals: list[_PreparedScaledScalpSignal],
     costs: OutcomeCosts,
     *,
     first_target_points: float,
     stop_points: float,
     runner_target_points: float,
     runner_stop_mode: str,
-    entry_match_mode: str,
 ) -> list[dict[str, Any]]:
     return [
-        _evaluate_one_signal_with_scaled_scalp(
-            signal,
-            bars_by_symbol,
+        _evaluate_prepared_scaled_scalp_context(
+            context,
             costs,
             first_target_points=first_target_points,
             stop_points=stop_points,
             runner_target_points=runner_target_points,
             runner_stop_mode=runner_stop_mode,
+        )
+        for context in prepared_signals
+    ]
+
+
+def _prepare_scaled_scalp_signal_contexts(
+    candidate_signals: list[dict[str, Any]],
+    bars_by_symbol: dict[str, list[OutcomeBar]],
+    *,
+    entry_match_mode: str,
+) -> list[_PreparedScaledScalpSignal]:
+    return [
+        _prepare_one_scaled_scalp_signal_context(
+            signal,
+            bars_by_symbol,
             entry_match_mode=entry_match_mode,
         )
         for signal in candidate_signals
     ]
+
+
+def _prepare_one_scaled_scalp_signal_context(
+    signal: dict[str, Any],
+    bars_by_symbol: dict[str, list[OutcomeBar]],
+    *,
+    entry_match_mode: str,
+) -> _PreparedScaledScalpSignal:
+    symbol = str(signal.get("symbol", ""))
+    direction = str(signal.get("direction", ""))
+    if direction not in {"long", "short"}:
+        raise SignalScaledScalpExperimentError(
+            f"Unsupported candidate direction: {direction!r}",
+        )
+
+    entry_bar_index = _to_int(signal.get("bar_index"), "bar_index")
+    entry_time = str(signal.get("bar_start_time") or signal.get("generated_at") or "")
+    entry_timestamp = _parse_timestamp(entry_time)
+    following_bars, resolved_match_mode = _following_bars_for_signal(
+        bars_by_symbol.get(symbol, []),
+        entry_bar_index=entry_bar_index,
+        entry_timestamp=entry_timestamp,
+        entry_match_mode=entry_match_mode,
+    )
+    return _PreparedScaledScalpSignal(
+        signal=signal,
+        symbol=symbol,
+        direction=direction,
+        entry_bar_index=entry_bar_index,
+        entry_time=entry_time,
+        entry_timestamp=entry_timestamp,
+        entry_price=_to_float(signal.get("signal_price"), "signal_price"),
+        following_bars=following_bars,
+        resolved_match_mode=resolved_match_mode,
+    )
 
 
 def _find_scaled_scalp_exit(

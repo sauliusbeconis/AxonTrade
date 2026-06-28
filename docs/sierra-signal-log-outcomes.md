@@ -730,6 +730,24 @@ write to:
 
 `reports/sierra-signal-log-scaled-scalp-walk-forward-holdout1-large-sample.csv`
 
+## Run Synthetic Scalp Entry Baselines
+
+Manual help needed: **No after the fresh export exists**.
+
+```bash
+.venv/bin/python scripts/run_signal_scalp_entry_baselines.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  reports/sierra-signal-log-scalp-entry-baselines-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth
+```
+
+This generates random, VWAP-extension fade, short impulse fade, and short
+impulse continuation entries from the exported Sierra bars, then tests the
+same two-contract scaled scalp exit grid. It is a baseline for whether the
+logged setup is better or worse than simple synthetic entries.
+
 ## Output
 
 Outcome rows are written to:
@@ -880,6 +898,14 @@ Scaled scalp non-overlapping holdout-1 walk-forward:
 
 `reports/sierra-signal-log-scaled-scalp-walk-forward-holdout1-large-sample.csv`
 
+Synthetic scalp entry baselines:
+
+`reports/sierra-signal-log-scalp-entry-baselines-large-sample.csv`
+
+Synthetic scalp entry baseline report:
+
+`reports/sierra-signal-log-scalp-entry-baselines-large-sample.md`
+
 Sample range:
 
 - first row: `2026-05-21 09:30:00`
@@ -1011,6 +1037,20 @@ sample. The only positive result is a small long-only aggregate pocket, and the
 chronological holdouts show that selected trades mostly failed before even
 reaching the first scale-out. This points back to entry filtering or better
 level-specific absorption evidence, not more aggressive stop/target tuning.
+
+Synthetic scalp entry baseline result:
+
+- generated entries: `4869` across random, VWAP-extension fade, impulse fade,
+  and impulse continuation families
+- entry window: `09:45` to `15:45` New York time
+- best synthetic family: `impulse_continue_3bar_1.5pt`, `433` trades,
+  `-9881.00` net USD, `-22.82` average net per trade
+- random baseline: `550` trades, `-25500.00` net USD, `-46.36` average net per
+  trade
+
+Interpretation: random entries were not better after current ES two-contract
+cost assumptions. The least bad simple baseline was short-term impulse
+continuation, but it was still negative.
 
 Context diagnostic observations:
 
