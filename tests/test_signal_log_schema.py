@@ -150,3 +150,18 @@ def test_acsil_liquidity_sweep_overlay_uses_signal_schema() -> None:
     assert "candidate_signal" in source
     assert "rejected_signal" in source
     assert "latest_closed_bar_index < last_processed_bar_index" in source
+
+
+def test_acsil_delta_impulse_overlay_uses_bounded_signal_logging() -> None:
+    source = open("src/acsil/AxonTradeDeltaImpulseContinuationOverlay.cpp", encoding="utf-8").read()
+    schema = load_signal_log_schema()
+
+    for field_name in schema["csv"]["header"]:
+        assert field_name in source
+
+    assert "delta_impulse_continue_10bar_2.5pt_50d" in source
+    assert "candidate_signal" in source
+    assert "rejected_signal" in source
+    assert "LogRejections.SetYesNo(0)" in source
+    assert "Reset CSV On Full Recalculation" in source
+    assert "FileContainsText" not in source

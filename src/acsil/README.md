@@ -40,7 +40,9 @@ Build and load instructions are documented in
 `AxonTradeDeltaImpulseContinuationOverlay.cpp` evaluates the fixed-exit
 `delta_impulse_continue_10bar_2.5pt_50d` research lead on the active chart,
 draws candidate markers and fixed stop/target lines, and writes
-candidate/rejection rows using `config/research/signal_log_schema.yaml`.
+candidate rows using `config/research/signal_log_schema.yaml`. Rejection rows
+are optional diagnostics and are disabled by default to keep historical
+backfills small.
 
 Build and load instructions are documented in
 `docs/sierra-delta-impulse-continuation-overlay.md`.

@@ -26,6 +26,8 @@ Rows use the AxonTrade signal-log fields:
 - `candidate_signal` when the fixed delta impulse continuation rule passes.
 - `rejected_signal` when the bar is outside the setup window, lacks lookback
   context, fails thresholds, violates spacing, or exceeds the daily signal cap.
+  Rejection logging is disabled by default because it creates one row for almost
+  every closed bar.
 
 ## Rule Defaults
 
@@ -98,8 +100,9 @@ Use the ES footprint/execution chart, not the TPO context chart.
 9. In `Settings and Inputs`, confirm:
    - `CSV Log Path = C:\SierraChart\Data\AxonTrade_DeltaImpulseSignalLog.csv`
    - `Trade Mode = replay` for replay, or `sim` for simulation
-   - `Log Rejections = Yes`
+   - `Log Rejections = No`
    - `Process Full Recalculation = No`
+   - `Reset CSV On Full Recalculation = Yes`
    - `Setup Start Time = 09:45:00`
    - `Setup End Time = 15:45:00`
    - `Lookback Bars = 10`
@@ -119,7 +122,8 @@ Expected chart result:
   segment, and runner target segment;
 - short candidates draw a red down arrow, label, stop segment, first target
   segment, and runner target segment;
-- candidate and rejection rows append to the CSV log.
+- candidate rows append to the CSV log. Rejection rows append only when
+  `Log Rejections = Yes`.
 
 ## Replay Use
 
@@ -138,13 +142,21 @@ If you want to backfill all loaded historical bars:
 1. Click `Analysis >> Studies`.
 2. Select `AxonTrade Delta Impulse Continuation Overlay`.
 3. Click `Settings`.
-4. Set `Process Full Recalculation = Yes`.
-5. Click `OK`.
-6. Click `Chart >> Recalculate`.
-7. After the backfill, set `Process Full Recalculation = No`.
+4. Confirm `Log Rejections = No`.
+5. Confirm `Reset CSV On Full Recalculation = Yes`.
+6. Set `Process Full Recalculation = Yes`.
+7. Click `OK`.
+8. Click `Chart >> Recalculate`.
+9. After the backfill, click `Analysis >> Studies`.
+10. Select `AxonTrade Delta Impulse Continuation Overlay`.
+11. Click `Settings`.
+12. Set `Process Full Recalculation = No`.
+13. Click `OK`.
 
-Leaving `Process Full Recalculation = Yes` can write many rejection rows during
-recalculations.
+Leaving `Process Full Recalculation = Yes` can repeat backfills during
+recalculations. Turning `Log Rejections = Yes` during a full backfill can write
+tens of thousands of diagnostic rows and is only useful for short debugging
+runs.
 
 ## Report The Log
 

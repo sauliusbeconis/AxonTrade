@@ -1,6 +1,7 @@
 #include "sierrachart.h"
 
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
@@ -90,23 +91,7 @@ bool SameChartDate(const SCDateTime& left, const SCDateTime& right)
     return left.GetDate() == right.GetDate();
 }
 
-bool FileContainsText(const std::string& file_path, const std::string& text)
-{
-    std::ifstream input(file_path.c_str());
-    if (!input.is_open())
-        return false;
-
-    std::string line;
-    while (std::getline(input, line))
-    {
-        if (line.find(text) != std::string::npos)
-            return true;
-    }
-
-    return false;
-}
-
-void AppendSignalLogRowIfMissing(
+void AppendSignalLogRow(
     const std::string& file_path,
     const std::string& event_key,
     const std::string& event_type,
@@ -128,9 +113,6 @@ void AppendSignalLogRowIfMissing(
     const std::string& confidence,
     const std::string& notes)
 {
-    if (FileContainsText(file_path, event_key))
-        return;
-
     const bool file_already_exists = static_cast<bool>(std::ifstream(file_path.c_str()));
 
     std::ofstream output(file_path.c_str(), std::ios::app);
@@ -484,6 +466,7 @@ SCSFExport scsf_AxonTradeDeltaImpulseContinuationOverlay(SCStudyInterfaceRef sc)
     SCInputRef FirstTargetPoints = sc.Input[12];
     SCInputRef RunnerTargetPoints = sc.Input[13];
     SCInputRef Confidence = sc.Input[14];
+    SCInputRef ResetCsvOnFullRecalculation = sc.Input[15];
 
     if (sc.SetDefaults)
     {
@@ -500,7 +483,7 @@ SCSFExport scsf_AxonTradeDeltaImpulseContinuationOverlay(SCStudyInterfaceRef sc)
         TradeMode.SetString("replay");
 
         LogRejections.Name = "Log Rejections";
-        LogRejections.SetYesNo(1);
+        LogRejections.SetYesNo(0);
 
         ProcessFullRecalculation.Name = "Process Full Recalculation";
         ProcessFullRecalculation.SetYesNo(0);
@@ -541,6 +524,9 @@ SCSFExport scsf_AxonTradeDeltaImpulseContinuationOverlay(SCStudyInterfaceRef sc)
         Confidence.Name = "Research Confidence";
         Confidence.SetFloat(0.60f);
 
+        ResetCsvOnFullRecalculation.Name = "Reset CSV On Full Recalculation";
+        ResetCsvOnFullRecalculation.SetYesNo(1);
+
         return;
     }
 
@@ -556,16 +542,25 @@ SCSFExport scsf_AxonTradeDeltaImpulseContinuationOverlay(SCStudyInterfaceRef sc)
         return;
 
     int& last_processed_bar_index = sc.GetPersistentInt(1);
+    int& full_recalculation_reset_done = sc.GetPersistentInt(5);
     if (sc.IsFullRecalculation && ProcessFullRecalculation.GetYesNo() != 0)
     {
-        last_processed_bar_index = -1;
-        sc.GetPersistentInt(2) = 0;
-        sc.GetPersistentInt(3) = 0;
-        sc.GetPersistentInt(4) = -1;
+        if (full_recalculation_reset_done == 0)
+        {
+            last_processed_bar_index = -1;
+            sc.GetPersistentInt(2) = 0;
+            sc.GetPersistentInt(3) = 0;
+            sc.GetPersistentInt(4) = -1;
+            if (ResetCsvOnFullRecalculation.GetYesNo() != 0)
+                std::remove(csv_log_path.c_str());
+            full_recalculation_reset_done = 1;
+        }
     }
-    else if (latest_closed_bar_index < last_processed_bar_index)
+    else
     {
-        last_processed_bar_index = latest_closed_bar_index - 1;
+        full_recalculation_reset_done = 0;
+        if (latest_closed_bar_index < last_processed_bar_index)
+            last_processed_bar_index = latest_closed_bar_index - 1;
     }
 
     int start_bar_index = latest_closed_bar_index;
@@ -633,7 +628,7 @@ SCSFExport scsf_AxonTradeDeltaImpulseContinuationOverlay(SCStudyInterfaceRef sc)
 
         if (evaluation.event_type == "candidate_signal" || LogRejections.GetYesNo() != 0)
         {
-            AppendSignalLogRowIfMissing(
+            AppendSignalLogRow(
                 csv_log_path,
                 event_key,
                 evaluation.event_type,
