@@ -101,6 +101,14 @@ from axontrade.research.signal_dynamic_exit_experiments import (
     run_signal_breakeven_stop_sweep,
     run_signal_breakeven_stop_walk_forward_sweep,
 )
+from axontrade.research.signal_scaled_scalp_experiments import (
+    SIGNAL_SCALED_SCALP_SWEEP_HEADER,
+    SIGNAL_SCALED_SCALP_WALK_FORWARD_HEADER,
+    SignalScaledScalpExperimentError,
+    evaluate_signal_scaled_scalp_outcomes,
+    run_signal_scaled_scalp_sweep,
+    run_signal_scaled_scalp_walk_forward_sweep,
+)
 from axontrade.research.signal_health_gate_experiments import (
     SIGNAL_HEALTH_GATE_SWEEP_HEADER,
     SIGNAL_HEALTH_GATE_WALK_FORWARD_HEADER,
@@ -229,6 +237,8 @@ __all__ = [
     "SIGNAL_CONTEXT_FILTER_WALK_FORWARD_HEADER",
     "SIGNAL_BREAKEVEN_STOP_SWEEP_HEADER",
     "SIGNAL_BREAKEVEN_STOP_WALK_FORWARD_HEADER",
+    "SIGNAL_SCALED_SCALP_SWEEP_HEADER",
+    "SIGNAL_SCALED_SCALP_WALK_FORWARD_HEADER",
     "SIGNAL_HEALTH_GATE_SWEEP_HEADER",
     "SIGNAL_HEALTH_GATE_WALK_FORWARD_HEADER",
     "SIGNAL_QUALITY_HEALTH_GATE_WALK_FORWARD_HEADER",
@@ -257,6 +267,7 @@ __all__ = [
     "SignalContextDiagnosticError",
     "SignalContextFilterExperimentError",
     "SignalDynamicExitExperimentError",
+    "SignalScaledScalpExperimentError",
     "SignalHealthGateExperimentError",
     "SignalQualityHealthGateExperimentError",
     "SignalStructureFilterExperimentError",
@@ -274,6 +285,7 @@ __all__ = [
     "evaluate_liquidity_sweep_absorption_reversal",
     "evaluate_price_only_vwap_reclaim",
     "evaluate_signal_breakeven_stop_outcomes",
+    "evaluate_signal_scaled_scalp_outcomes",
     "evaluate_signal_health_gate",
     "evaluate_trade_outcomes",
     "load_price_only_acceptance_config",
@@ -316,6 +328,8 @@ __all__ = [
     "run_signal_context_filter_walk_forward_sweep",
     "run_signal_breakeven_stop_sweep",
     "run_signal_breakeven_stop_walk_forward_sweep",
+    "run_signal_scaled_scalp_sweep",
+    "run_signal_scaled_scalp_walk_forward_sweep",
     "run_signal_health_gate_sweep",
     "run_signal_health_gate_walk_forward_sweep",
     "run_signal_quality_health_gate_walk_forward_sweep",

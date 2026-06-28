@@ -678,6 +678,58 @@ This selects the best target R, breakeven trigger R, and direction filter on
 earlier candidate dates, then evaluates the same selection on later candidate
 dates.
 
+## Run Scaled Scalp Sweep
+
+Manual help needed: **No after the fresh export and signal log exist**.
+
+```bash
+.venv/bin/python scripts/run_signal_scaled_scalp_sweep.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-scaled-scalp-sweep-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --first-target-points 0.75,1,1.25,1.5 \
+  --stop-points 1.5,2,2.5,3 \
+  --runner-target-points 1.5,2,2.5,3,4,5 \
+  --runner-stop-modes breakeven,initial \
+  --direction-filters all,long,short
+```
+
+This keeps the logged entries but replaces the original target/stop pair with
+a two-contract scalp: one contract exits at a fixed point target, and the
+second contract uses a fixed runner target with either the original fixed stop
+or a breakeven stop after the first target is touched. Same-bar ambiguity is
+handled conservatively by choosing the stop first.
+
+## Run Scaled Scalp Walk-Forward
+
+Manual help needed: **No after the fresh export and signal log exist**.
+
+```bash
+.venv/bin/python scripts/run_signal_scaled_scalp_walk_forward_sweep.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_NY_Large.txt \
+  data/processed/AxonTrade_ES_overlay_signal_log_large_sample.csv \
+  reports/sierra-signal-log-scaled-scalp-walk-forward-large-sample.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --train-date-count 8 \
+  --holdout-date-count 2 \
+  --minimum-train-trades 4 \
+  --first-target-points 0.75,1,1.25,1.5 \
+  --stop-points 1.5,2,2.5,3 \
+  --runner-target-points 1.5,2,2.5,3,4,5 \
+  --runner-stop-modes breakeven,initial \
+  --direction-filters all,long,short
+```
+
+For a non-overlapping holdout-date read, use `--holdout-date-count 1` and
+write to:
+
+`reports/sierra-signal-log-scaled-scalp-walk-forward-holdout1-large-sample.csv`
+
 ## Output
 
 Outcome rows are written to:
@@ -816,6 +868,18 @@ Breakeven stop walk-forward:
 
 `reports/sierra-signal-log-breakeven-stop-walk-forward-large-sample.csv`
 
+Scaled scalp sweep:
+
+`reports/sierra-signal-log-scaled-scalp-sweep-large-sample.csv`
+
+Scaled scalp walk-forward:
+
+`reports/sierra-signal-log-scaled-scalp-walk-forward-large-sample.csv`
+
+Scaled scalp non-overlapping holdout-1 walk-forward:
+
+`reports/sierra-signal-log-scaled-scalp-walk-forward-holdout1-large-sample.csv`
+
 Sample range:
 
 - first row: `2026-05-21 09:30:00`
@@ -926,6 +990,27 @@ filter, and the walk-forward selector often kept `max_bars_after_sweep=5` and
 `min_confirmation_edge_close=0.55`, meaning stricter sweep timing and close
 location did not consistently win. The setup likely needs level-specific
 absorption evidence, not more bar-level proxy thresholds.
+
+Scaled two-contract scalp result:
+
+- grid: first target `0.75,1,1.25,1.5` points; stop `1.5,2,2.5,3` points;
+  runner target `1.5,2,2.5,3,4,5` points; runner stop modes
+  `breakeven,initial`
+- best aggregate row: `long`, first target `1.5`, stop `2.5`, runner target
+  `5`, runner stop `initial`, `12` trades, `+166.00` net USD
+- best aggregate all-direction row: first target `1.5`, stop `1.5`, runner
+  target `5`, runner stop `initial`, `23` trades, `-336.00` net USD
+- rolling walk-forward: `6` holdout windows, `8` holdout trades, `8` full
+  stops before the first target, `0` positive trades, `-2056.00` net USD
+- non-overlapping holdout-1 walk-forward: `7` holdout windows, `5` holdout
+  trades, `5` full stops before the first target, `0` positive trades,
+  `-1235.00` net USD
+
+Interpretation: the fixed two-contract scalp is not validated on the current
+sample. The only positive result is a small long-only aggregate pocket, and the
+chronological holdouts show that selected trades mostly failed before even
+reaching the first scale-out. This points back to entry filtering or better
+level-specific absorption evidence, not more aggressive stop/target tuning.
 
 Context diagnostic observations:
 

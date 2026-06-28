@@ -49,6 +49,7 @@ Every research source should be documented with a link and retrieval date.
 - Add rolling walk-forward validation for logged Sierra overlay target R sweeps. Done.
 - Add signal quality diagnostics for logged Sierra overlay outcomes. Done.
 - Add dynamic breakeven stop sweeps and walk-forward validation for logged Sierra overlay candidates. Done.
+- Add fixed two-contract scaled-scalp exit sweeps and walk-forward validation for logged Sierra overlay candidates. Done.
 - Add entry-quality filter sweeps and walk-forward validation for logged Sierra overlay diagnostics. Done.
 - Add volatility/activity-normalized sweep features for logged Sierra overlay diagnostics. Done.
 - Add trade-level audits for selected auction-regime target/breakeven stacks. Done.
