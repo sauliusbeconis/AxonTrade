@@ -408,6 +408,30 @@ That duplicate signal is
 `liquidity_sweep_absorption_reversal_ESU26-CME_32971` on `2026-06-17`. The
 non-overlapping holdout-1 audit keeps it once at `2.5R` for `+221.50`.
 
+## Run Auction-Regime Stack Acceptance Gate
+
+Manual help needed: **No after the trade-level audit CSV exists**.
+
+```bash
+.venv/bin/python scripts/check_auction_regime_stack_acceptance.py \
+  --audit reports/sierra-signal-log-auction-regime-target-r-trade-audit-holdout1-large-sample.csv \
+  --report reports/sierra-signal-log-auction-regime-target-r-acceptance-holdout1-large-sample.md
+```
+
+For the breakeven stack:
+
+```bash
+.venv/bin/python scripts/check_auction_regime_stack_acceptance.py \
+  --audit reports/sierra-signal-log-auction-regime-breakeven-trade-audit-holdout1-large-sample.csv \
+  --report reports/sierra-signal-log-auction-regime-breakeven-acceptance-holdout1-large-sample.md
+```
+
+Current result: `FAIL`. The holdout-1 target-R and breakeven audits each have
+`1` unique evaluated holdout signal across `1` trade date, below the configured
+minimums of `30` unique signals and `15` trade dates. The single winning signal
+also contributes `100.00%` of positive unique holdout net, above the configured
+maximum of `25.00%`.
+
 ## Run Quality Plus Health Gate Walk-Forward
 
 Manual help needed: **No after the quality diagnostics CSV exists**.

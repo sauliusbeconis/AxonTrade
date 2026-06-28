@@ -52,6 +52,7 @@ Every research source should be documented with a link and retrieval date.
 - Add entry-quality filter sweeps and walk-forward validation for logged Sierra overlay diagnostics. Done.
 - Add volatility/activity-normalized sweep features for logged Sierra overlay diagnostics. Done.
 - Add trade-level audits for selected auction-regime target/breakeven stacks. Done.
+- Add acceptance gates for selected auction-regime stack trade-level audits. Done.
 - Build walk-forward filters over normalized context features after the sample is large enough.
 - Add scheduled-news exclusion to Sierra overlay research exports. Done.
 - Populate scheduled-news calendar for the current Sierra overlay sample.

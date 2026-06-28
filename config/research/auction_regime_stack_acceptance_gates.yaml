@@ -1,0 +1,8 @@
+schema_version: 1
+profile_id: auction_regime_stack_acceptance_gates_v1
+gates:
+  minimum_unique_holdout_evaluated_signals: 30
+  minimum_unique_holdout_trade_dates: 15
+  maximum_duplicate_holdout_evaluated_rows: 0
+  require_positive_unique_holdout_net: true
+  maximum_single_signal_net_share: 0.25

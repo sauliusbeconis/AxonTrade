@@ -34,6 +34,32 @@ returns exit code `0` even when the research sample fails, because a rejection i
 a valid research result. Add `--fail-on-reject` when a CI-style nonzero failure
 is desired.
 
+The current auction-regime target/breakeven stack has a separate executable
+gate profile in `config/research/auction_regime_stack_acceptance_gates.yaml`.
+
+Current thresholds:
+
+- at least `30` unique evaluated holdout signals;
+- at least `15` unique evaluated holdout trade dates;
+- `0` duplicate evaluated holdout rows;
+- de-duplicated holdout net must be positive after configured costs;
+- the largest unique winning signal must be no more than `25%` of total
+  positive unique holdout net.
+
+Manual help needed: **No** after the trade-level audit CSV exists.
+
+Run the check from the repository:
+
+```bash
+.venv/bin/python scripts/check_auction_regime_stack_acceptance.py \
+  --audit reports/sierra-signal-log-auction-regime-target-r-trade-audit-holdout1-large-sample.csv \
+  --report reports/sierra-signal-log-auction-regime-target-r-acceptance-holdout1-large-sample.md
+```
+
+The command writes a Markdown report. By default it returns exit code `0` even
+when the research sample fails. Add `--fail-on-reject` when a CI-style nonzero
+failure is desired.
+
 ## Risk Gates
 
 - Average holding time is comfortably above microscalping thresholds.

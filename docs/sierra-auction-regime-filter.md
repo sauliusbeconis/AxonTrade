@@ -300,6 +300,29 @@ Breakeven stack, non-overlapping holdout-date audit:
   --direction-filters all,long,short
 ```
 
+## Acceptance Gate
+
+The acceptance gate checks trade-level audit rows against minimum evidence
+thresholds before any simulation-only bot phase can treat a stack as eligible.
+
+Manual help needed: **No** after the trade-level audit CSV exists.
+
+Target-R holdout `1` acceptance check:
+
+```bash
+.venv/bin/python scripts/check_auction_regime_stack_acceptance.py \
+  --audit reports/sierra-signal-log-auction-regime-target-r-trade-audit-holdout1-large-sample.csv \
+  --report reports/sierra-signal-log-auction-regime-target-r-acceptance-holdout1-large-sample.md
+```
+
+Breakeven holdout `1` acceptance check:
+
+```bash
+.venv/bin/python scripts/check_auction_regime_stack_acceptance.py \
+  --audit reports/sierra-signal-log-auction-regime-breakeven-trade-audit-holdout1-large-sample.csv \
+  --report reports/sierra-signal-log-auction-regime-breakeven-acceptance-holdout1-large-sample.md
+```
+
 ## Current Large Sierra Signal Sample
 
 Diagnostic separation:
@@ -375,6 +398,15 @@ Trade-level audit result:
 | Breakeven rolling walk-forward | `2` | `1` | `1` | `393.00` |
 | Breakeven holdout `1` | `1` | `1` | `0` | `221.50` |
 
+Acceptance gate result:
+
+| Stack | Audit | Status | Unique Signals | Trade Dates | Duplicate Evaluated Rows | Unique Net USD | Largest Signal Share |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Target-R | Rolling walk-forward | `FAIL` | `1 / 30` | `1 / 15` | `2 / 0` | `171.50` | `100.00% / 25.00%` |
+| Target-R | Holdout `1` | `FAIL` | `1 / 30` | `1 / 15` | `0 / 0` | `221.50` | `100.00% / 25.00%` |
+| Breakeven | Rolling walk-forward | `FAIL` | `1 / 30` | `1 / 15` | `2 / 0` | `171.50` | `100.00% / 25.00%` |
+| Breakeven | Holdout `1` | `FAIL` | `1 / 30` | `1 / 15` | `0 / 0` | `221.50` | `100.00% / 25.00%` |
+
 Interpretation: auction-regime filters are useful as an explanation and
 damage-control clue, but not as a validated entry edge. The filter avoided most
 later losing holdout candidates by rejecting high-stretch directional sessions,
@@ -391,4 +423,5 @@ audit reduces the positive result to one unique holdout trade for `+221.50`,
 signal `liquidity_sweep_absorption_reversal_ESU26-CME_32971` on `2026-06-17`.
 The overlapping audit counts that same signal twice with two selected exits
 (`2R` and `2.5R`). Treat the target-R/breakeven stack as an exit hypothesis to
-test on a larger export, not as automation approval.
+test on a larger export, not as automation approval. The executable acceptance
+gate rejects both stacks on the current sample.
