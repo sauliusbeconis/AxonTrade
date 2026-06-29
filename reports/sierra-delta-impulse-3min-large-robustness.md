@@ -13,7 +13,7 @@ to keep collecting:
   `reports/sierra-delta-impulse-3min-large-scaled-exit-sweep.csv`
 - Main summary:
   `reports/sierra-delta-impulse-3min-large-sample-outcomes.md`
-- CME 2026 trading-hours reference, retrieved 2026-06-29:
+- CME trading-hours reference, retrieved 2026-06-29:
   `https://www.cmegroup.com/trading-hours.html`
 
 ## Fixed Row Result
@@ -53,28 +53,20 @@ Direction split:
 | 2026-06-25 | 6 | 1008 | 446 |
 | 2026-06-26 | 6 | 2658 | 3104 |
 
-The equity curve is still weak. It was down `-2578` after 2026-06-22 and
-down `-1570` after 2026-06-23. The final positive result depends heavily on
-the last three dates adding `4674`.
+The equity curve was down `-2578` at its weakest point and finished at `3104`.
 
 ## Holiday Handling
 
-2026-06-19 is listed by CME as a Juneteenth holiday date. That same date is the
-only sample date with `end_of_session` and `no_following_bar` exits.
-
-Excluding 2026-06-19 changes the fixed-row result to:
+Supplied holiday/early-close dates: `2026-06-19`. These dates are excluded in the holiday-adjusted diagnostics below.
 
 | Scope | Trades | Net USD | Long Net USD | Short Net USD |
 | --- | ---: | ---: | ---: | ---: |
 | All dates | 78 | 3104 | 4463 | -1359 |
-| Exclude 2026-06-19 | 72 | 4896 | 6791 | -1895 |
+| Exclude holidays | 72 | 4896 | 6791 | -1895 |
 
 Holiday/early-close dates should be flagged before any later acceptance test.
-Excluding the date improves total net, but the short side is still negative.
 
 ## Time Windows
-
-Excluding 2026-06-19:
 
 | NY Time Window | Trades | Net USD |
 | --- | ---: | ---: |
@@ -84,9 +76,7 @@ Excluding 2026-06-19:
 | 11:30-12:00 | 13 | -1441 |
 | 12:00-13:00 | 5 | 2065 |
 
-The 10:45-11:00 window is the strongest segment, but it is too thin to promote
-as a rule. The useful research lead is broader: avoid blind full-day routing and
-test session-time gates only after a larger sample exists.
+The time-window table is diagnostic only. Do not promote a thin time slice as a rule without a larger sample.
 
 ## Parameter Shelf
 
@@ -113,15 +103,11 @@ Nearby cells around the current row:
 | 5 | 10 | 8 | 3104 |
 | 5 | 10 | 10 | -396 |
 
-This is not a broad plateau. The setup strongly prefers a `10` point stop and
-an `8` point runner target in this sample. That is a parameter-fit warning.
+A narrow profitable neighborhood is a parameter-fit warning. A broader plateau would be stronger evidence.
 
 ## Fixed Row Rolling Windows
 
-The earlier walk-forward file uses train-window parameter selection. This check
-holds the current fixed row constant and only rolls dates.
-
-Using `4` train dates, `2` holdout dates, and a `2` date step:
+This check holds the current fixed row constant and rolls dates using `4` train dates, `2` holdout dates, and a `2` date step.
 
 | Window | Train Dates | Train Net USD | Holdout Dates | Holdout Net USD |
 | ---: | --- | ---: | --- | ---: |
@@ -132,7 +118,7 @@ Using `4` train dates, `2` holdout dates, and a `2` date step:
 
 Fixed-row rolling holdout total: `48` trades, `1214` net USD.
 
-Excluding 2026-06-19:
+Excluding holiday dates:
 
 | Window | Train Dates | Train Net USD | Holdout Dates | Holdout Net USD |
 | ---: | --- | ---: | --- | ---: |
@@ -143,13 +129,9 @@ Excluding 2026-06-19:
 
 Holiday-excluded fixed-row rolling holdout total: `48` trades, `5664` net USD.
 
-This is better than selection-based walk-forward, but it still does not prove
-stability. The early train windows are negative, and the later positive regime
-dominates the result.
+This separates fixed-row behavior from train-window optimizer selection, but it still does not prove stability.
 
 ## Risk Gate Checks
-
-Simple sequential daily gates on the fixed row:
 
 | Gate | Trades | Net USD |
 | --- | ---: | ---: |
@@ -160,18 +142,8 @@ Simple sequential daily gates on the fixed row:
 | Stop after daily profit 1000 | 60 | 5030 |
 | Stop after daily loss 1000 | 60 | 1480 |
 
-Profit gates look better in-sample, but they are especially easy to overfit.
-Treat them as risk-control candidates, not as evidence of strategy quality.
+Profit gates are especially easy to overfit. Treat them as risk-control candidates, not as evidence of strategy quality.
 
 ## Conclusion
 
-Keep collecting `5 / 10 / 8 / initial`, but do not promote it to live routing.
-The current edge is still too dependent on:
-
-- the last few dates,
-- a narrow parameter shelf,
-- holiday/early-close handling,
-- and a still-negative short side.
-
-Next research should add automatic holiday flags and repeat this fixed-row
-holdout check on a larger export before any new default changes.
+Keep collecting `5 / 10 / 8 / initial`, but do not promote it to live routing until the same fixed-row checks hold on a larger sample.
