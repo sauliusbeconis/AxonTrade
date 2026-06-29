@@ -7,6 +7,8 @@ import argparse
 
 from axontrade.reports import (
     load_csv_rows,
+    load_holiday_calendar_dates,
+    load_holiday_calendar_metadata,
     write_scaled_scalp_robustness_report,
 )
 
@@ -21,6 +23,7 @@ def main() -> int:
     parser.add_argument("--title", default="Sierra Delta Impulse 3-Min Fixed Row Robustness")
     parser.add_argument("--variant-label", required=True)
     parser.add_argument("--main-summary-source")
+    parser.add_argument("--holiday-calendar")
     parser.add_argument("--holiday-dates", default="")
     parser.add_argument("--holiday-source-url")
     parser.add_argument("--holiday-retrieved-date")
@@ -36,6 +39,15 @@ def main() -> int:
         for date in args.holiday_dates.split(",")
         if date.strip()
     ]
+    holiday_calendar_source = args.holiday_calendar
+    if args.holiday_calendar:
+        holiday_dates.extend(load_holiday_calendar_dates(args.holiday_calendar))
+        calendar_metadata = load_holiday_calendar_metadata(args.holiday_calendar)
+        if not args.holiday_source_url:
+            args.holiday_source_url = calendar_metadata["source_url"] or None
+        if not args.holiday_retrieved_date:
+            args.holiday_retrieved_date = calendar_metadata["retrieved_date"] or None
+    holiday_dates = sorted(set(holiday_dates))
     write_scaled_scalp_robustness_report(
         args.report,
         outcome_rows,
@@ -45,6 +57,7 @@ def main() -> int:
         outcome_source=args.outcomes,
         sweep_source=args.sweep,
         main_summary_source=args.main_summary_source,
+        holiday_calendar_source=holiday_calendar_source,
         holiday_dates=holiday_dates,
         holiday_source_url=args.holiday_source_url,
         holiday_retrieved_date=args.holiday_retrieved_date,

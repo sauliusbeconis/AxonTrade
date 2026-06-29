@@ -13,6 +13,8 @@ to keep collecting:
   `reports/sierra-delta-impulse-3min-large-scaled-exit-sweep.csv`
 - Main summary:
   `reports/sierra-delta-impulse-3min-large-sample-outcomes.md`
+- Holiday calendar:
+  `config/research/cme_equity_index_holidays_2026.csv`
 - CME trading-hours reference, retrieved 2026-06-29:
   `https://www.cmegroup.com/trading-hours.html`
 
@@ -64,7 +66,7 @@ Supplied holiday/early-close dates: `2026-06-19`. These dates are excluded in th
 | All dates | 78 | 3104 | 4463 | -1359 |
 | Exclude holidays | 72 | 4896 | 6791 | -1895 |
 
-Holiday/early-close dates should be flagged before any later acceptance test.
+Holiday/early-close dates are calendar-driven for later acceptance tests.
 
 ## Time Windows
 

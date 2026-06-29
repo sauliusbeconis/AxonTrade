@@ -119,4 +119,4 @@ Set the Sierra overlay to:
 
 Then collect another larger same-chart export. The key question is whether the
 short side keeps improving with the wider stop or remains a persistent drag.
-Holiday/early-close dates must be flagged before acceptance testing.
+Holiday/early-close dates are now flagged through the research holiday calendar.

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from axontrade.reports import (
     ScaledScalpRobustnessReportError,
+    load_holiday_calendar_dates,
+    load_holiday_calendar_metadata,
     render_scaled_scalp_robustness_report,
     write_scaled_scalp_robustness_report,
 )
@@ -16,6 +18,7 @@ def test_renders_scaled_scalp_robustness_report() -> None:
         outcome_source="outcomes.csv",
         sweep_source="sweep.csv",
         main_summary_source="summary.md",
+        holiday_calendar_source="holidays.csv",
         holiday_dates=["2026-06-19"],
         holiday_source_url="https://example.com/hours",
         holiday_retrieved_date="2026-06-29",
@@ -26,6 +29,7 @@ def test_renders_scaled_scalp_robustness_report() -> None:
 
     assert "# Robustness" in report
     assert "`5 / 10 / 8 / initial`" in report
+    assert "- Holiday calendar:\n  `holidays.csv`" in report
     assert "| Trades | 6 |" in report
     assert "| Net USD | 258 |" in report
     assert "| Long | 3 | 279 |" in report
@@ -74,6 +78,38 @@ def test_scaled_scalp_robustness_report_rejects_bad_timestamp() -> None:
         )
     except ScaledScalpRobustnessReportError as exc:
         assert "Invalid timestamp" in str(exc)
+    else:
+        raise AssertionError("expected ScaledScalpRobustnessReportError")
+
+
+def test_loads_holiday_calendar_dates_and_metadata(tmp_path) -> None:
+    calendar = tmp_path / "holidays.csv"
+    calendar.write_text(
+        "\n".join(
+            [
+                "date,label,source_url,retrieved_date",
+                "2026-06-19,Juneteenth,https://example.com/hours,2026-06-29",
+                "2026-06-19,Duplicate,https://example.com/hours,2026-06-29",
+            ],
+        ),
+        encoding="utf-8",
+    )
+
+    assert load_holiday_calendar_dates(calendar) == ["2026-06-19"]
+    assert load_holiday_calendar_metadata(calendar) == {
+        "source_url": "https://example.com/hours",
+        "retrieved_date": "2026-06-29",
+    }
+
+
+def test_holiday_calendar_rejects_invalid_date(tmp_path) -> None:
+    calendar = tmp_path / "holidays.csv"
+    calendar.write_text("date,label\nNone,Bad\n", encoding="utf-8")
+
+    try:
+        load_holiday_calendar_dates(calendar)
+    except ScaledScalpRobustnessReportError as exc:
+        assert "Invalid holiday calendar date" in str(exc)
     else:
         raise AssertionError("expected ScaledScalpRobustnessReportError")
 

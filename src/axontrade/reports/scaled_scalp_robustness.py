@@ -45,6 +45,35 @@ def load_csv_rows(path: str | Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def load_holiday_calendar_dates(path: str | Path) -> list[str]:
+    """Load holiday/early-close dates from a CSV calendar."""
+
+    rows = load_csv_rows(path)
+    dates = []
+    for row in rows:
+        raw_date = str(row.get("date", "")).strip()
+        if not raw_date:
+            raise ScaledScalpRobustnessReportError(
+                "Holiday calendar rows must include a non-empty date field",
+            )
+        _parse_calendar_date(raw_date)
+        dates.append(raw_date)
+    return sorted(set(dates))
+
+
+def load_holiday_calendar_metadata(path: str | Path) -> dict[str, str]:
+    """Load optional source metadata from a holiday calendar CSV."""
+
+    rows = load_csv_rows(path)
+    metadata = {"source_url": "", "retrieved_date": ""}
+    for row in rows:
+        if not metadata["source_url"]:
+            metadata["source_url"] = str(row.get("source_url", "")).strip()
+        if not metadata["retrieved_date"]:
+            metadata["retrieved_date"] = str(row.get("retrieved_date", "")).strip()
+    return metadata
+
+
 def write_scaled_scalp_robustness_report(
     path: str | Path,
     outcome_rows: Iterable[dict[str, Any]],
@@ -55,6 +84,7 @@ def write_scaled_scalp_robustness_report(
     outcome_source: str,
     sweep_source: str,
     main_summary_source: str | None = None,
+    holiday_calendar_source: str | None = None,
     holiday_dates: Iterable[str] = (),
     holiday_source_url: str | None = None,
     holiday_retrieved_date: str | None = None,
@@ -72,6 +102,7 @@ def write_scaled_scalp_robustness_report(
         outcome_source=outcome_source,
         sweep_source=sweep_source,
         main_summary_source=main_summary_source,
+        holiday_calendar_source=holiday_calendar_source,
         holiday_dates=holiday_dates,
         holiday_source_url=holiday_source_url,
         holiday_retrieved_date=holiday_retrieved_date,
@@ -94,6 +125,7 @@ def render_scaled_scalp_robustness_report(
     outcome_source: str,
     sweep_source: str,
     main_summary_source: str | None = None,
+    holiday_calendar_source: str | None = None,
     holiday_dates: Iterable[str] = (),
     holiday_source_url: str | None = None,
     holiday_retrieved_date: str | None = None,
@@ -140,6 +172,8 @@ def render_scaled_scalp_robustness_report(
     ]
     if main_summary_source:
         lines.extend(["- Main summary:", f"  `{main_summary_source}`"])
+    if holiday_calendar_source:
+        lines.extend(["- Holiday calendar:", f"  `{holiday_calendar_source}`"])
     if holiday_source_url:
         retrieved = (
             f", retrieved {holiday_retrieved_date}"
@@ -179,7 +213,7 @@ def render_scaled_scalp_robustness_report(
             "",
             _holiday_scope_table(all_summary, holiday_excluded_summary, holidays),
             "",
-            "Holiday/early-close dates should be flagged before any later acceptance test.",
+            "Holiday/early-close dates are calendar-driven for later acceptance tests.",
             "",
             "## Time Windows",
             "",
@@ -276,6 +310,15 @@ def _parse_timestamp(value: str) -> datetime:
         except ValueError:
             continue
     raise ScaledScalpRobustnessReportError(f"Invalid timestamp: {value!r}")
+
+
+def _parse_calendar_date(value: str) -> datetime:
+    try:
+        return datetime.strptime(value, "%Y-%m-%d")
+    except ValueError as exc:
+        raise ScaledScalpRobustnessReportError(
+            f"Invalid holiday calendar date: {value!r}",
+        ) from exc
 
 
 def _to_float(value: Any, field_name: str) -> float:
