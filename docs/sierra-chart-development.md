@@ -24,6 +24,21 @@ Use deterministic drawing identifiers and Sierra Chart's add-or-adjust drawing b
 
 CSV logging must prevent duplicate event rows during recalculation.
 
-## Manual References To Collect
+## Official References
 
-Add verified Sierra Chart documentation links in `docs/research-backlog.md` as they are collected.
+Manual help needed: **No**.
+
+Verified source list:
+
+`docs/sierra-acsil-reference-audit.md`
+
+Key source-controlled rules from the official Sierra docs:
+
+- ACSIL source files use `#include "sierrachart.h"`, `SCDLLName(...)`, and
+  `SCSFExport`.
+- Build through `Analysis >> Build Custom Studies DLL`; use
+  `Build >> Remote Build` for the current Wine workflow.
+- Use `sc.UseTool()` with stable drawing identifiers and `UTAM_ADD_OR_ADJUST`
+  for recalculation-safe AxonTrade drawings.
+- Set `sc.MaintainVolumeAtPriceData = 1` in `sc.SetDefaults` before reading
+  `sc.VolumeAtPriceForBars`.

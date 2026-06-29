@@ -53,3 +53,6 @@ Build and load instructions are documented in
 2. Compile through Sierra Chart's custom study build workflow.
 3. Load the study on a replay or simulation chart.
 4. Follow `docs/phase-0-verification.md`.
+
+Official Sierra ACSIL references are recorded in
+`docs/sierra-acsil-reference-audit.md`.

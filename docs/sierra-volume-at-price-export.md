@@ -98,9 +98,13 @@ indicator-only ACSIL study documented in
 
 ## Official Sierra References
 
+Retrieved on `2026-06-29`.
+
 - `Edit >> Export Bar and Study Data to Text File`:
   https://www.sierrachart.com/index.php?page=doc/EditMenu.html#ExportBarAndStudyDataToTextFile
 - Accessing Volume at Price Data Per Bar:
   https://www.sierrachart.com/index.php?page=doc/ACSILProgrammingConcepts.html#AccessingVolumeAtPriceDataPerBar
 - `sc.MaintainVolumeAtPriceData` / `sc.VolumeAtPriceForBars`:
   https://www.sierrachart.com/index.php?page=doc/ACSIL_Members_Variables_And_Arrays.html#scVolumeAtPriceForBars
+- Full source audit:
+  [sierra-acsil-reference-audit.md](sierra-acsil-reference-audit.md)

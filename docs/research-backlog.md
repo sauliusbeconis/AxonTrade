@@ -5,8 +5,8 @@ Every research source should be documented with a link and retrieval date.
 ## Account And Platform Rules
 
 - Collect official LucidFlex rules and compare them to `config/firms/lucidflex_25k_evaluation.yaml`. Done.
-- Collect Sierra Chart ACSIL documentation links.
-- Collect Sierra Chart `VolumeAtPriceForBars` references.
+- Collect Sierra Chart ACSIL documentation links. Done.
+- Collect Sierra Chart `VolumeAtPriceForBars` references. Done.
 - Research prop-firm restrictions around HFT and microscalping. Done for active LucidFlex firm profile.
 
 ## Market Research
