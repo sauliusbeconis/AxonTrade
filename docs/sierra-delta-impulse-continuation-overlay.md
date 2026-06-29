@@ -283,6 +283,29 @@ Summary:
 
 `reports/sierra-delta-impulse-fixed-row-context-filter.md`
 
+## Run Direction Variant Diagnostics
+
+Manual help needed: **No** after the matching bar export and signal log exist.
+
+This compares the logged continuation direction with a simple inverted fade
+variant. It is a diagnostic only.
+
+```bash
+.venv/bin/python scripts/run_delta_impulse_direction_variant_diagnostics.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_DeltaImpulse_3Min_Large.txt \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_DeltaImpulseSignalLog.csv
+```
+
+Current result:
+
+- logged-direction walk-forward: `72` selected holdout trades, `-11254` net USD
+- inverted-direction walk-forward: `100` selected holdout trades, `-4512.5` net USD
+
+The inverted/fade direction has positive in-sample rows but still fails
+walk-forward. Summary:
+
+`reports/sierra-delta-impulse-direction-variant-diagnostics.md`
+
 Use this to evaluate the original `5 / 5 / 15 / breakeven` exit when the CSV
 came from the same Sierra chart that produced the export:
 

@@ -61,3 +61,27 @@ Consequences:
   parameter tuning.
 - Any new variant must pass fresh overlay validation, cost/slippage checks,
   context diagnostics, and chronological walk-forward validation.
+
+## 2026-06-29: Reject Simple Delta Impulse Fade Inversion
+
+Decision: reject a simple inverted Delta Impulse fade as a current strategy
+candidate.
+
+Context:
+
+- The inverted test flips every logged Delta Impulse candidate direction and
+  keeps the same entry bar.
+- In-sample sweeps produce positive rows, led by an inverted long-only
+  `5 / 10 / 15 / initial` row at `4849` net USD.
+- Rolling walk-forward remains negative: `100` selected holdout trades for
+  `-4512.50` net USD.
+- The first holdout window is positive, but the next three selected windows are
+  negative.
+
+Consequences:
+
+- Do not promote simple "take the opposite side" logic.
+- The failed continuation signal may contain information, but it needs a
+  materially different context filter before it is useful.
+- Further Delta Impulse research should focus on auction regime, liquidity
+  sweep, or exhaustion context rather than raw direction inversion.
