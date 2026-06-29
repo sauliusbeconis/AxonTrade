@@ -20,14 +20,14 @@ Status: **PASS**
 
 ## Summary
 
-- expected candidates from bars: `78`
-- Sierra candidate log rows: `78`
-- matched rows: `78`
+- expected candidates from bars: `163`
+- Sierra candidate log rows: `163`
+- matched rows: `163`
 - missing rows: `0`
 - unexpected rows: `0`
 - field mismatches: `0`
-- trade dates: `13`
-- date range: `2026-06-10` through `2026-06-26`
+- trade dates: `41`
+- date range: `2026-03-23` through `2026-06-26`
 
 ## Interpretation
 

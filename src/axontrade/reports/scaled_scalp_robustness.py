@@ -275,9 +275,10 @@ def render_scaled_scalp_robustness_report(
             "",
             "## Conclusion",
             "",
-            (
-                f"Keep collecting `{variant_label}`, but do not promote it to "
-                "live routing until the same fixed-row checks hold on a larger sample."
+            _conclusion_text(
+                variant_label,
+                all_summary=all_summary,
+                holiday_excluded_summary=holiday_excluded_summary,
             ),
             "",
         ],
@@ -368,6 +369,33 @@ def _summary_table(summary: dict[str, float | int]) -> str:
             f"| Runner initial-stop exits | {int(summary['runner_initial_stop_exits'])} |",
             f"| End/no-following exits | {int(summary['end_or_no_following_exits'])} |",
         ],
+    )
+
+
+def _conclusion_text(
+    variant_label: str,
+    *,
+    all_summary: dict[str, float | int],
+    holiday_excluded_summary: dict[str, float | int],
+) -> str:
+    trades = int(all_summary["trades"])
+    net_usd = float(all_summary["net_usd"])
+    holiday_excluded_net_usd = float(holiday_excluded_summary["net_usd"])
+    if trades >= 100 and net_usd <= 0:
+        return (
+            f"Reject `{variant_label}` as a fixed row for the current sample. "
+            "The sample is now large enough for the configured minimum trade "
+            "count, and both the full result and robustness checks are negative."
+        )
+    if trades >= 100 and holiday_excluded_net_usd <= 0:
+        return (
+            f"Do not keep collecting `{variant_label}` without a changed "
+            "hypothesis. The full sample is positive, but the holiday-adjusted "
+            "result is not robust."
+        )
+    return (
+        f"Keep collecting `{variant_label}`, but do not promote it to live "
+        "routing until the same fixed-row checks hold on a larger sample."
     )
 
 

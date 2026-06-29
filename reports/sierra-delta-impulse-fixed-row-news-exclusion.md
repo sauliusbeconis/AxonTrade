@@ -15,20 +15,20 @@ Status: **diagnostic only**
 ## Summary
 
 - calendar events: `17`
-- annotated fixed-row outcomes: `78`
+- annotated fixed-row outcomes: `163`
 - rows inside scheduled-news blackout windows: `1`
-- all-row net USD: `3104`
-- news-excluded trades: `77`
-- news-excluded net USD: `3411`
+- all-row net USD: `-15716`
+- news-excluded trades: `162`
+- news-excluded net USD: `-15409`
 
 ## Blackout Row
 
 | Entry Time | Signal ID | Direction | Exit Reason | Net USD | Event | Minutes From Event |
 | --- | --- | --- | --- | ---: | --- | ---: |
-| `2026-06-24 10:15:00` | `delta_impulse_continue_10bar_2.5pt_50d_ESU26-CME_1300` | `short` | `runner_initial_stop_hit` | `-307` | `census-new-home-sales-2026-06-24` | `15` |
+| `2026-06-24 10:15:00` | `delta_impulse_continue_10bar_2.5pt_50d_ESU26-CME_7610` | `short` | `runner_initial_stop_hit` | `-307` | `census-new-home-sales-2026-06-24` | `15` |
 
 ## Interpretation
 
-The added June calendar removes one current-sample trade, improving the fixed
-row from `3104` to `3411` net USD. This is not validation. It only confirms the
-news-exclusion plumbing is now populated for the current replay date range.
+The June scheduled-news calendar removes one losing current-sample trade, but
+the fixed row remains strongly negative. News exclusion does not rescue the
+Delta Impulse fixed row on the expanded sample.

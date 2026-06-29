@@ -191,7 +191,7 @@ result to `AxonTrade_DeltaImpulseSignalLog.csv`.
 
 Expected current result:
 
-`overlay_validation=PASS; expected=78; actual=78; matched=78`
+`overlay_validation=PASS; expected=163; actual=163; matched=163`
 
 The report is written to:
 
@@ -215,8 +215,11 @@ For the current fixed row, use the one-command pipeline. It regenerates:
   /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_DeltaImpulseSignalLog.csv
 ```
 
-The current sample is expected to print `acceptance=FAIL`. That is a research
-rejection, not a script error.
+The current expanded sample is expected to print:
+
+`validated 163 entries; outcomes=163 net_usd=-15716.00; sweep_rows=924; acceptance=FAIL`
+
+That is a research rejection, not a script error.
 
 ## Annotate News Blackouts
 
@@ -238,7 +241,7 @@ Annotate the current fixed-row outcomes with:
   --default-blackout-after-minutes 15
 ```
 
-Current result: `78` rows annotated, `1` row inside a blackout window. The
+Current result: `163` rows annotated, `1` row inside a blackout window. The
 diagnostic summary is:
 
 `reports/sierra-delta-impulse-fixed-row-news-exclusion.md`
@@ -265,15 +268,16 @@ Run the rolling context-filter walk-forward:
 .venv/bin/python scripts/run_scaled_context_filter_walk_forward_sweep.py \
   reports/sierra-delta-impulse-fixed-row-context-diagnostics.csv \
   reports/sierra-delta-impulse-fixed-row-context-filter-walk-forward.csv \
-  --train-date-count 8 \
-  --holdout-date-count 2 \
-  --minimum-train-trades 12 \
-  --window-step-date-count 1
+  --train-date-count 20 \
+  --holdout-date-count 5 \
+  --minimum-train-trades 20 \
+  --window-step-date-count 5
 ```
 
-Current result: `4` holdout windows, `19` selected holdout trades, `6917` net
-USD. The unfiltered rows across the same overlapping holdout windows were
-`8064` net USD, so this is a diagnostic only, not a validation improvement.
+Current result: `4` holdout windows, `20` selected holdout trades, `-4640` net
+USD. The unfiltered rows across the same holdout windows were `-7927` net USD.
+The selector reduced exposure and lost less, but it is still a losing
+diagnostic, not a validation improvement.
 
 Summary:
 
@@ -297,7 +301,8 @@ came from the same Sierra chart that produced the export:
   --entry-match-mode auto
 ```
 
-For the larger 3-minute replay sample, the best all-direction fixed variant is:
+For the expanded 3-minute replay sample, this is the rejected fixed variant
+currently documented by the overlay and pipeline:
 
 ```bash
 .venv/bin/python scripts/run_signal_log_scaled_scalp_outcomes.py \
@@ -315,9 +320,10 @@ For the larger 3-minute replay sample, the best all-direction fixed variant is:
 ```
 
 The one-command pipeline above should normally be preferred because it also
-updates the robustness and acceptance reports.
+updates the robustness and acceptance reports. Do not promote this variant
+without a changed hypothesis and fresh walk-forward validation.
 
-To make the Sierra overlay log that variant:
+To reproduce that rejected fixed variant in Sierra:
 
 Manual help needed: **Yes**.
 

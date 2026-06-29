@@ -38,6 +38,26 @@ def test_renders_scaled_scalp_robustness_report() -> None:
     assert "| Exclude holidays | 3 | 429 | -164 | 593 |" in report
     assert "| 5 | 10 | 8 | 258 |" in report
     assert "Fixed-row rolling holdout total: `0` trades, `0` net USD." in report
+    assert "Keep collecting `5 / 10 / 8 / initial`" in report
+
+
+def test_scaled_scalp_robustness_report_rejects_large_negative_sample() -> None:
+    report = render_scaled_scalp_robustness_report(
+        [_outcome(f"2026-06-{day:02d} 10:15:00", "long", "full_stop_hit", -757) for day in range(1, 29)]
+        + [_outcome(f"2026-07-{day:02d} 10:15:00", "short", "runner_target_hit", 593) for day in range(1, 29)]
+        + [_outcome(f"2026-08-{day:02d} 10:15:00", "long", "full_stop_hit", -757) for day in range(1, 29)]
+        + [_outcome(f"2026-09-{day:02d} 10:15:00", "short", "runner_target_hit", 593) for day in range(1, 29)],
+        _sweep_rows(),
+        title="Robustness",
+        variant_label="5 / 10 / 8 / initial",
+        outcome_source="outcomes.csv",
+        sweep_source="sweep.csv",
+        first_target_points=5,
+        stop_points=10,
+        runner_target_points=8,
+    )
+
+    assert "Reject `5 / 10 / 8 / initial` as a fixed row" in report
 
 
 def test_writes_scaled_scalp_robustness_report(tmp_path) -> None:
