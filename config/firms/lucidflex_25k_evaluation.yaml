@@ -20,14 +20,31 @@ microscalping_allowed: false
 live_automated_entries_enabled: false
 one_click_approved_entries_enabled: false
 simulation_only: true
-source_status: requires_manual_official_verification
+source_status: official_sources_reviewed_recheck_before_live
+source_reviewed_on: "2026-06-29"
 notes:
   - Phase-0 research configuration only.
-  - Verify official Lucid Trading rules before any funded or live trading decision.
+  - Verify official Lucid Trading rules again before any funded or live trading decision.
+  - New-entry and internal flatten times are stricter AxonTrade safety buffers, not Lucid published cutoffs.
 sources:
-  - name: Lucid Trading public site
-    url: https://lucidtrading.com/
-    retrieved_on: "2026-06-16"
+  - name: LucidFlex Evaluation Account
+    url: https://support.lucidtrading.com/en/articles/12945790-lucidflex-evaluation-account
+    retrieved_on: "2026-06-29"
+  - name: LucidFlex Drawdown
+    url: https://support.lucidtrading.com/en/articles/12945815-lucidflex-drawdown
+    retrieved_on: "2026-06-29"
   - name: LucidFlex consistency percentage help article
     url: https://support.lucidtrading.com/en/articles/12945805-lucidflex-consistency-percentage
-    retrieved_on: "2026-06-16"
+    retrieved_on: "2026-06-29"
+  - name: Allowed Trading Times
+    url: https://support.lucidtrading.com/en/articles/11404729-allowed-trading-times
+    retrieved_on: "2026-06-29"
+  - name: Permitted Activities
+    url: https://support.lucidtrading.com/en/articles/11404728-permitted-activities
+    retrieved_on: "2026-06-29"
+  - name: Prohibited High Frequency Trading
+    url: https://support.lucidtrading.com/en/articles/11404736-prohibited-high-frequency-trading
+    retrieved_on: "2026-06-29"
+  - name: Prohibited Microscalping
+    url: https://support.lucidtrading.com/en/articles/11404742-prohibited-microscalping
+    retrieved_on: "2026-06-29"

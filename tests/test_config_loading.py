@@ -21,6 +21,11 @@ def test_loads_lucidflex_profile() -> None:
     assert config["account_type"] == "LucidFlex"
     assert config["simulation_only"] is True
     assert config["live_automated_entries_enabled"] is False
+    assert config["source_status"] == "official_sources_reviewed_recheck_before_live"
+    assert config["source_reviewed_on"] == "2026-06-29"
+    source_names = {source["name"] for source in config["sources"]}
+    assert "Prohibited High Frequency Trading" in source_names
+    assert "Prohibited Microscalping" in source_names
 
 
 def test_loads_instrument_profiles() -> None:
