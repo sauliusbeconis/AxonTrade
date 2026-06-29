@@ -116,10 +116,10 @@ Consequences:
 - The next Delta Impulse research step should be a targeted veto or quality
   model for losing selected windows, not another broad parameter grid.
 
-## 2026-06-29: Mark Delta Impulse Selected Veto Promising But Research-Only
+## 2026-06-29: Mark Delta Impulse Selected Veto Research-Only
 
-Decision: keep the second-stage selected context veto as a promising diagnostic,
-but do not promote it to live or funded execution.
+Decision: keep the second-stage selected context veto as a diagnostic, but
+reject it as a standalone strategy candidate.
 
 Context:
 
@@ -134,10 +134,11 @@ Context:
 
 Consequences:
 
-- Delta Impulse context filtering now has a positive research lead.
-- The result remains too small and too filtered for deployment.
-- The next required step is a larger export or a fresh out-of-sample replay
-  before any Sierra-side rule change.
+- Delta Impulse context filtering is useful for loss attribution, but not as an
+  executable edge.
+- No Sierra-side rule change should be made from this stack.
+- Further Delta Impulse work needs a materially different hypothesis, not just
+  another threshold layer.
 
 Update after the `2026-06-29` larger export:
 
@@ -145,3 +146,15 @@ Update after the `2026-06-29` larger export:
 - The selected-veto result held directionally: `60` kept holdout trades for
   `3930` USD versus `72` first-stage selected holdout trades for `-1554` USD.
 - This is a useful sanity check, but not a genuine larger-sample validation.
+
+Update after the continuous-contract 240D export:
+
+- Overlay validation passed on `1003` matched candidates across `168` signal
+  dates.
+- Raw fixed row remained strongly negative: `-72508.50` USD.
+- First-stage selected context remained negative: `364` holdout trades for
+  `-45648` USD.
+- Second-stage selected veto reduced losses but stayed negative: `227` kept
+  holdout trades for `-22339` USD.
+- The small positive selected-veto result is invalidated as an overfit/thin
+  sample result.

@@ -66,21 +66,33 @@ The selected-veto idea survived this small extension, but this is not a true
 large-sample validation. The next meaningful test still requires substantially
 more trade dates and candidate signals.
 
+## Continuous 240D Validation
+
+The continuous-contract 240D export is the first materially larger validation
+set:
+
+- validated overlay candidates: `1003`
+- trade dates in signal log: `168`
+- raw fixed row: `1003` trades, `-72508.50` net USD
+- first-stage selected context: `364` holdout trades, `-45648` net USD
+- unfiltered same-window holdout baseline: `955` trades, `-74122.50` net USD
+- second-stage selected veto: `227` kept holdout trades, `-22339` net USD
+- veto improvement versus first-stage selected context: `23309` USD
+
+This invalidates the positive small-sample result. The selected-veto stack still
+removes a lot of bad exposure, but it does not produce a positive strategy on
+the first true large sample.
+
 ## Interpretation
 
-This is the first positive chronological holdout result in the Delta Impulse
-path after the expanded export. The improvement is structurally meaningful
-because the second stage is selected on train rows only and then applied to
-holdout rows.
-
-Do not treat it as deployable yet. It is still only `53` kept holdout trades,
-selected through two stages, and several windows have zero or one kept holdout
-trade. The finding is strong enough to justify another export and a larger
-out-of-sample check, not strong enough for live routing.
+The original `53`-trade positive result was too thin. The continuous 240D
+validation shows the context/veto stack is a loss-avoidance mechanism, not a
+profitable strategy.
 
 Current status:
 
 - raw Delta Impulse continuation: rejected;
-- first-stage normalized context filter: active research direction;
-- second-stage selected veto: promising diagnostic, needs larger-sample
-  validation.
+- first-stage normalized context filter: rejected as a standalone selector;
+- second-stage selected veto: rejected as a standalone selector;
+- the remaining useful information is diagnostic: these filters identify bad
+  exposure, but they do not define an executable edge.

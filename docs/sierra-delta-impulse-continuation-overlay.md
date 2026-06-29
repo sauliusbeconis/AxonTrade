@@ -416,6 +416,17 @@ to `169`, so it is a sanity check rather than a true larger sample. The
 selected-veto result held: `60` kept holdout trades, `3930` net USD, versus `72`
 first-stage selected holdout trades and `-1554` net USD.
 
+The continuous-contract 240D export is the first true larger validation and it
+rejects the stack:
+
+- overlay validation: `1003` matched candidates;
+- raw fixed row: `-72508.50` net USD;
+- first-stage selected context: `364` holdout trades, `-45648` net USD;
+- second-stage selected veto: `227` kept holdout trades, `-22339` net USD.
+
+The filters still reduce bad exposure, but they do not produce an executable
+edge.
+
 To reproduce that rejected fixed variant in Sierra:
 
 Manual help needed: **Yes**.

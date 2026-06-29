@@ -77,3 +77,9 @@ The next targeted test has been run as a second-stage selected veto:
 That test improves the old-shape selected holdout from `64` trades and `-1198`
 USD to `53` trades and `3979` USD. Treat it as a promising diagnostic only
 until it survives a larger sample.
+
+Continuous 240D update: the larger validation rejects this stack as a standalone
+strategy. First-stage selected context produced `364` holdout trades for
+`-45648` USD, and the second-stage selected veto improved that to `227` kept
+holdout trades for `-22339` USD. The filters reduce bad exposure, but they do
+not create a positive edge.
