@@ -7,6 +7,10 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from axontrade.config import ConfigError, load_yaml, require_fields
+from axontrade.research.rejection_reasons import (
+    load_rejection_reason_catalog,
+    rejection_reason_codes,
+)
 
 
 DEFAULT_SIGNAL_LOG_SCHEMA = "config/research/signal_log_schema.yaml"
@@ -25,6 +29,7 @@ SCHEMA_REQUIRED_FIELDS = (
     "actions",
     "trade_modes",
     "rejection_reasons",
+    "rejection_reason_catalog",
     "common_required_fields",
     "event_type_required_fields",
     "field_types",
@@ -54,8 +59,13 @@ def validate_signal_log_schema(schema: dict[str, Any]) -> dict[str, Any]:
         "common_required_fields",
     )
     event_types = _require_string_list(schema["event_types"], "event_types")
+    rejection_reasons = _require_string_list(schema["rejection_reasons"], "rejection_reasons")
 
     _ensure_subset(common_required, header, "common_required_fields", "csv.header")
+    _ensure_catalog_reasons_match_schema(
+        schema["rejection_reason_catalog"],
+        rejection_reasons,
+    )
 
     event_required = schema["event_type_required_fields"]
     if not isinstance(event_required, dict):
@@ -219,6 +229,19 @@ def _ensure_subset(
         raise SignalLogError(
             f"{values_context} contains values not present in {allowed_context}: "
             + ", ".join(unknown),
+        )
+
+
+def _ensure_catalog_reasons_match_schema(
+    catalog_path: str,
+    schema_reasons: list[str],
+) -> None:
+    catalog = load_rejection_reason_catalog(catalog_path)
+    catalog_reasons = rejection_reason_codes(catalog)
+    if schema_reasons != catalog_reasons:
+        raise SignalLogError(
+            "rejection_reasons must match rejection_reason_catalog order. "
+            f"Expected {catalog_reasons}, got {schema_reasons}",
         )
 
 

@@ -55,6 +55,8 @@ trade_modes:
   - research
   - unknown
 
+rejection_reason_catalog: config/research/rejection_reason_codes.yaml
+
 rejection_reasons:
   - not_applicable
   - no_setup
@@ -65,6 +67,9 @@ rejection_reasons:
   - duplicate_signal
   - manual_review_required
   - no_absorption
+  - daily_limit
+  - spacing_filter
+  - configuration_error
   - other
 
 common_required_fields:

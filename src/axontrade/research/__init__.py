@@ -67,6 +67,17 @@ from axontrade.research.signal_log import (
     validate_signal_log_rows,
     validate_signal_log_schema,
 )
+from axontrade.research.rejection_reasons import (
+    ALLOWED_REJECTION_REASON_CATEGORIES,
+    DEFAULT_REJECTION_REASON_CATALOG,
+    REJECTION_REASON_CATALOG_REQUIRED_FIELDS,
+    REJECTION_REASON_DETAIL_REQUIRED_FIELDS,
+    RejectionReasonCatalogError,
+    load_rejection_reason_catalog,
+    rejection_reason_codes,
+    rejection_reason_logging_fields,
+    validate_rejection_reason_catalog,
+)
 from axontrade.research.session_clock_alignment import (
     SESSION_CLOCK_ALIGNMENT_HEADER,
     SessionClockAlignmentError,
@@ -273,6 +284,11 @@ __all__ = [
     "PRICE_ONLY_TRAIN_HOLDOUT_SWEEP_HEADER",
     "SESSION_CLOCK_ALIGNMENT_HEADER",
     "SignalLogError",
+    "RejectionReasonCatalogError",
+    "ALLOWED_REJECTION_REASON_CATEGORIES",
+    "DEFAULT_REJECTION_REASON_CATALOG",
+    "REJECTION_REASON_CATALOG_REQUIRED_FIELDS",
+    "REJECTION_REASON_DETAIL_REQUIRED_FIELDS",
     "SIGNAL_AUCTION_REGIME_BREAKEVEN_REPORT_HEADER",
     "SIGNAL_AUCTION_REGIME_DIAGNOSTIC_HEADER",
     "SIGNAL_AUCTION_REGIME_FILTER_SWEEP_HEADER",
@@ -347,6 +363,7 @@ __all__ = [
     "load_signal_rows_csv",
     "load_signal_log_schema",
     "load_signal_log_rows_csv",
+    "load_rejection_reason_catalog",
     "price_only_acceptance_passed",
     "auction_regime_stack_acceptance_passed",
     "scaled_scalp_acceptance_passed",
@@ -410,6 +427,7 @@ __all__ = [
     "validate_signal_log_row",
     "validate_signal_log_rows",
     "validate_signal_log_schema",
+    "validate_rejection_reason_catalog",
     "validate_price_only_acceptance_config",
     "validate_auction_regime_stack_acceptance_config",
     "validate_scaled_scalp_acceptance_config",
@@ -420,4 +438,6 @@ __all__ = [
     "write_auction_regime_stack_acceptance_report",
     "write_delta_impulse_overlay_validation_report",
     "write_scaled_scalp_acceptance_report",
+    "rejection_reason_codes",
+    "rejection_reason_logging_fields",
 ]

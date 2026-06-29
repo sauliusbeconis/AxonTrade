@@ -43,6 +43,11 @@ The script validates:
 - required fields by event type;
 - allowed enum values;
 - numeric field parsing.
+- canonical rejected-signal reason codes from
+  `config/research/rejection_reason_codes.yaml`.
+
+Rejected-signal reason fields are defined in
+[signal-log-rejection-reasons.md](signal-log-rejection-reasons.md).
 
 ## Current Replay Sample
 

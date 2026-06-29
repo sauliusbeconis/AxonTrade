@@ -1,0 +1,138 @@
+schema_version: 1
+profile_id: axon_rejection_reason_codes_v1
+description: >
+  Canonical rejected-signal reason-code catalog for AxonTrade research and
+  Sierra Chart indicator-only signal logs.
+
+reason_code_order:
+  - not_applicable
+  - no_setup
+  - outside_session
+  - insufficient_context
+  - risk_limit
+  - news_blackout
+  - duplicate_signal
+  - manual_review_required
+  - no_absorption
+  - daily_limit
+  - spacing_filter
+  - configuration_error
+  - other
+
+reason_codes:
+  not_applicable:
+    category: not_rejected
+    applies_to:
+      - candidate_signal
+      - replay_marker
+      - smoke_test
+    description: No rejection was applied to this row.
+    logging_notes: Use for accepted candidates and non-rejection marker rows.
+  no_setup:
+    category: setup
+    applies_to:
+      - rejected_signal
+    description: The strategy pattern was not present on the evaluated bar.
+    logging_notes: Include threshold values or setup state in notes when available.
+  outside_session:
+    category: session
+    applies_to:
+      - rejected_signal
+    description: The bar was outside the configured trading or setup window.
+    logging_notes: Include the configured session or setup window in notes when useful.
+  insufficient_context:
+    category: data_context
+    applies_to:
+      - rejected_signal
+    description: The bar did not have enough prior data or required level context.
+    logging_notes: Include the missing context, such as lookback bars or opening range.
+  risk_limit:
+    category: risk
+    applies_to:
+      - rejected_signal
+    description: Candidate geometry or account rules violated a configured risk limit.
+    logging_notes: Include the risk distance or violated limit in notes.
+  news_blackout:
+    category: calendar
+    applies_to:
+      - rejected_signal
+    description: The bar was inside a scheduled-news exclusion window.
+    logging_notes: Include the matching event name and blackout window in notes.
+  duplicate_signal:
+    category: pacing
+    applies_to:
+      - rejected_signal
+    description: An equivalent signal was already emitted for the configured scope.
+    logging_notes: Include the duplicate scope, such as symbol/date/side.
+  manual_review_required:
+    category: ambiguity
+    applies_to:
+      - rejected_signal
+    description: The bar matched conflicting states and should not be auto-classified.
+    logging_notes: Include the conflicting setup states in notes.
+  no_absorption:
+    category: order_flow
+    applies_to:
+      - rejected_signal
+    description: Price swept a reference level but the absorption condition was absent.
+    logging_notes: Include the absorption threshold that failed.
+  daily_limit:
+    category: pacing
+    applies_to:
+      - rejected_signal
+    description: The strategy already emitted the maximum configured signals for the day.
+    logging_notes: Include the configured daily cap in notes.
+  spacing_filter:
+    category: pacing
+    applies_to:
+      - rejected_signal
+    description: The bar occurred too soon after the prior accepted strategy signal.
+    logging_notes: Include elapsed seconds and the configured minimum spacing in notes.
+  configuration_error:
+    category: system
+    applies_to:
+      - rejected_signal
+    description: The study or strategy inputs are invalid for signal generation.
+    logging_notes: Include the invalid input name and value when available.
+  other:
+    category: fallback
+    applies_to:
+      - rejected_signal
+    description: A rejected row did not fit a more specific canonical reason.
+    logging_notes: Avoid for strategy logic unless a new catalog code is not available yet.
+
+logging_fields:
+  rejected_signal_required:
+    - schema_version
+    - event_key
+    - event_type
+    - generated_at
+    - symbol
+    - chart_number
+    - bar_index
+    - bar_start_time
+    - trade_mode
+    - strategy_id
+    - signal_id
+    - direction
+    - action
+    - signal_price
+    - rejection_reason
+    - notes
+  rejected_signal_blank_when_not_applicable:
+    - stop_price
+    - target_price
+    - invalidation_price
+  candidate_signal_required:
+    - stop_price
+    - target_price
+    - invalidation_price
+  optional_diagnostic:
+    - confidence
+
+rules:
+  - rejected_signal rows must set event_type to rejected_signal and action to reject.
+  - rejected_signal rows must use one reason from reason_code_order.
+  - rejected_signal rows should keep signal_price as the evaluated bar close.
+  - rejected_signal rows should put threshold details and failed inputs in notes.
+  - candidate_signal rows must set rejection_reason to not_applicable.

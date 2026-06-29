@@ -27,7 +27,7 @@ Every research source should be documented with a link and retrieval date.
 ## Bot Pipeline
 
 - Define the first signal log schema. Done.
-- Define rejected-signal reason codes.
+- Define rejected-signal reason codes. Done.
 - Define Sierra Chart export fields for bars and levels. Done.
 - Build Python loaders for Sierra-exported CSV files. Done.
 - Build the first price-only VWAP/opening-range baseline. Done.
@@ -78,7 +78,7 @@ Every research source should be documented with a link and retrieval date.
 ## Reporting
 
 - Define the first price-only baseline outcome workflow. Done.
-- Define rejected-signal logging fields.
+- Define rejected-signal logging fields. Done.
 - Define parameter experiment logging format. Done.
 - Define daily outcome and drawdown breakdown. Done.
 - Build Sierra overlay signal-log validation/report workflow. Done.

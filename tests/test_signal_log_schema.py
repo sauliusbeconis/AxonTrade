@@ -6,9 +6,14 @@ import pytest
 
 from axontrade.config import load_yaml
 from axontrade.research import (
+    RejectionReasonCatalogError,
     SignalLogError,
+    load_rejection_reason_catalog,
     load_signal_log_rows_csv,
     load_signal_log_schema,
+    rejection_reason_codes,
+    rejection_reason_logging_fields,
+    validate_rejection_reason_catalog,
     validate_signal_log_row,
     validate_signal_log_schema,
 )
@@ -46,6 +51,20 @@ def test_loads_signal_log_schema() -> None:
     assert "event_key" in schema["csv"]["header"]
     assert "candidate_signal" in schema["event_types"]
     assert "rejected_signal" in schema["event_types"]
+    assert "daily_limit" in schema["rejection_reasons"]
+    assert "spacing_filter" in schema["rejection_reasons"]
+    assert "configuration_error" in schema["rejection_reasons"]
+
+
+def test_loads_rejection_reason_catalog() -> None:
+    catalog = load_rejection_reason_catalog()
+
+    assert catalog["profile_id"] == "axon_rejection_reason_codes_v1"
+    assert rejection_reason_codes(catalog) == catalog["reason_code_order"]
+    assert catalog["reason_codes"]["spacing_filter"]["category"] == "pacing"
+    assert "rejection_reason" in rejection_reason_logging_fields(catalog)[
+        "rejected_signal_required"
+    ]
 
 
 def test_signal_log_schema_is_internally_consistent() -> None:
@@ -57,6 +76,15 @@ def test_signal_log_schema_is_internally_consistent() -> None:
     assert set(schema["common_required_fields"]).issubset(header)
     for fields in schema["event_type_required_fields"].values():
         assert set(fields).issubset(header)
+    assert schema["rejection_reasons"] == rejection_reason_codes()
+
+
+def test_rejection_reason_catalog_is_internally_consistent() -> None:
+    catalog = load_yaml("config/research/rejection_reason_codes.yaml")
+
+    validate_rejection_reason_catalog(catalog)
+
+    assert set(catalog["reason_code_order"]) == set(catalog["reason_codes"])
 
 
 def test_validates_candidate_signal_row() -> None:
@@ -81,6 +109,28 @@ def test_validates_rejected_signal_row() -> None:
     assert validate_signal_log_row(row) == row
 
 
+@pytest.mark.parametrize(
+    "reason",
+    ["daily_limit", "spacing_filter", "configuration_error"],
+)
+def test_validates_delta_impulse_rejection_reason_codes(reason: str) -> None:
+    row = _candidate_row()
+    row.update(
+        {
+            "event_type": "rejected_signal",
+            "action": "reject",
+            "direction": "none",
+            "rejection_reason": reason,
+            "stop_price": "",
+            "target_price": "",
+            "invalidation_price": "",
+            "notes": f"{reason} smoke test",
+        },
+    )
+
+    assert validate_signal_log_row(row) == row
+
+
 def test_rejects_candidate_missing_stop_target_or_invalidation() -> None:
     row = _candidate_row()
     row["stop_price"] = ""
@@ -95,6 +145,31 @@ def test_rejects_invalid_enum_value() -> None:
 
     with pytest.raises(SignalLogError, match="Invalid direction"):
         validate_signal_log_row(row)
+
+
+def test_rejects_schema_with_rejection_reasons_out_of_sync_with_catalog() -> None:
+    schema = load_yaml("config/research/signal_log_schema.yaml")
+    schema["rejection_reasons"] = [
+        reason
+        for reason in schema["rejection_reasons"]
+        if reason != "spacing_filter"
+    ]
+
+    with pytest.raises(SignalLogError, match="rejection_reason_catalog"):
+        validate_signal_log_schema(schema)
+
+
+def test_rejects_invalid_rejection_reason_catalog() -> None:
+    catalog = load_yaml("config/research/rejection_reason_codes.yaml")
+    catalog["reason_codes"]["not_valid"] = {
+        "category": "setup",
+        "applies_to": ["rejected_signal"],
+        "description": "extra code",
+        "logging_notes": "extra code",
+    }
+
+    with pytest.raises(RejectionReasonCatalogError, match="extra details"):
+        validate_rejection_reason_catalog(catalog)
 
 
 def test_rejects_invalid_numeric_value() -> None:

@@ -119,6 +119,11 @@ simulation-only assistant phase. This still does not authorize live automation.
 
 ## Completed Foundation
 
+- `config/research/signal_log_schema.yaml` defines the first signal-log
+  contract.
+- `config/research/rejection_reason_codes.yaml` defines the canonical
+  rejected-signal reason codes and rejected-row logging fields.
+
 - `config/research/signal_log_schema.yaml` defines the first signal log contract.
 - Python validation checks schema consistency and signal/rejection rows.
 - `OrderFlowSignalSmokeTest.cpp` writes schema-compatible CSV rows and draws
