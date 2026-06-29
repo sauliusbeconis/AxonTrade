@@ -15,6 +15,8 @@ This report evaluates the larger Sierra Chart export from
   `reports/sierra-delta-impulse-3min-large-scaled-exit-sweep.csv`
 - Walk-forward:
   `reports/sierra-delta-impulse-3min-large-scaled-exit-walk-forward.csv`
+- Fixed-row robustness:
+  `reports/sierra-delta-impulse-3min-large-robustness.md`
 
 ## Candidate Log
 
@@ -117,3 +119,4 @@ Set the Sierra overlay to:
 
 Then collect another larger same-chart export. The key question is whether the
 short side keeps improving with the wider stop or remains a persistent drag.
+Holiday/early-close dates must be flagged before acceptance testing.
