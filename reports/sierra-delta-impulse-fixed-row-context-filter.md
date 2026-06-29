@@ -70,6 +70,10 @@ The current decision is:
 - keep normalized context filtering as an active research direction because it
   materially reduces bad exposure on the expanded sample.
 
-The next useful test is not another broad grid. It should be a targeted veto or
-quality model for the losing selected windows, using the enriched context CSV to
-identify which selected states still produce full-stop clusters.
+The next targeted test has been run as a second-stage selected veto:
+
+`reports/sierra-delta-impulse-fixed-row-context-selected-veto.md`
+
+That test improves the old-shape selected holdout from `64` trades and `-1198`
+USD to `53` trades and `3979` USD. Treat it as a promising diagnostic only
+until it survives a larger sample.

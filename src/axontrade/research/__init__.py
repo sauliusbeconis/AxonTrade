@@ -48,6 +48,14 @@ from axontrade.research.scaled_context_filter_experiments import (
     ScaledContextFilterExperimentError,
     run_scaled_context_filter_sweep,
     run_scaled_context_filter_walk_forward_sweep,
+    scaled_context_row_passes_filter as scaled_context_row_passes_filter,
+)
+from axontrade.research.scaled_context_selected_veto import (
+    SCALED_CONTEXT_SELECTED_TRADE_AUDIT_HEADER as SCALED_CONTEXT_SELECTED_TRADE_AUDIT_HEADER,
+    SCALED_CONTEXT_SELECTED_VETO_WALK_FORWARD_HEADER as SCALED_CONTEXT_SELECTED_VETO_WALK_FORWARD_HEADER,
+    ScaledContextSelectedVetoError as ScaledContextSelectedVetoError,
+    audit_scaled_context_selected_trades as audit_scaled_context_selected_trades,
+    run_scaled_context_selected_veto_walk_forward as run_scaled_context_selected_veto_walk_forward,
 )
 from axontrade.research.delta_impulse_overlay_validation import (
     DELTA_IMPULSE_STRATEGY_ID,

@@ -385,6 +385,32 @@ trades and `-12862` net USD in the same windows.
 This is a material loss-avoidance result, but it is still negative after costs
 and remains research-only.
 
+Audit those selected trades:
+
+```bash
+.venv/bin/python scripts/run_scaled_context_selected_trade_audit.py \
+  reports/sierra-delta-impulse-fixed-row-context-diagnostics.csv \
+  reports/sierra-delta-impulse-fixed-row-context-filter-oldshape-nonoverlap-walk-forward.csv \
+  reports/sierra-delta-impulse-fixed-row-context-selected-trade-audit.csv
+```
+
+Run the current second-stage selected-veto check:
+
+```bash
+.venv/bin/python scripts/run_scaled_context_selected_veto_walk_forward.py \
+  reports/sierra-delta-impulse-fixed-row-context-diagnostics.csv \
+  reports/sierra-delta-impulse-fixed-row-context-filter-oldshape-nonoverlap-walk-forward.csv \
+  reports/sierra-delta-impulse-fixed-row-context-selected-veto-walk-forward.csv \
+  --minimum-kept-train-trades 10
+```
+
+Current selected-veto result:
+
+`53` kept holdout trades, `3979` net USD, versus `64` first-stage selected
+holdout trades and `-1198` net USD. This is a promising diagnostic only; it
+needs a larger export or fresh out-of-sample replay before any Sierra-side rule
+change.
+
 To reproduce that rejected fixed variant in Sierra:
 
 Manual help needed: **Yes**.

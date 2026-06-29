@@ -412,83 +412,205 @@ def _filter_rows(
     min_entry_volume_to_session_average_volume: float,
     min_lookback_volume_to_session_average_volume: float,
 ) -> list[dict[str, Any]]:
-    filtered_rows: list[dict[str, Any]] = []
-    for row in rows:
-        direction = str(row["direction"])
-        if direction_filter != "all" and direction != direction_filter:
-            continue
-        minutes = _to_float(row["minutes_after_rth_open"], "minutes_after_rth_open")
-        if minutes < min_minutes_after_rth_open or minutes > max_minutes_after_rth_open:
-            continue
-        if (
-            _to_float(row["risk_to_average_bar_range"], "risk_to_average_bar_range")
-            > max_risk_to_average_bar_range
-        ):
-            continue
-        if (
-            _to_float(
-                row["runner_target_to_average_bar_range"],
-                "runner_target_to_average_bar_range",
-            )
-            > max_runner_target_to_average_bar_range
-        ):
-            continue
-        signal_ratio = _to_float(
-            row["signal_abs_delta_sum_to_average_abs_delta"],
-            "signal_abs_delta_sum_to_average_abs_delta",
+    return [
+        row
+        for row in rows
+        if _row_passes_filter(
+            row,
+            direction_filter=direction_filter,
+            min_minutes_after_rth_open=min_minutes_after_rth_open,
+            max_minutes_after_rth_open=max_minutes_after_rth_open,
+            max_risk_to_average_bar_range=max_risk_to_average_bar_range,
+            max_runner_target_to_average_bar_range=max_runner_target_to_average_bar_range,
+            min_signal_abs_delta_sum_to_average_abs_delta=(
+                min_signal_abs_delta_sum_to_average_abs_delta
+            ),
+            max_signal_abs_delta_sum_to_average_abs_delta=(
+                max_signal_abs_delta_sum_to_average_abs_delta
+            ),
+            min_entry_volume_to_average_volume=min_entry_volume_to_average_volume,
+            min_entry_trades_to_average_trades=min_entry_trades_to_average_trades,
+            min_continuation_edge_score=min_continuation_edge_score,
+            min_opening_range_continuation_edge_score=(
+                min_opening_range_continuation_edge_score
+            ),
+            min_directional_opening_range_breakout_points=(
+                min_directional_opening_range_breakout_points
+            ),
+            min_lookback_efficiency_ratio=min_lookback_efficiency_ratio,
+            max_lookback_choppiness_score=max_lookback_choppiness_score,
+            min_entry_volume_to_session_average_volume=(
+                min_entry_volume_to_session_average_volume
+            ),
+            min_lookback_volume_to_session_average_volume=(
+                min_lookback_volume_to_session_average_volume
+            ),
         )
-        if (
-            signal_ratio < min_signal_abs_delta_sum_to_average_abs_delta
-            or signal_ratio > max_signal_abs_delta_sum_to_average_abs_delta
-        ):
-            continue
-        if (
-            _to_float(row["entry_volume_to_average_volume"], "entry_volume_to_average_volume")
-            < min_entry_volume_to_average_volume
-        ):
-            continue
-        if (
-            _to_float(row["entry_trades_to_average_trades"], "entry_trades_to_average_trades")
-            < min_entry_trades_to_average_trades
-        ):
-            continue
-        if (
-            _to_float_or_default(row, "continuation_edge_score", 0.0)
-            < min_continuation_edge_score
-        ):
-            continue
-        if (
-            _to_float_or_default(row, "opening_range_continuation_edge_score", 0.0)
-            < min_opening_range_continuation_edge_score
-        ):
-            continue
-        if (
-            _to_float_or_default(row, "directional_opening_range_breakout_points", -999999.0)
-            < min_directional_opening_range_breakout_points
-        ):
-            continue
-        if (
-            _to_float_or_default(row, "lookback_efficiency_ratio", 0.0)
-            < min_lookback_efficiency_ratio
-        ):
-            continue
-        if (
-            _to_float_or_default(row, "lookback_choppiness_score", 1.0)
-            > max_lookback_choppiness_score
-        ):
-            continue
-        if (
-            _to_float_or_default(row, "entry_volume_to_session_average_volume", 0.0)
-            < min_entry_volume_to_session_average_volume
-        ):
-            continue
-        if (
-            _to_float_or_default(row, "lookback_volume_to_session_average_volume", 0.0)
-            < min_lookback_volume_to_session_average_volume
-        ):
-            continue
-        filtered_rows.append(row)
-    return filtered_rows
+    ]
+
+
+def scaled_context_row_passes_filter(
+    row: dict[str, Any],
+    selection_row: dict[str, Any],
+) -> bool:
+    """Return whether a context row passes a selected context-filter row."""
+
+    return _row_passes_filter(
+        row,
+        direction_filter=str(selection_row["direction_filter"]),
+        min_minutes_after_rth_open=_to_float(
+            selection_row["min_minutes_after_rth_open"],
+            "min_minutes_after_rth_open",
+        ),
+        max_minutes_after_rth_open=_to_float(
+            selection_row["max_minutes_after_rth_open"],
+            "max_minutes_after_rth_open",
+        ),
+        max_risk_to_average_bar_range=_to_float(
+            selection_row["max_risk_to_average_bar_range"],
+            "max_risk_to_average_bar_range",
+        ),
+        max_runner_target_to_average_bar_range=_to_float(
+            selection_row["max_runner_target_to_average_bar_range"],
+            "max_runner_target_to_average_bar_range",
+        ),
+        min_signal_abs_delta_sum_to_average_abs_delta=_to_float(
+            selection_row["min_signal_abs_delta_sum_to_average_abs_delta"],
+            "min_signal_abs_delta_sum_to_average_abs_delta",
+        ),
+        max_signal_abs_delta_sum_to_average_abs_delta=_to_float(
+            selection_row["max_signal_abs_delta_sum_to_average_abs_delta"],
+            "max_signal_abs_delta_sum_to_average_abs_delta",
+        ),
+        min_entry_volume_to_average_volume=_to_float(
+            selection_row["min_entry_volume_to_average_volume"],
+            "min_entry_volume_to_average_volume",
+        ),
+        min_entry_trades_to_average_trades=_to_float(
+            selection_row["min_entry_trades_to_average_trades"],
+            "min_entry_trades_to_average_trades",
+        ),
+        min_continuation_edge_score=_to_float_or_default(
+            selection_row,
+            "min_continuation_edge_score",
+            0.0,
+        ),
+        min_opening_range_continuation_edge_score=_to_float_or_default(
+            selection_row,
+            "min_opening_range_continuation_edge_score",
+            0.0,
+        ),
+        min_directional_opening_range_breakout_points=_to_float_or_default(
+            selection_row,
+            "min_directional_opening_range_breakout_points",
+            -999999.0,
+        ),
+        min_lookback_efficiency_ratio=_to_float_or_default(
+            selection_row,
+            "min_lookback_efficiency_ratio",
+            0.0,
+        ),
+        max_lookback_choppiness_score=_to_float_or_default(
+            selection_row,
+            "max_lookback_choppiness_score",
+            1.0,
+        ),
+        min_entry_volume_to_session_average_volume=_to_float_or_default(
+            selection_row,
+            "min_entry_volume_to_session_average_volume",
+            0.0,
+        ),
+        min_lookback_volume_to_session_average_volume=_to_float_or_default(
+            selection_row,
+            "min_lookback_volume_to_session_average_volume",
+            0.0,
+        ),
+    )
+
+
+def _row_passes_filter(
+    row: dict[str, Any],
+    *,
+    direction_filter: str,
+    min_minutes_after_rth_open: float,
+    max_minutes_after_rth_open: float,
+    max_risk_to_average_bar_range: float,
+    max_runner_target_to_average_bar_range: float,
+    min_signal_abs_delta_sum_to_average_abs_delta: float,
+    max_signal_abs_delta_sum_to_average_abs_delta: float,
+    min_entry_volume_to_average_volume: float,
+    min_entry_trades_to_average_trades: float,
+    min_continuation_edge_score: float,
+    min_opening_range_continuation_edge_score: float,
+    min_directional_opening_range_breakout_points: float,
+    min_lookback_efficiency_ratio: float,
+    max_lookback_choppiness_score: float,
+    min_entry_volume_to_session_average_volume: float,
+    min_lookback_volume_to_session_average_volume: float,
+) -> bool:
+    direction = str(row["direction"])
+    if direction_filter != "all" and direction != direction_filter:
+        return False
+    minutes = _to_float(row["minutes_after_rth_open"], "minutes_after_rth_open")
+    if minutes < min_minutes_after_rth_open or minutes > max_minutes_after_rth_open:
+        return False
+    if (
+        _to_float(row["risk_to_average_bar_range"], "risk_to_average_bar_range")
+        > max_risk_to_average_bar_range
+    ):
+        return False
+    if (
+        _to_float(
+            row["runner_target_to_average_bar_range"],
+            "runner_target_to_average_bar_range",
+        )
+        > max_runner_target_to_average_bar_range
+    ):
+        return False
+    signal_ratio = _to_float(
+        row["signal_abs_delta_sum_to_average_abs_delta"],
+        "signal_abs_delta_sum_to_average_abs_delta",
+    )
+    if (
+        signal_ratio < min_signal_abs_delta_sum_to_average_abs_delta
+        or signal_ratio > max_signal_abs_delta_sum_to_average_abs_delta
+    ):
+        return False
+    if (
+        _to_float(row["entry_volume_to_average_volume"], "entry_volume_to_average_volume")
+        < min_entry_volume_to_average_volume
+    ):
+        return False
+    if (
+        _to_float(row["entry_trades_to_average_trades"], "entry_trades_to_average_trades")
+        < min_entry_trades_to_average_trades
+    ):
+        return False
+    if _to_float_or_default(row, "continuation_edge_score", 0.0) < min_continuation_edge_score:
+        return False
+    if (
+        _to_float_or_default(row, "opening_range_continuation_edge_score", 0.0)
+        < min_opening_range_continuation_edge_score
+    ):
+        return False
+    if (
+        _to_float_or_default(row, "directional_opening_range_breakout_points", -999999.0)
+        < min_directional_opening_range_breakout_points
+    ):
+        return False
+    if _to_float_or_default(row, "lookback_efficiency_ratio", 0.0) < min_lookback_efficiency_ratio:
+        return False
+    if _to_float_or_default(row, "lookback_choppiness_score", 1.0) > max_lookback_choppiness_score:
+        return False
+    if (
+        _to_float_or_default(row, "entry_volume_to_session_average_volume", 0.0)
+        < min_entry_volume_to_session_average_volume
+    ):
+        return False
+    return (
+        _to_float_or_default(row, "lookback_volume_to_session_average_volume", 0.0)
+        >= min_lookback_volume_to_session_average_volume
+    )
 
 
 def _experiment_row(

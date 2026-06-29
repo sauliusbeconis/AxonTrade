@@ -115,3 +115,26 @@ Consequences:
   still negative after costs.
 - The next Delta Impulse research step should be a targeted veto or quality
   model for losing selected windows, not another broad parameter grid.
+
+## 2026-06-29: Mark Delta Impulse Selected Veto Promising But Research-Only
+
+Decision: keep the second-stage selected context veto as a promising diagnostic,
+but do not promote it to live or funded execution.
+
+Context:
+
+- The selected-veto walk-forward starts from the old-style `8x2`
+  non-overlapping context selector.
+- The first-stage selected holdout baseline is `64` trades for `-1198` USD.
+- A train-selected single-feature veto with at least `10` kept train trades
+  improves holdout to `53` trades for `3979` USD.
+- The veto removes `11` selected holdout trades and improves net by `5177` USD.
+- The most selected veto families are opening-range continuation edge minimum,
+  signal-delta ratio maximum, and risk-to-average-range maximum.
+
+Consequences:
+
+- Delta Impulse context filtering now has a positive research lead.
+- The result remains too small and too filtered for deployment.
+- The next required step is a larger export or a fresh out-of-sample replay
+  before any Sierra-side rule change.
