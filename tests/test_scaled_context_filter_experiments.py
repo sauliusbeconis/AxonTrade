@@ -22,6 +22,13 @@ def _context_row(
     signal_delta_ratio: float = 25,
     volume_ratio: float = 1,
     trade_ratio: float = 1,
+    continuation_edge_score: float = 0,
+    opening_range_continuation_edge_score: float = 0,
+    directional_opening_range_breakout_points: float = -999999,
+    lookback_efficiency_ratio: float = 0,
+    lookback_choppiness_score: float = 1,
+    entry_volume_to_session_average_volume: float = 0,
+    lookback_volume_to_session_average_volume: float = 0,
     exit_reason: str = "runner_target_hit",
     net_usd: float = 593,
 ) -> dict[str, object]:
@@ -37,6 +44,13 @@ def _context_row(
         "signal_abs_delta_sum_to_average_abs_delta": signal_delta_ratio,
         "entry_volume_to_average_volume": volume_ratio,
         "entry_trades_to_average_trades": trade_ratio,
+        "continuation_edge_score": continuation_edge_score,
+        "opening_range_continuation_edge_score": opening_range_continuation_edge_score,
+        "directional_opening_range_breakout_points": directional_opening_range_breakout_points,
+        "lookback_efficiency_ratio": lookback_efficiency_ratio,
+        "lookback_choppiness_score": lookback_choppiness_score,
+        "entry_volume_to_session_average_volume": entry_volume_to_session_average_volume,
+        "lookback_volume_to_session_average_volume": lookback_volume_to_session_average_volume,
         "exit_reason": exit_reason,
         "net_usd": net_usd,
     }
@@ -67,6 +81,58 @@ def test_runs_scaled_context_filter_sweep() -> None:
     assert experiment_rows[0]["runner_target_hits"] == 1
     assert experiment_rows[0]["full_stops"] == 0
     assert experiment_rows[0]["net_usd"] == "593"
+    assert experiment_rows[0]["unfiltered_net_usd"] == "-1521"
+    assert experiment_rows[0]["filter_net_improvement_usd"] == "2114"
+
+
+def test_scaled_context_filter_sweep_applies_regime_fields() -> None:
+    rows = [
+        _context_row(
+            1,
+            trade_date="2026-06-10",
+            continuation_edge_score=0.8,
+            opening_range_continuation_edge_score=0.7,
+            directional_opening_range_breakout_points=2,
+            lookback_efficiency_ratio=0.6,
+            lookback_choppiness_score=0.4,
+            entry_volume_to_session_average_volume=1.2,
+            lookback_volume_to_session_average_volume=1.1,
+        ),
+        _context_row(
+            2,
+            trade_date="2026-06-10",
+            continuation_edge_score=0.4,
+            opening_range_continuation_edge_score=0.8,
+            directional_opening_range_breakout_points=4,
+            lookback_efficiency_ratio=0.7,
+            lookback_choppiness_score=0.3,
+            entry_volume_to_session_average_volume=1.4,
+            lookback_volume_to_session_average_volume=1.2,
+        ),
+    ]
+
+    experiment_rows = run_scaled_context_filter_sweep(
+        rows,
+        min_minutes_after_rth_open_values=[0],
+        max_minutes_after_rth_open_values=[120],
+        max_risk_to_average_bar_ranges=[8],
+        max_runner_target_to_average_bar_ranges=[8],
+        min_signal_abs_delta_sum_to_average_abs_deltas=[0],
+        max_signal_abs_delta_sum_to_average_abs_deltas=[50],
+        min_entry_volume_to_average_volumes=[0],
+        min_entry_trades_to_average_trades=[0],
+        min_continuation_edge_scores=[0.75],
+        min_opening_range_continuation_edge_scores=[0.6],
+        min_directional_opening_range_breakout_points_values=[0],
+        min_lookback_efficiency_ratios=[0.5],
+        max_lookback_choppiness_scores=[0.5],
+        min_entry_volume_to_session_average_volumes=[1],
+        min_lookback_volume_to_session_average_volumes=[1],
+    )
+
+    assert experiment_rows[0]["evaluated_trades"] == 1
+    assert experiment_rows[0]["min_continuation_edge_score"] == "0.75"
+    assert experiment_rows[0]["min_directional_opening_range_breakout_points"] == "0"
 
 
 def test_runs_scaled_context_filter_walk_forward_sweep() -> None:

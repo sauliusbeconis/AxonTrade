@@ -38,7 +38,19 @@ def main() -> int:
     )
     parser.add_argument("--min-entry-volume-to-average-volumes", default="0,0.75,1")
     parser.add_argument("--min-entry-trades-to-average-trades", default="0,0.75,1")
+    parser.add_argument("--min-continuation-edge-scores", default="0")
+    parser.add_argument("--min-opening-range-continuation-edge-scores", default="0")
+    parser.add_argument("--min-directional-opening-range-breakout-points", default="-999999")
+    parser.add_argument("--min-lookback-efficiency-ratios", default="0")
+    parser.add_argument("--max-lookback-choppiness-scores", default="1")
+    parser.add_argument("--min-entry-volume-to-session-average-volumes", default="0")
+    parser.add_argument("--min-lookback-volume-to-session-average-volumes", default="0")
     parser.add_argument("--direction-filters", default="all,long,short")
+    parser.add_argument(
+        "--selection-objective",
+        choices=("net", "efficiency"),
+        default="net",
+    )
     args = parser.parse_args()
 
     try:
@@ -69,7 +81,29 @@ def main() -> int:
             min_entry_trades_to_average_trades=_parse_float_list(
                 args.min_entry_trades_to_average_trades,
             ),
+            min_continuation_edge_scores=_parse_float_list(
+                args.min_continuation_edge_scores,
+            ),
+            min_opening_range_continuation_edge_scores=_parse_float_list(
+                args.min_opening_range_continuation_edge_scores,
+            ),
+            min_directional_opening_range_breakout_points_values=_parse_float_list(
+                args.min_directional_opening_range_breakout_points,
+            ),
+            min_lookback_efficiency_ratios=_parse_float_list(
+                args.min_lookback_efficiency_ratios,
+            ),
+            max_lookback_choppiness_scores=_parse_float_list(
+                args.max_lookback_choppiness_scores,
+            ),
+            min_entry_volume_to_session_average_volumes=_parse_float_list(
+                args.min_entry_volume_to_session_average_volumes,
+            ),
+            min_lookback_volume_to_session_average_volumes=_parse_float_list(
+                args.min_lookback_volume_to_session_average_volumes,
+            ),
             direction_filters=_parse_string_list(args.direction_filters),
+            selection_objective=args.selection_objective,
         )
     except (ScaledContextFilterExperimentError, OSError) as exc:
         print(f"error: {exc}")

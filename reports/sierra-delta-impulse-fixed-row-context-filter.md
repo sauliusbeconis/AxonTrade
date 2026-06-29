@@ -1,4 +1,4 @@
-# Sierra Delta Impulse Fixed Row Context Filter
+# Sierra Delta Impulse Fixed Row Context And Regime Filters
 
 Status: **diagnostic only**
 
@@ -12,46 +12,64 @@ Status: **diagnostic only**
   `data/processed/AxonTrade_ES_delta_impulse_3min_large_scaled_outcomes_all_5_10_8_initial.csv`
 - Context diagnostics:
   `reports/sierra-delta-impulse-fixed-row-context-diagnostics.csv`
-- Walk-forward output:
+- Main walk-forward output:
   `reports/sierra-delta-impulse-fixed-row-context-filter-walk-forward.csv`
+- Old-shape non-overlap output:
+  `reports/sierra-delta-impulse-fixed-row-context-filter-oldshape-nonoverlap-walk-forward.csv`
+- Regime test outputs:
+  `reports/sierra-delta-impulse-fixed-row-regime-filter-walk-forward.csv`
+  `reports/sierra-delta-impulse-fixed-row-regime-net-filter-walk-forward.csv`
+  `reports/sierra-delta-impulse-fixed-row-regime-filter-oldshape-nonoverlap-walk-forward.csv`
+  `reports/sierra-delta-impulse-fixed-row-regime-net-filter-oldshape-nonoverlap-walk-forward.csv`
 
 ## Method
-
-- context lookback: `20` prior 3-minute bars
-- features: normalized risk, normalized runner target, normalized signal delta
-  sum, entry volume ratio, entry trade-count ratio
-- train window: `20` trade dates
-- holdout window: `5` trade dates
-- minimum selected train trades: `20`
-- window step: `5` trade dates
-
-## Result
 
 - context rows: `163`
 - trade dates: `41`
 - all fixed-row net USD: `-15716`
-- holdout windows: `4`
-- selected holdout trades: `20`
-- selected holdout net USD: `-4640`
-- unfiltered same-window holdout trades: `111`
-- unfiltered same-window holdout net USD: `-7927`
+- base exit row: `5 / 10 / 8 / initial`
+- context lookback: `20` prior 3-minute bars
+- base features: normalized risk, normalized runner target, normalized signal
+  delta sum, entry volume ratio, entry trade-count ratio
+- added regime features: session range position, continuation/fade edge,
+  opening-range continuation edge, directional opening-range breakout,
+  lookback efficiency/choppiness, entry/session volume ratio, and
+  lookback/session volume ratio
 
-## Selected Holdouts
+## Walk-Forward Results
 
-| Window | Holdout Dates | Selected Trades | Selected Net USD | Unfiltered Trades | Unfiltered Net USD | Selected Direction |
-| --- | --- | ---: | ---: | ---: | ---: | --- |
-| `1` | `2026-05-29;2026-06-01;2026-06-02;2026-06-03;2026-06-04` | `9` | `-2913` | `21` | `-6597` | `long` |
-| `6` | `2026-06-05;2026-06-08;2026-06-09;2026-06-10;2026-06-11` | `8` | `-3506` | `30` | `-2160` | `long` |
-| `11` | `2026-06-12;2026-06-15;2026-06-16;2026-06-17;2026-06-18` | `1` | `593` | `30` | `240` | `all` |
-| `16` | `2026-06-19;2026-06-22;2026-06-23;2026-06-24;2026-06-25` | `2` | `1186` | `30` | `590` | `long` |
+| Variant | Windows | Selected Trades | Selected Net USD | Selected Avg USD | Unfiltered Trades | Unfiltered Net USD | Unfiltered Avg USD | Participation | Improvement Vs Unfiltered |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 20x5 default net | 4 | 13 | -2191 | -168.54 | 111 | -7927 | -71.41 | 11.7% | 5736 |
+| 20x5 regime efficiency | 4 | 23 | -6811 | -296.13 | 111 | -7927 | -71.41 | 20.7% | 1116 |
+| 20x5 regime net | 4 | 31 | -9567 | -308.61 | 111 | -7927 | -71.41 | 27.9% | -1640 |
+| 8x2 default net non-overlap | 16 | 64 | -1198 | -18.72 | 141 | -12862 | -91.22 | 45.4% | 11664 |
+| 8x2 regime efficiency non-overlap | 16 | 61 | -4627 | -75.85 | 141 | -12862 | -91.22 | 43.3% | 8235 |
+| 8x2 regime net non-overlap | 16 | 65 | -5705 | -87.77 | 141 | -12862 | -91.22 | 46.1% | 7157 |
 
 ## Interpretation
 
-The normalized context selector reduced exposure and lost less than the
-unfiltered same-window holdout total, but the selected result is still negative.
-This is not a validated filter.
+The user challenge was correct: the context-filter family should not be treated
+as worthless just because the unfiltered fixed Delta Impulse row failed.
 
-The main finding is negative: the older 78-trade long-only shape did not survive
-the expanded March-June sample. Do not promote the fixed Delta Impulse row or
-this context selector without a materially changed hypothesis and a new
-walk-forward test.
+The best expanded-sample evidence is the `8x2 default net non-overlap` run. It
+reduced average holdout loss from `-$91.22` to `-$18.72` per trade while taking
+about `45%` of same-window holdout trades. That is a real exposure-quality
+improvement and a large loss-avoidance effect.
+
+The same evidence is not yet deployable. The selected holdout is still negative
+after costs, and the first added regime filters did not improve the result.
+Trend-edge, opening-range breakout, efficiency, choppiness, and session-volume
+thresholds made the broad tests worse in both the `20x5` and `8x2` walk-forward
+shapes.
+
+The current decision is:
+
+- reject raw unfiltered Delta Impulse continuation;
+- reject the first broad regime-filter grid;
+- keep normalized context filtering as an active research direction because it
+  materially reduces bad exposure on the expanded sample.
+
+The next useful test is not another broad grid. It should be a targeted veto or
+quality model for the losing selected windows, using the enriched context CSV to
+identify which selected states still produce full-stop clusters.

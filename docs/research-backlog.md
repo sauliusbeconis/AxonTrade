@@ -73,6 +73,7 @@ Every research source should be documented with a link and retrieval date.
 - Add one-command auction-regime target/breakeven stack pipeline. Done.
 - Build walk-forward filters over normalized context features after the sample is large enough. Done.
 - Add Delta Impulse direction-inversion diagnostics after expanded sample rejection. Done.
+- Add enriched Delta Impulse session-regime context filters and efficiency scoring. Done.
 - Add scheduled-news exclusion to Sierra overlay research exports. Done.
 - Populate scheduled-news calendar for the current Sierra overlay sample. Done.
 

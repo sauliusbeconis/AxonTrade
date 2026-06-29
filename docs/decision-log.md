@@ -85,3 +85,33 @@ Consequences:
   materially different context filter before it is useful.
 - Further Delta Impulse research should focus on auction regime, liquidity
   sweep, or exhaustion context rather than raw direction inversion.
+
+## 2026-06-29: Keep Delta Impulse Context Filtering Active
+
+Decision: keep normalized context filtering for Delta Impulse as an active
+research direction, but do not promote the fixed row or the first regime grid.
+
+Context:
+
+- The refreshed expanded-sample context diagnostics still cover `163` fixed-row
+  outcomes across `41` trade dates.
+- The `20x5` default net selector reduces same-window holdout exposure to `13`
+  trades and improves selected net by `5736` USD versus unfiltered holdouts, but
+  it remains negative at `-2191` USD.
+- The old-style `8x2` non-overlapping selector is the strongest structural
+  result: `64` selected holdout trades for `-1198` USD versus `141` unfiltered
+  holdout trades for `-12862` USD.
+- That improves average holdout result from `-91.22` USD/trade to `-18.72`
+  USD/trade while taking `45.4%` of same-window holdout trades.
+- The first broad regime grid using session edge, opening-range breakout,
+  lookback efficiency, choppiness, and session-volume thresholds makes results
+  worse in both `20x5` and `8x2` walk-forward shapes.
+
+Consequences:
+
+- Raw Delta Impulse continuation stays rejected.
+- The first regime-threshold grid stays rejected.
+- The normalized context filter is not deployable because selected holdouts are
+  still negative after costs.
+- The next Delta Impulse research step should be a targeted veto or quality
+  model for losing selected windows, not another broad parameter grid.

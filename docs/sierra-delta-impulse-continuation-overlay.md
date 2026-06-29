@@ -346,6 +346,45 @@ The one-command pipeline above should normally be preferred because it also
 updates the robustness and acceptance reports. Do not promote this variant
 without a changed hypothesis and fresh walk-forward validation.
 
+## Run Fixed-Row Context Filters
+
+Manual help needed: **No** after the matching bar export, signal log, and fixed
+outcome CSV exist.
+
+Regenerate enriched context diagnostics:
+
+```bash
+.venv/bin/python scripts/run_scaled_outcome_context_diagnostics.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_DeltaImpulse_3Min_Large.txt \
+  data/processed/AxonTrade_ES_delta_impulse_3min_large_scaled_outcomes_all_5_10_8_initial.csv \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_DeltaImpulseSignalLog.csv \
+  reports/sierra-delta-impulse-fixed-row-context-diagnostics.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --lookback-bars 20
+```
+
+Run the strongest current non-overlapping context-filter check:
+
+```bash
+.venv/bin/python scripts/run_scaled_context_filter_walk_forward_sweep.py \
+  reports/sierra-delta-impulse-fixed-row-context-diagnostics.csv \
+  reports/sierra-delta-impulse-fixed-row-context-filter-oldshape-nonoverlap-walk-forward.csv \
+  --train-date-count 8 \
+  --holdout-date-count 2 \
+  --minimum-train-trades 12 \
+  --window-step-date-count 2
+```
+
+Current expanded-sample result:
+
+`64` selected holdout trades, `-1198` net USD, versus `141` unfiltered holdout
+trades and `-12862` net USD in the same windows.
+
+This is a material loss-avoidance result, but it is still negative after costs
+and remains research-only.
+
 To reproduce that rejected fixed variant in Sierra:
 
 Manual help needed: **Yes**.

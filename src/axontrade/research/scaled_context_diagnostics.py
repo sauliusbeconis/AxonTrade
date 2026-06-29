@@ -39,6 +39,8 @@ SCALED_CONTEXT_DIAGNOSTIC_HEADER = [
     "average_trades",
     "average_abs_delta",
     "entry_bar_range_points",
+    "entry_open_price",
+    "entry_close_price",
     "entry_bar_volume",
     "entry_bar_trades",
     "entry_bar_delta",
@@ -48,6 +50,31 @@ SCALED_CONTEXT_DIAGNOSTIC_HEADER = [
     "entry_volume_to_average_volume",
     "entry_trades_to_average_trades",
     "entry_abs_delta_to_average_abs_delta",
+    "session_open_price",
+    "session_high_so_far",
+    "session_low_so_far",
+    "session_range_points",
+    "entry_position_in_session_range",
+    "continuation_edge_score",
+    "fade_edge_score",
+    "directional_open_distance_points",
+    "opening_range_high",
+    "opening_range_low",
+    "opening_range_points",
+    "entry_position_in_opening_range",
+    "opening_range_continuation_edge_score",
+    "opening_range_fade_edge_score",
+    "directional_opening_range_breakout_points",
+    "lookback_directional_move_points",
+    "lookback_efficiency_ratio",
+    "lookback_choppiness_score",
+    "session_bars_so_far",
+    "session_average_volume",
+    "session_average_trades",
+    "entry_volume_to_session_average_volume",
+    "entry_trades_to_session_average_trades",
+    "lookback_volume_to_session_average_volume",
+    "lookback_trades_to_session_average_trades",
     "exit_reason",
     "first_target_hit",
     "net_usd",
@@ -72,11 +99,15 @@ class _ContextBar:
     parsed_timestamp: datetime
     symbol: str
     bar_index: int
+    open: float
     high: float
     low: float
+    close: float
     volume: float | None
     trades: float | None
     delta: float | None
+    opening_range_high: float | None = None
+    opening_range_low: float | None = None
 
     @property
     def bar_range(self) -> float:
@@ -151,6 +182,15 @@ def _context_row(
             f"No entry context bar found for signal_id={signal_id} "
             f"entry_bar_index={entry_bar_index}",
         )
+    bars_so_far = [
+        bar
+        for bar in same_day_bars
+        if bar.bar_index <= entry_bar_index
+    ]
+    if not bars_so_far:
+        raise ScaledContextDiagnosticError(
+            f"No session context bars found for signal_id={signal_id}",
+        )
 
     entry_price = _to_float(row["entry_price"], "entry_price")
     stop_price = _to_float(row["stop_price"], "stop_price")
@@ -167,6 +207,45 @@ def _context_row(
     signal_abs_delta_sum = (
         None if signal_notes.delta_sum is None else abs(signal_notes.delta_sum)
     )
+    session_open = bars_so_far[0].open
+    session_high = max(bar.high for bar in bars_so_far)
+    session_low = min(bar.low for bar in bars_so_far)
+    session_range = session_high - session_low
+    session_position = _ratio_or_none(entry_bar.close - session_low, session_range)
+    continuation_edge_score = _direction_aware_continuation_edge_score(
+        direction=str(row["direction"]),
+        range_position=session_position,
+    )
+    fade_edge_score = _direction_aware_fade_edge_score(
+        direction=str(row["direction"]),
+        range_position=session_position,
+    )
+    opening_range_high = entry_bar.opening_range_high
+    opening_range_low = entry_bar.opening_range_low
+    if opening_range_high is None or opening_range_low is None:
+        opening_range_high, opening_range_low = _computed_opening_range(same_day_bars)
+    opening_range_points = _range_or_none(opening_range_high, opening_range_low)
+    opening_range_position = _ratio_or_none(
+        None if opening_range_low is None else entry_bar.close - opening_range_low,
+        opening_range_points,
+    )
+    directional_opening_range_breakout = _direction_aware_opening_range_breakout(
+        direction=str(row["direction"]),
+        entry_price=entry_bar.close,
+        opening_range_high=opening_range_high,
+        opening_range_low=opening_range_low,
+    )
+    session_average_volume = _mean_optional(bar.volume for bar in bars_so_far)
+    session_average_trades = _mean_optional(bar.trades for bar in bars_so_far)
+    lookback_volume = _mean_optional(bar.volume for bar in previous_bars)
+    lookback_trades = _mean_optional(bar.trades for bar in previous_bars)
+    lookback_directional_move = _direction_aware_price_move(
+        direction=str(row["direction"]),
+        start_price=previous_bars[0].close,
+        end_price=entry_bar.close,
+    )
+    lookback_efficiency = _lookback_efficiency_ratio([*previous_bars, entry_bar])
+    lookback_choppiness = None if lookback_efficiency is None else 1.0 - lookback_efficiency
 
     return {
         "schema_version": 1,
@@ -200,6 +279,8 @@ def _context_row(
         "average_trades": _format_optional(average_trades),
         "average_abs_delta": _format_optional(average_abs_delta),
         "entry_bar_range_points": _format_number(entry_bar.bar_range),
+        "entry_open_price": _format_number(entry_bar.open),
+        "entry_close_price": _format_number(entry_bar.close),
         "entry_bar_volume": _format_optional(entry_bar.volume),
         "entry_bar_trades": _format_optional(entry_bar.trades),
         "entry_bar_delta": _format_optional(entry_bar.delta),
@@ -221,10 +302,64 @@ def _context_row(
         "entry_abs_delta_to_average_abs_delta": _format_optional(
             _ratio_or_none(entry_bar.abs_delta, average_abs_delta),
         ),
+        "session_open_price": _format_number(session_open),
+        "session_high_so_far": _format_number(session_high),
+        "session_low_so_far": _format_number(session_low),
+        "session_range_points": _format_number(session_range),
+        "entry_position_in_session_range": _format_optional(session_position),
+        "continuation_edge_score": _format_optional(continuation_edge_score),
+        "fade_edge_score": _format_optional(fade_edge_score),
+        "directional_open_distance_points": _format_number(
+            _direction_aware_price_move(
+                direction=str(row["direction"]),
+                start_price=session_open,
+                end_price=entry_bar.close,
+            ),
+        ),
+        "opening_range_high": _format_optional(opening_range_high),
+        "opening_range_low": _format_optional(opening_range_low),
+        "opening_range_points": _format_optional(opening_range_points),
+        "entry_position_in_opening_range": _format_optional(opening_range_position),
+        "opening_range_continuation_edge_score": _format_optional(
+            _direction_aware_continuation_edge_score(
+                direction=str(row["direction"]),
+                range_position=opening_range_position,
+            ),
+        ),
+        "opening_range_fade_edge_score": _format_optional(
+            _direction_aware_fade_edge_score(
+                direction=str(row["direction"]),
+                range_position=opening_range_position,
+            ),
+        ),
+        "directional_opening_range_breakout_points": _format_optional(
+            directional_opening_range_breakout,
+        ),
+        "lookback_directional_move_points": _format_number(lookback_directional_move),
+        "lookback_efficiency_ratio": _format_optional(lookback_efficiency),
+        "lookback_choppiness_score": _format_optional(lookback_choppiness),
+        "session_bars_so_far": len(bars_so_far),
+        "session_average_volume": _format_optional(session_average_volume),
+        "session_average_trades": _format_optional(session_average_trades),
+        "entry_volume_to_session_average_volume": _format_optional(
+            _ratio_or_none(entry_bar.volume, session_average_volume),
+        ),
+        "entry_trades_to_session_average_trades": _format_optional(
+            _ratio_or_none(entry_bar.trades, session_average_trades),
+        ),
+        "lookback_volume_to_session_average_volume": _format_optional(
+            _ratio_or_none(lookback_volume, session_average_volume),
+        ),
+        "lookback_trades_to_session_average_trades": _format_optional(
+            _ratio_or_none(lookback_trades, session_average_trades),
+        ),
         "exit_reason": row["exit_reason"],
         "first_target_hit": row["first_target_hit"],
         "net_usd": row["net_usd"],
-        "notes": "pre-entry normalized context for fixed scaled-scalp outcome row",
+        "notes": (
+            "pre-entry normalized context and session-regime state for fixed "
+            "scaled-scalp outcome row"
+        ),
     }
 
 
@@ -257,11 +392,21 @@ def _context_bar(row: dict[str, Any]) -> _ContextBar:
         parsed_timestamp=_parse_timestamp(timestamp),
         symbol=str(row["symbol"]),
         bar_index=_to_int(row["bar_index"], "bar_index"),
+        open=_to_float(row["open"], "open"),
         high=_to_float(row["high"], "high"),
         low=_to_float(row["low"], "low"),
+        close=_to_float(row["close"], "close"),
         volume=volume,
         trades=_optional_float(row.get("number_of_trades"), "number_of_trades"),
         delta=delta,
+        opening_range_high=_optional_float(
+            row.get("opening_range_high"),
+            "opening_range_high",
+        ),
+        opening_range_low=_optional_float(
+            row.get("opening_range_low"),
+            "opening_range_low",
+        ),
     )
 
 
@@ -312,6 +457,97 @@ def _ratio_or_none(numerator: float | None, denominator: float | None) -> float 
     if numerator is None or denominator is None or denominator == 0:
         return None
     return numerator / denominator
+
+
+def _computed_opening_range(bars: list[_ContextBar]) -> tuple[float | None, float | None]:
+    opening_range_bars = [bar for bar in bars if _is_opening_range_timestamp(bar.parsed_timestamp)]
+    if not opening_range_bars:
+        return None, None
+    return (
+        max(bar.high for bar in opening_range_bars),
+        min(bar.low for bar in opening_range_bars),
+    )
+
+
+def _is_opening_range_timestamp(timestamp: datetime) -> bool:
+    minutes = timestamp.hour * 60 + timestamp.minute
+    return (_RTH_OPEN_HOUR * 60 + _RTH_OPEN_MINUTE) <= minutes < 10 * 60
+
+
+def _range_or_none(high: float | None, low: float | None) -> float | None:
+    if high is None or low is None:
+        return None
+    return high - low
+
+
+def _direction_aware_price_move(
+    *,
+    direction: str,
+    start_price: float,
+    end_price: float,
+) -> float:
+    if direction == "long":
+        return end_price - start_price
+    if direction == "short":
+        return start_price - end_price
+    raise ScaledContextDiagnosticError(f"Unsupported direction: {direction}")
+
+
+def _direction_aware_continuation_edge_score(
+    *,
+    direction: str,
+    range_position: float | None,
+) -> float | None:
+    if range_position is None:
+        return None
+    if direction == "long":
+        return range_position
+    if direction == "short":
+        return 1.0 - range_position
+    raise ScaledContextDiagnosticError(f"Unsupported direction: {direction}")
+
+
+def _direction_aware_fade_edge_score(
+    *,
+    direction: str,
+    range_position: float | None,
+) -> float | None:
+    if range_position is None:
+        return None
+    if direction == "long":
+        return 1.0 - range_position
+    if direction == "short":
+        return range_position
+    raise ScaledContextDiagnosticError(f"Unsupported direction: {direction}")
+
+
+def _direction_aware_opening_range_breakout(
+    *,
+    direction: str,
+    entry_price: float,
+    opening_range_high: float | None,
+    opening_range_low: float | None,
+) -> float | None:
+    if opening_range_high is None or opening_range_low is None:
+        return None
+    if direction == "long":
+        return entry_price - opening_range_high
+    if direction == "short":
+        return opening_range_low - entry_price
+    raise ScaledContextDiagnosticError(f"Unsupported direction: {direction}")
+
+
+def _lookback_efficiency_ratio(bars: list[_ContextBar]) -> float | None:
+    if len(bars) < 2:
+        return None
+    path_distance = sum(
+        abs(current.close - previous.close)
+        for previous, current in zip(bars, bars[1:], strict=False)
+    )
+    if path_distance == 0:
+        return 0.0
+    direct_distance = abs(bars[-1].close - bars[0].close)
+    return direct_distance / path_distance
 
 
 def _parse_timestamp(value: str) -> datetime:

@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections import Counter
 from datetime import datetime
 from itertools import product
+from math import sqrt
+from statistics import pstdev
 from typing import Any, Iterable
 
 
@@ -21,6 +23,13 @@ SCALED_CONTEXT_FILTER_SWEEP_HEADER = [
     "max_signal_abs_delta_sum_to_average_abs_delta",
     "min_entry_volume_to_average_volume",
     "min_entry_trades_to_average_trades",
+    "min_continuation_edge_score",
+    "min_opening_range_continuation_edge_score",
+    "min_directional_opening_range_breakout_points",
+    "min_lookback_efficiency_ratio",
+    "max_lookback_choppiness_score",
+    "min_entry_volume_to_session_average_volume",
+    "min_lookback_volume_to_session_average_volume",
     "input_context_rows",
     "evaluated_trades",
     "runner_target_hits",
@@ -31,6 +40,10 @@ SCALED_CONTEXT_FILTER_SWEEP_HEADER = [
     "positive_net_rate",
     "net_usd",
     "average_net_usd",
+    "average_net_usd_lower_bound",
+    "unfiltered_net_usd",
+    "participation_rate",
+    "filter_net_improvement_usd",
     "long_trades",
     "short_trades",
     "notes",
@@ -56,6 +69,7 @@ _RUNNER_STOP_REASONS = {
     "ambiguous_runner_stop_first",
 }
 _RUNNER_TARGET_REASONS = {"runner_target_hit"}
+_ALLOWED_SELECTION_OBJECTIVES = ("net", "efficiency")
 
 
 class ScaledContextFilterExperimentError(ValueError):
@@ -73,6 +87,13 @@ def run_scaled_context_filter_sweep(
     max_signal_abs_delta_sum_to_average_abs_deltas: Iterable[float],
     min_entry_volume_to_average_volumes: Iterable[float],
     min_entry_trades_to_average_trades: Iterable[float],
+    min_continuation_edge_scores: Iterable[float] = (0,),
+    min_opening_range_continuation_edge_scores: Iterable[float] = (0,),
+    min_directional_opening_range_breakout_points_values: Iterable[float] = (-999999,),
+    min_lookback_efficiency_ratios: Iterable[float] = (0,),
+    max_lookback_choppiness_scores: Iterable[float] = (1,),
+    min_entry_volume_to_session_average_volumes: Iterable[float] = (0,),
+    min_lookback_volume_to_session_average_volumes: Iterable[float] = (0,),
     direction_filters: Iterable[str] = ("all",),
 ) -> list[dict[str, Any]]:
     """Sweep entry-known normalized context filters for scaled outcomes."""
@@ -115,6 +136,34 @@ def run_scaled_context_filter_sweep(
         min_entry_trades_to_average_trades,
         "min_entry_trades_to_average_trades",
     )
+    min_continuation_edges = _normalize_zero_to_one_grid(
+        min_continuation_edge_scores,
+        "min_continuation_edge_scores",
+    )
+    min_opening_range_continuation_edges = _normalize_zero_to_one_grid(
+        min_opening_range_continuation_edge_scores,
+        "min_opening_range_continuation_edge_scores",
+    )
+    min_opening_range_breakouts = _normalize_float_grid(
+        min_directional_opening_range_breakout_points_values,
+        "min_directional_opening_range_breakout_points_values",
+    )
+    min_efficiency_ratios = _normalize_zero_to_one_grid(
+        min_lookback_efficiency_ratios,
+        "min_lookback_efficiency_ratios",
+    )
+    max_choppiness_scores = _normalize_zero_to_one_grid(
+        max_lookback_choppiness_scores,
+        "max_lookback_choppiness_scores",
+    )
+    min_session_volume_ratios = _normalize_nonnegative_grid(
+        min_entry_volume_to_session_average_volumes,
+        "min_entry_volume_to_session_average_volumes",
+    )
+    min_lookback_session_volume_ratios = _normalize_nonnegative_grid(
+        min_lookback_volume_to_session_average_volumes,
+        "min_lookback_volume_to_session_average_volumes",
+    )
     directions = _normalize_direction_filters(direction_filters)
 
     experiment_rows: list[dict[str, Any]] = []
@@ -125,6 +174,13 @@ def run_scaled_context_filter_sweep(
         (min_signal_delta_ratio, max_signal_delta_ratio),
         min_volume_ratio,
         min_trade_ratio,
+        min_continuation_edge,
+        min_opening_range_continuation_edge,
+        min_opening_range_breakout,
+        min_efficiency_ratio,
+        max_choppiness_score,
+        min_session_volume_ratio,
+        min_lookback_session_volume_ratio,
         direction_filter,
     ) in product(
         time_windows,
@@ -133,6 +189,13 @@ def run_scaled_context_filter_sweep(
         signal_delta_windows,
         min_volume_ratios,
         min_trade_ratios,
+        min_continuation_edges,
+        min_opening_range_continuation_edges,
+        min_opening_range_breakouts,
+        min_efficiency_ratios,
+        max_choppiness_scores,
+        min_session_volume_ratios,
+        min_lookback_session_volume_ratios,
         directions,
     ):
         filtered_rows = _filter_rows(
@@ -146,6 +209,13 @@ def run_scaled_context_filter_sweep(
             max_signal_abs_delta_sum_to_average_abs_delta=max_signal_delta_ratio,
             min_entry_volume_to_average_volume=min_volume_ratio,
             min_entry_trades_to_average_trades=min_trade_ratio,
+            min_continuation_edge_score=min_continuation_edge,
+            min_opening_range_continuation_edge_score=min_opening_range_continuation_edge,
+            min_directional_opening_range_breakout_points=min_opening_range_breakout,
+            min_lookback_efficiency_ratio=min_efficiency_ratio,
+            max_lookback_choppiness_score=max_choppiness_score,
+            min_entry_volume_to_session_average_volume=min_session_volume_ratio,
+            min_lookback_volume_to_session_average_volume=min_lookback_session_volume_ratio,
         )
         experiment_rows.append(
             _experiment_row(
@@ -160,6 +230,17 @@ def run_scaled_context_filter_sweep(
                 max_signal_abs_delta_sum_to_average_abs_delta=max_signal_delta_ratio,
                 min_entry_volume_to_average_volume=min_volume_ratio,
                 min_entry_trades_to_average_trades=min_trade_ratio,
+                min_continuation_edge_score=min_continuation_edge,
+                min_opening_range_continuation_edge_score=(
+                    min_opening_range_continuation_edge
+                ),
+                min_directional_opening_range_breakout_points=min_opening_range_breakout,
+                min_lookback_efficiency_ratio=min_efficiency_ratio,
+                max_lookback_choppiness_score=max_choppiness_score,
+                min_entry_volume_to_session_average_volume=min_session_volume_ratio,
+                min_lookback_volume_to_session_average_volume=(
+                    min_lookback_session_volume_ratio
+                ),
             ),
         )
     return experiment_rows
@@ -178,9 +259,17 @@ def run_scaled_context_filter_walk_forward_sweep(
     max_signal_abs_delta_sum_to_average_abs_deltas: Iterable[float],
     min_entry_volume_to_average_volumes: Iterable[float],
     min_entry_trades_to_average_trades: Iterable[float],
+    min_continuation_edge_scores: Iterable[float] = (0,),
+    min_opening_range_continuation_edge_scores: Iterable[float] = (0,),
+    min_directional_opening_range_breakout_points_values: Iterable[float] = (-999999,),
+    min_lookback_efficiency_ratios: Iterable[float] = (0,),
+    max_lookback_choppiness_scores: Iterable[float] = (1,),
+    min_entry_volume_to_session_average_volumes: Iterable[float] = (0,),
+    min_lookback_volume_to_session_average_volumes: Iterable[float] = (0,),
     direction_filters: Iterable[str] = ("all",),
     minimum_train_trades: int = 1,
     window_step_date_count: int = 1,
+    selection_objective: str = "net",
 ) -> list[dict[str, Any]]:
     """Run rolling selection of scaled context filters by trade date."""
 
@@ -194,6 +283,7 @@ def run_scaled_context_filter_walk_forward_sweep(
         raise ScaledContextFilterExperimentError("minimum_train_trades must be positive")
     if window_step_date_count <= 0:
         raise ScaledContextFilterExperimentError("window_step_date_count must be positive")
+    objective = _normalize_selection_objective(selection_objective)
     if train_date_count + holdout_date_count > len(dates):
         raise ScaledContextFilterExperimentError(
             "train_date_count plus holdout_date_count must not exceed "
@@ -222,11 +312,27 @@ def run_scaled_context_filter_walk_forward_sweep(
             ),
             min_entry_volume_to_average_volumes=min_entry_volume_to_average_volumes,
             min_entry_trades_to_average_trades=min_entry_trades_to_average_trades,
+            min_continuation_edge_scores=min_continuation_edge_scores,
+            min_opening_range_continuation_edge_scores=(
+                min_opening_range_continuation_edge_scores
+            ),
+            min_directional_opening_range_breakout_points_values=(
+                min_directional_opening_range_breakout_points_values
+            ),
+            min_lookback_efficiency_ratios=min_lookback_efficiency_ratios,
+            max_lookback_choppiness_scores=max_lookback_choppiness_scores,
+            min_entry_volume_to_session_average_volumes=(
+                min_entry_volume_to_session_average_volumes
+            ),
+            min_lookback_volume_to_session_average_volumes=(
+                min_lookback_volume_to_session_average_volumes
+            ),
             direction_filters=direction_filters,
         )
         best_train = _select_best_train_row(
             train_sweep,
             minimum_train_trades=minimum_train_trades,
+            selection_objective=objective,
         )
         holdout_sweep = run_scaled_context_filter_sweep(
             _filter_rows_by_dates(rows, holdout_dates),
@@ -242,6 +348,21 @@ def run_scaled_context_filter_walk_forward_sweep(
             ),
             min_entry_volume_to_average_volumes=min_entry_volume_to_average_volumes,
             min_entry_trades_to_average_trades=min_entry_trades_to_average_trades,
+            min_continuation_edge_scores=min_continuation_edge_scores,
+            min_opening_range_continuation_edge_scores=(
+                min_opening_range_continuation_edge_scores
+            ),
+            min_directional_opening_range_breakout_points_values=(
+                min_directional_opening_range_breakout_points_values
+            ),
+            min_lookback_efficiency_ratios=min_lookback_efficiency_ratios,
+            max_lookback_choppiness_scores=max_lookback_choppiness_scores,
+            min_entry_volume_to_session_average_volumes=(
+                min_entry_volume_to_session_average_volumes
+            ),
+            min_lookback_volume_to_session_average_volumes=(
+                min_lookback_volume_to_session_average_volumes
+            ),
             direction_filters=direction_filters,
         )
         matching_holdout = _find_matching_selection_row(holdout_sweep, best_train)
@@ -283,6 +404,13 @@ def _filter_rows(
     max_signal_abs_delta_sum_to_average_abs_delta: float,
     min_entry_volume_to_average_volume: float,
     min_entry_trades_to_average_trades: float,
+    min_continuation_edge_score: float,
+    min_opening_range_continuation_edge_score: float,
+    min_directional_opening_range_breakout_points: float,
+    min_lookback_efficiency_ratio: float,
+    max_lookback_choppiness_score: float,
+    min_entry_volume_to_session_average_volume: float,
+    min_lookback_volume_to_session_average_volume: float,
 ) -> list[dict[str, Any]]:
     filtered_rows: list[dict[str, Any]] = []
     for row in rows:
@@ -324,6 +452,41 @@ def _filter_rows(
             < min_entry_trades_to_average_trades
         ):
             continue
+        if (
+            _to_float_or_default(row, "continuation_edge_score", 0.0)
+            < min_continuation_edge_score
+        ):
+            continue
+        if (
+            _to_float_or_default(row, "opening_range_continuation_edge_score", 0.0)
+            < min_opening_range_continuation_edge_score
+        ):
+            continue
+        if (
+            _to_float_or_default(row, "directional_opening_range_breakout_points", -999999.0)
+            < min_directional_opening_range_breakout_points
+        ):
+            continue
+        if (
+            _to_float_or_default(row, "lookback_efficiency_ratio", 0.0)
+            < min_lookback_efficiency_ratio
+        ):
+            continue
+        if (
+            _to_float_or_default(row, "lookback_choppiness_score", 1.0)
+            > max_lookback_choppiness_score
+        ):
+            continue
+        if (
+            _to_float_or_default(row, "entry_volume_to_session_average_volume", 0.0)
+            < min_entry_volume_to_session_average_volume
+        ):
+            continue
+        if (
+            _to_float_or_default(row, "lookback_volume_to_session_average_volume", 0.0)
+            < min_lookback_volume_to_session_average_volume
+        ):
+            continue
         filtered_rows.append(row)
     return filtered_rows
 
@@ -341,8 +504,16 @@ def _experiment_row(
     max_signal_abs_delta_sum_to_average_abs_delta: float,
     min_entry_volume_to_average_volume: float,
     min_entry_trades_to_average_trades: float,
+    min_continuation_edge_score: float,
+    min_opening_range_continuation_edge_score: float,
+    min_directional_opening_range_breakout_points: float,
+    min_lookback_efficiency_ratio: float,
+    max_lookback_choppiness_score: float,
+    min_entry_volume_to_session_average_volume: float,
+    min_lookback_volume_to_session_average_volume: float,
 ) -> dict[str, Any]:
     summary = _summary(filtered_rows)
+    all_summary = _summary(all_rows)
     direction_counts = Counter(str(row["direction"]) for row in filtered_rows)
     strategy_id = _strategy_id(filtered_rows)
     experiment_id = (
@@ -355,7 +526,14 @@ def _experiment_row(
         f"signal_delta_avg={_format_number(min_signal_abs_delta_sum_to_average_abs_delta)}-"
         f"{_format_number(max_signal_abs_delta_sum_to_average_abs_delta)}:"
         f"min_volume_avg={_format_number(min_entry_volume_to_average_volume)}:"
-        f"min_trades_avg={_format_number(min_entry_trades_to_average_trades)}"
+        f"min_trades_avg={_format_number(min_entry_trades_to_average_trades)}:"
+        f"min_cont_edge={_format_number(min_continuation_edge_score)}:"
+        f"min_or_cont_edge={_format_number(min_opening_range_continuation_edge_score)}:"
+        f"min_or_breakout={_format_number(min_directional_opening_range_breakout_points)}:"
+        f"min_efficiency={_format_number(min_lookback_efficiency_ratio)}:"
+        f"max_chop={_format_number(max_lookback_choppiness_score)}:"
+        f"min_entry_session_volume={_format_number(min_entry_volume_to_session_average_volume)}:"
+        f"min_lookback_session_volume={_format_number(min_lookback_volume_to_session_average_volume)}"
     )
     return {
         "schema_version": 1,
@@ -376,6 +554,21 @@ def _experiment_row(
         ),
         "min_entry_volume_to_average_volume": _format_number(min_entry_volume_to_average_volume),
         "min_entry_trades_to_average_trades": _format_number(min_entry_trades_to_average_trades),
+        "min_continuation_edge_score": _format_number(min_continuation_edge_score),
+        "min_opening_range_continuation_edge_score": _format_number(
+            min_opening_range_continuation_edge_score,
+        ),
+        "min_directional_opening_range_breakout_points": _format_number(
+            min_directional_opening_range_breakout_points,
+        ),
+        "min_lookback_efficiency_ratio": _format_number(min_lookback_efficiency_ratio),
+        "max_lookback_choppiness_score": _format_number(max_lookback_choppiness_score),
+        "min_entry_volume_to_session_average_volume": _format_number(
+            min_entry_volume_to_session_average_volume,
+        ),
+        "min_lookback_volume_to_session_average_volume": _format_number(
+            min_lookback_volume_to_session_average_volume,
+        ),
         "input_context_rows": len(all_rows),
         "evaluated_trades": summary["total_trades"],
         "runner_target_hits": summary["runner_target_hits"],
@@ -386,11 +579,19 @@ def _experiment_row(
         "positive_net_rate": _format_number(summary["positive_net_rate"]),
         "net_usd": _format_number(summary["net_usd"]),
         "average_net_usd": _format_number(summary["average_net_usd"]),
+        "average_net_usd_lower_bound": _format_number(_average_net_lower_bound(filtered_rows)),
+        "unfiltered_net_usd": _format_number(all_summary["net_usd"]),
+        "participation_rate": _format_number(
+            summary["total_trades"] / len(all_rows) if all_rows else 0.0,
+        ),
+        "filter_net_improvement_usd": _format_number(
+            summary["net_usd"] - all_summary["net_usd"],
+        ),
         "long_trades": direction_counts.get("long", 0),
         "short_trades": direction_counts.get("short", 0),
         "notes": (
             "scaled context filter sweep; uses only entry-known normalized "
-            "volatility/activity fields"
+            "volatility, activity, and session-regime fields"
         ),
     }
 
@@ -419,6 +620,7 @@ def _select_best_train_row(
     rows: list[dict[str, Any]],
     *,
     minimum_train_trades: int,
+    selection_objective: str,
 ) -> dict[str, Any]:
     eligible_rows = [
         row
@@ -429,13 +631,28 @@ def _select_best_train_row(
         raise ScaledContextFilterExperimentError(
             f"No train experiments met minimum_train_trades={minimum_train_trades}",
         )
-    return max(
-        eligible_rows,
-        key=lambda row: (
-            float(row["net_usd"]),
-            float(row["positive_net_rate"]),
-            int(row["evaluated_trades"]),
-        ),
+    if selection_objective == "net":
+        return max(
+            eligible_rows,
+            key=lambda row: (
+                float(row["net_usd"]),
+                float(row["positive_net_rate"]),
+                int(row["evaluated_trades"]),
+            ),
+        )
+    if selection_objective == "efficiency":
+        return max(
+            eligible_rows,
+            key=lambda row: (
+                float(row["average_net_usd_lower_bound"]),
+                float(row["filter_net_improvement_usd"]),
+                float(row["average_net_usd"]),
+                float(row["positive_net_rate"]),
+                int(row["evaluated_trades"]),
+            ),
+        )
+    raise ScaledContextFilterExperimentError(
+        f"Unsupported selection_objective: {selection_objective}",
     )
 
 
@@ -489,6 +706,13 @@ def _selection_key(row: dict[str, Any]) -> tuple[str, ...]:
         str(row["max_signal_abs_delta_sum_to_average_abs_delta"]),
         str(row["min_entry_volume_to_average_volume"]),
         str(row["min_entry_trades_to_average_trades"]),
+        str(row["min_continuation_edge_score"]),
+        str(row["min_opening_range_continuation_edge_score"]),
+        str(row["min_directional_opening_range_breakout_points"]),
+        str(row["min_lookback_efficiency_ratio"]),
+        str(row["max_lookback_choppiness_score"]),
+        str(row["min_entry_volume_to_session_average_volume"]),
+        str(row["min_lookback_volume_to_session_average_volume"]),
     )
 
 
@@ -596,6 +820,22 @@ def _normalize_nonnegative_grid(values: Iterable[float], field_name: str) -> lis
     return grid
 
 
+def _normalize_float_grid(values: Iterable[float], field_name: str) -> list[float]:
+    grid = [float(value) for value in values]
+    if not grid:
+        raise ScaledContextFilterExperimentError(f"{field_name} must contain at least one value")
+    return grid
+
+
+def _normalize_zero_to_one_grid(values: Iterable[float], field_name: str) -> list[float]:
+    grid = _normalize_float_grid(values, field_name)
+    if any(value < 0 or value > 1 for value in grid):
+        raise ScaledContextFilterExperimentError(
+            f"{field_name} values must be between 0 and 1",
+        )
+    return grid
+
+
 def _normalize_direction_filters(values: Iterable[str]) -> list[str]:
     filters = [str(value).strip().lower() for value in values if str(value).strip()]
     if not filters:
@@ -610,6 +850,16 @@ def _normalize_direction_filters(values: Iterable[str]) -> list[str]:
     return filters
 
 
+def _normalize_selection_objective(value: str) -> str:
+    objective = str(value).strip().lower()
+    if objective not in _ALLOWED_SELECTION_OBJECTIVES:
+        raise ScaledContextFilterExperimentError(
+            "selection_objective must be one of: "
+            + ", ".join(_ALLOWED_SELECTION_OBJECTIVES),
+        )
+    return objective
+
+
 def _to_float(value: Any, field_name: str) -> float:
     try:
         return float(str(value))
@@ -617,6 +867,23 @@ def _to_float(value: Any, field_name: str) -> float:
         raise ScaledContextFilterExperimentError(
             f"Invalid numeric field {field_name}: {value!r}",
         ) from exc
+
+
+def _to_float_or_default(row: dict[str, Any], field_name: str, default: float) -> float:
+    value = row.get(field_name)
+    if value is None or str(value).strip() == "":
+        return default
+    return _to_float(value, field_name)
+
+
+def _average_net_lower_bound(rows: list[dict[str, Any]]) -> float:
+    values = [_to_float(row["net_usd"], "net_usd") for row in rows]
+    if not values:
+        return 0.0
+    average = sum(values) / len(values)
+    if len(values) == 1:
+        return average
+    return average - pstdev(values) / sqrt(len(values))
 
 
 def _format_number(value: Any) -> str:

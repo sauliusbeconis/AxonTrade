@@ -15,6 +15,8 @@ def _bar(
     timestamp: str,
     high: float,
     low: float,
+    open_: float | None = None,
+    close: float | None = None,
     volume: float = 10,
     trades: float = 5,
     delta: float = 2,
@@ -23,8 +25,10 @@ def _bar(
         "timestamp": timestamp,
         "symbol": "ESU26-CME",
         "bar_index": index,
+        "open": low if open_ is None else open_,
         "high": high,
         "low": low,
+        "close": high if close is None else close,
         "volume": volume,
         "number_of_trades": trades,
         "delta": delta,
@@ -80,6 +84,12 @@ def test_runs_scaled_outcome_context_diagnostics() -> None:
     assert rows[0]["average_bar_range_points"] == "1.33333333"
     assert rows[0]["signal_abs_delta_sum_to_average_abs_delta"] == "30"
     assert rows[0]["entry_volume_to_average_volume"] == "2"
+    assert rows[0]["session_open_price"] == "100"
+    assert rows[0]["session_range_points"] == "4"
+    assert rows[0]["continuation_edge_score"] == "1"
+    assert rows[0]["fade_edge_score"] == "0"
+    assert rows[0]["directional_open_distance_points"] == "4"
+    assert rows[0]["lookback_efficiency_ratio"] == "0.6"
 
 
 def test_scaled_outcome_context_diagnostics_requires_entry_bar() -> None:
