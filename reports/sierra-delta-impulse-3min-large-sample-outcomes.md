@@ -24,16 +24,39 @@ This report evaluates the larger Sierra Chart export from
 - rejected rows: `0`
 - signals per day: `6`
 - directions: `41` long, `37` short
-- logged overlay variant: `5 / 8 / 10 / initial`
+- logged overlay variant: `5 / 10 / 8 / initial`
 
 The logged variant means:
 
 - first target: `5` points
-- stop: `8` points
-- runner target: `10` points
+- stop: `10` points
+- runner target: `8` points
 - runner stop: initial stop
 
-## Logged Variant Result
+## Current Logged Variant Result
+
+| Metric | Value |
+| --- | ---: |
+| Trades | 78 |
+| First-target hits | 56 |
+| Runner targets | 47 |
+| Full stops | 20 |
+| Net USD | 3104 |
+
+Direction split:
+
+| Direction | Trades | Net USD |
+| --- | ---: | ---: |
+| Long | 41 | 4463 |
+| Short | 37 | -1359 |
+
+This is the active all-direction collection candidate because it improves the
+larger sample without introducing a new direction filter.
+
+## Previous Logged Variant
+
+The prior larger export was logged at `5 / 8 / 10 / initial`. The same 78
+candidates produced:
 
 | Metric | Value |
 | --- | ---: |
@@ -50,35 +73,8 @@ Direction split:
 | Long | 41 | 3263 |
 | Short | 37 | -5509 |
 
-The larger sample invalidates the `5 / 8 / 10 / initial` all-direction setting.
-Shorts are the main drag.
-
-## Larger-Sample Fixed Exit Lead
-
-Best all-direction fixed row from the larger sweep:
-
-- first target: `5`
-- stop: `10`
-- runner target: `8`
-- runner stop: `initial`
-
-| Metric | Value |
-| --- | ---: |
-| Trades | 78 |
-| First-target hits | 56 |
-| Runner targets | 47 |
-| Full stops | 20 |
-| Net USD | 3104 |
-
-Direction split for this row:
-
-| Direction | Trades | Net USD |
-| --- | ---: | ---: |
-| Long | 41 | 4463 |
-| Short | 37 | -1359 |
-
-This is the next all-direction collection candidate because it improves the
-larger sample without introducing a new direction filter.
+The larger sample invalidated the previous all-direction setting. Shorts were
+the main drag.
 
 ## Long-Only Observation
 
