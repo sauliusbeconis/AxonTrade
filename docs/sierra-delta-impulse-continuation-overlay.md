@@ -243,6 +243,42 @@ diagnostic summary is:
 
 `reports/sierra-delta-impulse-fixed-row-news-exclusion.md`
 
+## Run Scaled Context Filters
+
+Manual help needed: **No** after the matching bar export, fixed-row outcomes,
+and signal log exist.
+
+Generate pre-entry normalized context diagnostics:
+
+```bash
+.venv/bin/python scripts/run_scaled_outcome_context_diagnostics.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_DeltaImpulse_3Min_Large.txt \
+  data/processed/AxonTrade_ES_delta_impulse_3min_large_scaled_outcomes_all_5_10_8_initial.csv \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_DeltaImpulseSignalLog.csv \
+  reports/sierra-delta-impulse-fixed-row-context-diagnostics.csv \
+  --lookback-bars 20
+```
+
+Run the rolling context-filter walk-forward:
+
+```bash
+.venv/bin/python scripts/run_scaled_context_filter_walk_forward_sweep.py \
+  reports/sierra-delta-impulse-fixed-row-context-diagnostics.csv \
+  reports/sierra-delta-impulse-fixed-row-context-filter-walk-forward.csv \
+  --train-date-count 8 \
+  --holdout-date-count 2 \
+  --minimum-train-trades 12 \
+  --window-step-date-count 1
+```
+
+Current result: `4` holdout windows, `19` selected holdout trades, `6917` net
+USD. The unfiltered rows across the same overlapping holdout windows were
+`8064` net USD, so this is a diagnostic only, not a validation improvement.
+
+Summary:
+
+`reports/sierra-delta-impulse-fixed-row-context-filter.md`
+
 Use this to evaluate the original `5 / 5 / 15 / breakeven` exit when the CSV
 came from the same Sierra chart that produced the export:
 

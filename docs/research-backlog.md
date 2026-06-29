@@ -71,7 +71,7 @@ Every research source should be documented with a link and retrieval date.
 - Add trade-level audits for selected auction-regime target/breakeven stacks. Done.
 - Add acceptance gates for selected auction-regime stack trade-level audits. Done.
 - Add one-command auction-regime target/breakeven stack pipeline. Done.
-- Build walk-forward filters over normalized context features after the sample is large enough.
+- Build walk-forward filters over normalized context features after the sample is large enough. Done.
 - Add scheduled-news exclusion to Sierra overlay research exports. Done.
 - Populate scheduled-news calendar for the current Sierra overlay sample. Done.
 

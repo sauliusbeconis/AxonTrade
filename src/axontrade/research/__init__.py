@@ -37,6 +37,18 @@ from axontrade.research.scaled_scalp_acceptance import (
     validate_scaled_scalp_acceptance_config,
     write_scaled_scalp_acceptance_report,
 )
+from axontrade.research.scaled_context_diagnostics import (
+    SCALED_CONTEXT_DIAGNOSTIC_HEADER,
+    ScaledContextDiagnosticError,
+    run_scaled_outcome_context_diagnostics,
+)
+from axontrade.research.scaled_context_filter_experiments import (
+    SCALED_CONTEXT_FILTER_SWEEP_HEADER,
+    SCALED_CONTEXT_FILTER_WALK_FORWARD_HEADER,
+    ScaledContextFilterExperimentError,
+    run_scaled_context_filter_sweep,
+    run_scaled_context_filter_walk_forward_sweep,
+)
 from axontrade.research.delta_impulse_overlay_validation import (
     DELTA_IMPULSE_STRATEGY_ID,
     DeltaImpulseOverlayComparison,
@@ -242,6 +254,11 @@ __all__ = [
     "ScaledScalpAcceptanceError",
     "ScaledScalpAcceptanceFinding",
     "ScaledScalpAcceptanceSummary",
+    "SCALED_CONTEXT_DIAGNOSTIC_HEADER",
+    "SCALED_CONTEXT_FILTER_SWEEP_HEADER",
+    "SCALED_CONTEXT_FILTER_WALK_FORWARD_HEADER",
+    "ScaledContextDiagnosticError",
+    "ScaledContextFilterExperimentError",
     "DELTA_IMPULSE_STRATEGY_ID",
     "DeltaImpulseOverlayComparison",
     "DeltaImpulseOverlayValidationError",
@@ -352,6 +369,9 @@ __all__ = [
     "run_absorption_reward_risk_walk_forward_sweep",
     "run_price_only_train_holdout_sweep",
     "run_price_only_walk_forward_sweep",
+    "run_scaled_context_filter_sweep",
+    "run_scaled_context_filter_walk_forward_sweep",
+    "run_scaled_outcome_context_diagnostics",
     "run_session_clock_alignment_diagnostics",
     "report_signal_auction_regime_breakeven",
     "run_signal_auction_regime_diagnostics",
