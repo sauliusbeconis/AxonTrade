@@ -1,12 +1,9 @@
 # Sierra Delta Impulse Continuation Overlay
 
 `AxonTradeDeltaImpulseContinuationOverlay.cpp` is an indicator-only ACSIL study
-for the current fixed-exit lead:
+for the current 3-minute delta impulse continuation candidate:
 
-`delta_impulse_continue_10bar_2.5pt_50d` with fixed `5 / 5 / 15 / breakeven`.
-
-The restored 3-minute replay sample also tracks a candidate variant:
-`5 / 8 / 10 / initial`.
+`delta_impulse_continue_10bar_2.5pt_50d` with fixed `5 / 8 / 10 / initial`.
 
 Manual help needed: **Yes, to compile and load the Sierra Chart study.**
 Manual help needed after it is loaded: **No**, unless Sierra Chart reports a
@@ -34,7 +31,7 @@ Rows use the AxonTrade signal-log fields:
 
 ## Rule Defaults
 
-These defaults match the fixed-exit research lead:
+These defaults match the current 3-minute replay candidate:
 
 - strategy ID: `delta_impulse_continue_10bar_2.5pt_50d`
 - setup window: `09:45:00` through `15:45:00`
@@ -43,10 +40,10 @@ These defaults match the fixed-exit research lead:
 - minimum delta sum: `50`
 - minimum spacing: `900` seconds
 - max signals per day: `6`
-- initial stop: `5` points
+- initial stop: `8` points
 - first target: `5` points
-- runner target: `15` points
-- runner stop mode: `breakeven` after first target, recorded in `notes`
+- runner target: `10` points
+- runner stop mode: `initial`, recorded in `notes`
 
 The CSV `target_price` field stores the runner target. The first target and
 runner stop mode are recorded in the `notes` field and drawn on the chart.
@@ -113,10 +110,10 @@ Use the ES footprint/execution chart, not the TPO context chart.
    - `Minimum Delta Sum = 50`
    - `Minimum Signal Spacing Seconds = 900`
    - `Max Signals Per Day = 6`
-   - `Initial Stop Points = 5`
+   - `Initial Stop Points = 8`
    - `First Target Points = 5`
-   - `Runner Target Points = 15`
-   - `Runner Stop Mode = breakeven`
+   - `Runner Target Points = 10`
+   - `Runner Stop Mode = initial`
 10. Click `OK`.
 11. Click `OK` again to close Chart Studies.
 
@@ -181,7 +178,8 @@ The reporting workflow is documented in
 
 Manual help needed: **No** after the matching bar export exists.
 
-Use this when the CSV came from the same Sierra chart that produced the export:
+Use this to evaluate the original `5 / 5 / 15 / breakeven` exit when the CSV
+came from the same Sierra chart that produced the export:
 
 ```bash
 .venv/bin/python scripts/run_signal_log_scaled_scalp_outcomes.py \
@@ -198,7 +196,7 @@ Use this when the CSV came from the same Sierra chart that produced the export:
   --entry-match-mode auto
 ```
 
-For the current 3-minute replay sample, the best in-sample variant was:
+For the current 3-minute replay sample, the best in-sample variant is:
 
 ```bash
 .venv/bin/python scripts/run_signal_log_scaled_scalp_outcomes.py \

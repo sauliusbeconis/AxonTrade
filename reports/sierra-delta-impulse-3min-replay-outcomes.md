@@ -3,6 +3,9 @@
 This report evaluates the Sierra Chart overlay output from chart
 `ESU26-CME[M] 3 Min #2`.
 
+As of the latest Sierra recalculation, the overlay is configured to log the
+`5 / 8 / 10 / initial` candidate variant.
+
 ## Sources
 
 - Signal log:
@@ -49,7 +52,7 @@ Result on the 3-minute replay export:
 | Full stops | 14 |
 | Net USD | -4710 |
 
-This exit is too fragile on the 3-minute chart sample. The first target is hit
+This previous exit is too fragile on the 3-minute chart sample. The first target is hit
 often enough to matter, but the breakeven runner converts many trades into
 small wins while full stops remain large.
 
@@ -111,8 +114,8 @@ as a reason to continue collecting 3-minute overlay data, not as acceptance.
 The restored 3-minute chart changes the meaning of the research rule:
 `10` bars now means about `30` minutes of impulse, not the lower-timeframe
 export context used earlier. On this chart, the entry family may still have
-signal, but the currently loaded `5 / 5 / 15 / breakeven` exit is not the right
-version. The next candidate overlay configuration to test is:
+signal, but the previous `5 / 5 / 15 / breakeven` exit is not the right version.
+The candidate overlay configuration now loaded for continued collection is:
 
 `5 / 8 / 10 / initial`
 

@@ -523,13 +523,13 @@ SCSFExport scsf_AxonTradeDeltaImpulseContinuationOverlay(SCStudyInterfaceRef sc)
         MaxSignalsPerDay.SetIntLimits(0, 100);
 
         InitialStopPoints.Name = "Initial Stop Points";
-        InitialStopPoints.SetFloat(5.0f);
+        InitialStopPoints.SetFloat(8.0f);
 
         FirstTargetPoints.Name = "First Target Points";
         FirstTargetPoints.SetFloat(5.0f);
 
         RunnerTargetPoints.Name = "Runner Target Points";
-        RunnerTargetPoints.SetFloat(15.0f);
+        RunnerTargetPoints.SetFloat(10.0f);
 
         Confidence.Name = "Research Confidence";
         Confidence.SetFloat(0.60f);
@@ -538,7 +538,7 @@ SCSFExport scsf_AxonTradeDeltaImpulseContinuationOverlay(SCStudyInterfaceRef sc)
         ResetCsvOnFullRecalculation.SetYesNo(1);
 
         RunnerStopMode.Name = "Runner Stop Mode";
-        RunnerStopMode.SetString("breakeven");
+        RunnerStopMode.SetString("initial");
 
         return;
     }
