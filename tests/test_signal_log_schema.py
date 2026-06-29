@@ -164,4 +164,5 @@ def test_acsil_delta_impulse_overlay_uses_bounded_signal_logging() -> None:
     assert "rejected_signal" in source
     assert "LogRejections.SetYesNo(0)" in source
     assert "Reset CSV On Full Recalculation" in source
+    assert "Runner Stop Mode" in source
     assert "FileContainsText" not in source

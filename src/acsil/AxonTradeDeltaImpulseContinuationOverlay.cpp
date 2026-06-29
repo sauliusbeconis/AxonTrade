@@ -91,6 +91,13 @@ bool SameChartDate(const SCDateTime& left, const SCDateTime& right)
     return left.GetDate() == right.GetDate();
 }
 
+std::string NormalizeRunnerStopMode(const std::string& runner_stop_mode)
+{
+    if (runner_stop_mode == "initial")
+        return "initial";
+    return "breakeven";
+}
+
 void AppendSignalLogRow(
     const std::string& file_path,
     const std::string& event_key,
@@ -218,7 +225,8 @@ SignalEvaluation EvaluateSignalAtBar(
     int max_signals_per_day,
     double stop_points,
     double first_target_points,
-    double runner_target_points)
+    double runner_target_points,
+    const std::string& runner_stop_mode)
 {
     const double close = sc.BaseDataIn[SC_LAST][bar_index];
     const int bar_time = sc.BaseDateTimeIn[bar_index].GetTimeInSeconds();
@@ -278,6 +286,7 @@ SignalEvaluation EvaluateSignalAtBar(
     const double stop_price = is_long ? close - stop_points : close + stop_points;
     const double first_target_price = is_long ? close + first_target_points : close - first_target_points;
     const double runner_target_price = is_long ? close + runner_target_points : close - runner_target_points;
+    const std::string normalized_runner_stop_mode = NormalizeRunnerStopMode(runner_stop_mode);
 
     evaluation.stop_price = FormatNumber(stop_price);
     evaluation.first_target_price = FormatNumber(first_target_price);
@@ -292,7 +301,7 @@ SignalEvaluation EvaluateSignalAtBar(
           << "delta_sum=" << FormatNumber(delta_sum) << "; "
           << "first_target_points=" << FormatNumber(first_target_points) << "; "
           << "runner_target_points=" << FormatNumber(runner_target_points) << "; "
-          << "runner_stop_mode=breakeven; "
+          << "runner_stop_mode=" << normalized_runner_stop_mode << "; "
           << "minimum_spacing_seconds=" << minimum_spacing_seconds << "; "
           << "max_signals_per_day=" << max_signals_per_day;
     evaluation.notes = notes.str();
@@ -467,6 +476,7 @@ SCSFExport scsf_AxonTradeDeltaImpulseContinuationOverlay(SCStudyInterfaceRef sc)
     SCInputRef RunnerTargetPoints = sc.Input[13];
     SCInputRef Confidence = sc.Input[14];
     SCInputRef ResetCsvOnFullRecalculation = sc.Input[15];
+    SCInputRef RunnerStopMode = sc.Input[16];
 
     if (sc.SetDefaults)
     {
@@ -526,6 +536,9 @@ SCSFExport scsf_AxonTradeDeltaImpulseContinuationOverlay(SCStudyInterfaceRef sc)
 
         ResetCsvOnFullRecalculation.Name = "Reset CSV On Full Recalculation";
         ResetCsvOnFullRecalculation.SetYesNo(1);
+
+        RunnerStopMode.Name = "Runner Stop Mode";
+        RunnerStopMode.SetString("breakeven");
 
         return;
     }
@@ -592,7 +605,8 @@ SCSFExport scsf_AxonTradeDeltaImpulseContinuationOverlay(SCStudyInterfaceRef sc)
             MaxSignalsPerDay.GetInt(),
             InitialStopPoints.GetFloat(),
             FirstTargetPoints.GetFloat(),
-            RunnerTargetPoints.GetFloat());
+            RunnerTargetPoints.GetFloat(),
+            NormalizeRunnerStopMode(ToStdString(RunnerStopMode.GetString())));
 
         if (evaluation.event_type == "candidate_signal")
         {

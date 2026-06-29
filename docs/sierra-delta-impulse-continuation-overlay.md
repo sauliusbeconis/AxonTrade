@@ -5,6 +5,9 @@ for the current fixed-exit lead:
 
 `delta_impulse_continue_10bar_2.5pt_50d` with fixed `5 / 5 / 15 / breakeven`.
 
+The restored 3-minute replay sample also tracks a candidate variant:
+`5 / 8 / 10 / initial`.
+
 Manual help needed: **Yes, to compile and load the Sierra Chart study.**
 Manual help needed after it is loaded: **No**, unless Sierra Chart reports a
 build error or the chart is missing bid/ask volume data.
@@ -43,7 +46,7 @@ These defaults match the fixed-exit research lead:
 - initial stop: `5` points
 - first target: `5` points
 - runner target: `15` points
-- runner stop mode: breakeven after first target, recorded in `notes`
+- runner stop mode: `breakeven` after first target, recorded in `notes`
 
 The CSV `target_price` field stores the runner target. The first target and
 runner stop mode are recorded in the `notes` field and drawn on the chart.
@@ -113,6 +116,7 @@ Use the ES footprint/execution chart, not the TPO context chart.
    - `Initial Stop Points = 5`
    - `First Target Points = 5`
    - `Runner Target Points = 15`
+   - `Runner Stop Mode = breakeven`
 10. Click `OK`.
 11. Click `OK` again to close Chart Studies.
 
@@ -210,3 +214,20 @@ For the current 3-minute replay sample, the best in-sample variant was:
   --runner-stop-mode initial \
   --entry-match-mode auto
 ```
+
+To make the Sierra overlay log that variant:
+
+Manual help needed: **Yes**.
+
+1. Click the footprint chart `ESU26-CME[M] 3 Min #2`.
+2. Click `Analysis >> Studies`.
+3. Select `AxonTrade Delta Impulse Continuation Overlay`.
+4. Click `Settings`.
+5. Set:
+   - `Initial Stop Points = 8`
+   - `First Target Points = 5`
+   - `Runner Target Points = 10`
+   - `Runner Stop Mode = initial`
+6. Click `OK`.
+7. Click `OK`.
+8. Click `File >> Save`.
