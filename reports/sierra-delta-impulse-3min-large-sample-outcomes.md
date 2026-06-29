@@ -17,6 +17,8 @@ This report evaluates the larger Sierra Chart export from
   `reports/sierra-delta-impulse-3min-large-scaled-exit-walk-forward.csv`
 - Fixed-row robustness:
   `reports/sierra-delta-impulse-3min-large-robustness.md`
+- Fixed-row acceptance:
+  `reports/sierra-delta-impulse-3min-fixed-row-acceptance.md`
 
 ## Candidate Log
 
@@ -110,6 +112,10 @@ The all-direction rolling selection was also weak:
 This means the current family is still research-only. The fixed `5 / 10 / 8 /
 initial` candidate is worth collecting next, but not accepted for live order
 routing.
+
+The executable fixed-row acceptance gate also rejects the current sample. It
+requires more trades, more dates, less drawdown dependence, a broader parameter
+shelf, and nonnegative holiday-adjusted short-side performance.
 
 ## Next Step
 

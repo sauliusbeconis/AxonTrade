@@ -1,0 +1,17 @@
+schema_version: 1
+profile_id: scaled_scalp_fixed_row_acceptance_gates_v1
+description: >
+  Evidence gates for fixed two-contract scaled-scalp rows. These gates are
+  intentionally stricter than the current delta-impulse sample and are expected
+  to reject underpowered or narrow in-sample results.
+gates:
+  minimum_outcome_trades: 100
+  minimum_trade_dates: 20
+  require_positive_holiday_adjusted_net: true
+  require_positive_holiday_adjusted_fixed_rolling_holdout_net: true
+  maximum_drawdown_to_net_ratio: 0.50
+  last_n_dates: 3
+  maximum_last_n_positive_day_net_share: 0.40
+  minimum_positive_nearby_parameter_rows: 4
+  require_nonnegative_holiday_adjusted_short_net: true
+  maximum_nonholiday_terminal_exits: 0

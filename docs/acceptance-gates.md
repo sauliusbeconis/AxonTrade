@@ -65,6 +65,38 @@ audit this states the practical gap directly: `29` additional unique evaluated
 holdout signals and `14` additional trade dates are required before the stack
 can pass the minimum evidence-count gates.
 
+The current Sierra delta-impulse fixed scaled-scalp row has a separate
+executable gate profile in
+`config/research/scaled_scalp_fixed_row_acceptance_gates.yaml`.
+
+Current thresholds:
+
+- at least `100` evaluated fixed-row outcome trades;
+- at least `20` distinct trade dates;
+- holiday-adjusted net must be positive;
+- holiday-adjusted fixed rolling holdout net must be positive;
+- peak-to-trough drawdown must be no more than `50%` of final net;
+- the final `3` dates must contribute no more than `40%` of positive daily net;
+- at least `4` nearby all-direction initial-stop parameter rows must be
+  positive;
+- holiday-adjusted short-side net must be nonnegative;
+- nonholiday `end_of_session` / `no_following_bar` exits must be `0`.
+
+Manual help needed: **No** after the fixed-row outcome CSV and sweep CSV exist.
+
+Run the check from the repository:
+
+```bash
+.venv/bin/python scripts/check_scaled_scalp_acceptance.py
+```
+
+The command writes
+`reports/sierra-delta-impulse-3min-fixed-row-acceptance.md`. The current sample
+is expected to fail. The report states the practical gap directly: `22`
+additional evaluated trades and `7` additional trade dates are required before
+the fixed row can pass the minimum evidence-count gates, before considering the
+other failed stability gates.
+
 ## Risk Gates
 
 - Average holding time is comfortably above microscalping thresholds.
