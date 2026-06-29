@@ -19,6 +19,8 @@ This report evaluates the larger Sierra Chart export from
   `reports/sierra-delta-impulse-3min-large-robustness.md`
 - Fixed-row acceptance:
   `reports/sierra-delta-impulse-3min-fixed-row-acceptance.md`
+- One-command pipeline:
+  `scripts/run_delta_impulse_fixed_row_pipeline.py`
 
 ## Candidate Log
 
@@ -126,3 +128,5 @@ Set the Sierra overlay to:
 Then collect another larger same-chart export. The key question is whether the
 short side keeps improving with the wider stop or remains a persistent drag.
 Holiday/early-close dates are now flagged through the research holiday calendar.
+After exporting, run `scripts/run_delta_impulse_fixed_row_pipeline.py` to
+refresh outcomes, sweep rows, robustness, and acceptance together.

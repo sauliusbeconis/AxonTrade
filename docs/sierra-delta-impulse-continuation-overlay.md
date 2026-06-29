@@ -178,6 +178,23 @@ The reporting workflow is documented in
 
 Manual help needed: **No** after the matching bar export exists.
 
+For the current fixed row, use the one-command pipeline. It regenerates:
+
+- `reports/sierra-delta-impulse-signal-log-live.md`
+- `data/processed/AxonTrade_ES_delta_impulse_3min_large_scaled_outcomes_all_5_10_8_initial.csv`
+- `reports/sierra-delta-impulse-3min-large-scaled-exit-sweep.csv`
+- `reports/sierra-delta-impulse-3min-large-robustness.md`
+- `reports/sierra-delta-impulse-3min-fixed-row-acceptance.md`
+
+```bash
+.venv/bin/python scripts/run_delta_impulse_fixed_row_pipeline.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_DeltaImpulse_3Min_Large.txt \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_DeltaImpulseSignalLog.csv
+```
+
+The current sample is expected to print `acceptance=FAIL`. That is a research
+rejection, not a script error.
+
 Use this to evaluate the original `5 / 5 / 15 / breakeven` exit when the CSV
 came from the same Sierra chart that produced the export:
 
@@ -212,6 +229,9 @@ For the larger 3-minute replay sample, the best all-direction fixed variant is:
   --runner-stop-mode initial \
   --entry-match-mode auto
 ```
+
+The one-command pipeline above should normally be preferred because it also
+updates the robustness and acceptance reports.
 
 To make the Sierra overlay log that variant:
 
