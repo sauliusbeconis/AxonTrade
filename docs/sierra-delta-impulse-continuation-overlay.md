@@ -172,3 +172,41 @@ From the repository:
 
 The reporting workflow is documented in
 [sierra-signal-log-report.md](sierra-signal-log-report.md).
+
+## Evaluate Scaled Outcomes
+
+Manual help needed: **No** after the matching bar export exists.
+
+Use this when the CSV came from the same Sierra chart that produced the export:
+
+```bash
+.venv/bin/python scripts/run_signal_log_scaled_scalp_outcomes.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_DeltaImpulse_3Min.txt \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_DeltaImpulseSignalLog.csv \
+  data/processed/AxonTrade_ES_delta_impulse_3min_scaled_outcomes.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --first-target-points 5 \
+  --stop-points 5 \
+  --runner-target-points 15 \
+  --runner-stop-mode breakeven \
+  --entry-match-mode auto
+```
+
+For the current 3-minute replay sample, the best in-sample variant was:
+
+```bash
+.venv/bin/python scripts/run_signal_log_scaled_scalp_outcomes.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_DeltaImpulse_3Min.txt \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_DeltaImpulseSignalLog.csv \
+  data/processed/AxonTrade_ES_delta_impulse_3min_scaled_outcomes_5_8_10_initial.csv \
+  --symbol ESU26-CME \
+  --chart-number 2 \
+  --session-phase rth \
+  --first-target-points 5 \
+  --stop-points 8 \
+  --runner-target-points 10 \
+  --runner-stop-mode initial \
+  --entry-match-mode auto
+```
