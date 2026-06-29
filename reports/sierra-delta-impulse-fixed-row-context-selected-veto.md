@@ -49,6 +49,23 @@ The second-stage veto removed `11` selected holdout trades and improved net by
 | no veto | 2 |
 | risk-to-average-range maximum | 2 |
 
+## Larger Export Sanity Check
+
+The `2026-06-29` larger export did not materially increase the sample. It added
+only `6` validated candidates:
+
+- prior validated overlay candidates: `163`
+- larger export validated overlay candidates: `169`
+- first-stage selected context on larger export: `72` holdout trades, `-1554`
+  net USD
+- second-stage selected veto on larger export: `60` kept holdout trades,
+  `3930` net USD
+- veto improvement versus first-stage selected context: `5484` USD
+
+The selected-veto idea survived this small extension, but this is not a true
+large-sample validation. The next meaningful test still requires substantially
+more trade dates and candidate signals.
+
 ## Interpretation
 
 This is the first positive chronological holdout result in the Delta Impulse

@@ -411,6 +411,11 @@ holdout trades and `-1198` net USD. This is a promising diagnostic only; it
 needs a larger export or fresh out-of-sample replay before any Sierra-side rule
 change.
 
+The `2026-06-29` larger export increased validated candidates only from `163`
+to `169`, so it is a sanity check rather than a true larger sample. The
+selected-veto result held: `60` kept holdout trades, `3930` net USD, versus `72`
+first-stage selected holdout trades and `-1554` net USD.
+
 To reproduce that rejected fixed variant in Sierra:
 
 Manual help needed: **Yes**.

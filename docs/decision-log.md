@@ -138,3 +138,10 @@ Consequences:
 - The result remains too small and too filtered for deployment.
 - The next required step is a larger export or a fresh out-of-sample replay
   before any Sierra-side rule change.
+
+Update after the `2026-06-29` larger export:
+
+- Overlay validation increased only from `163` to `169` matched candidates.
+- The selected-veto result held directionally: `60` kept holdout trades for
+  `3930` USD versus `72` first-stage selected holdout trades for `-1554` USD.
+- This is a useful sanity check, but not a genuine larger-sample validation.
