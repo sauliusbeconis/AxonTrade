@@ -37,6 +37,16 @@ from axontrade.research.scaled_scalp_acceptance import (
     validate_scaled_scalp_acceptance_config,
     write_scaled_scalp_acceptance_report,
 )
+from axontrade.research.delta_impulse_overlay_validation import (
+    DELTA_IMPULSE_STRATEGY_ID,
+    DeltaImpulseOverlayComparison,
+    DeltaImpulseOverlayValidationError,
+    DeltaImpulseRuleConfig,
+    compare_delta_impulse_overlay_log,
+    generate_delta_impulse_overlay_candidates,
+    render_delta_impulse_overlay_validation_report,
+    write_delta_impulse_overlay_validation_report,
+)
 from axontrade.research.signal_log import (
     SignalLogError,
     load_signal_log_rows_csv,
@@ -232,6 +242,10 @@ __all__ = [
     "ScaledScalpAcceptanceError",
     "ScaledScalpAcceptanceFinding",
     "ScaledScalpAcceptanceSummary",
+    "DELTA_IMPULSE_STRATEGY_ID",
+    "DeltaImpulseOverlayComparison",
+    "DeltaImpulseOverlayValidationError",
+    "DeltaImpulseRuleConfig",
     "ABSORPTION_REWARD_RISK_SWEEP_HEADER",
     "AbsorptionExperimentError",
     "BaselineError",
@@ -319,7 +333,10 @@ __all__ = [
     "price_only_acceptance_passed",
     "auction_regime_stack_acceptance_passed",
     "scaled_scalp_acceptance_passed",
+    "compare_delta_impulse_overlay_log",
+    "generate_delta_impulse_overlay_candidates",
     "render_auction_regime_stack_acceptance_report",
+    "render_delta_impulse_overlay_validation_report",
     "render_scaled_scalp_acceptance_report",
     "render_price_only_acceptance_report",
     "summarize_trade_outcomes_by_day",
@@ -381,5 +398,6 @@ __all__ = [
     "validate_price_only_liquidity_sweep_config",
     "write_price_only_acceptance_report",
     "write_auction_regime_stack_acceptance_report",
+    "write_delta_impulse_overlay_validation_report",
     "write_scaled_scalp_acceptance_report",
 ]

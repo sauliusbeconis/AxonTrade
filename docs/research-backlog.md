@@ -62,7 +62,7 @@ Every research source should be documented with a link and retrieval date.
 - Add trade-level audit for the spaced delta-impulse continuation lead. Done.
 - Add exit-stability or fixed-exit validation for the spaced delta-impulse continuation lead. Done.
 - Build a dedicated Sierra overlay candidate for fixed-exit spaced delta-impulse continuation. Done.
-- Validate the Sierra delta-impulse overlay log against the Python-generated baseline.
+- Validate the Sierra delta-impulse overlay log against the Python-generated baseline. Done.
 - Add fixed-row robustness and calendar-driven holiday/early-close diagnostics for the Sierra delta-impulse overlay. Done.
 - Add executable acceptance gate for the Sierra delta-impulse fixed scaled-scalp row. Done.
 - Add one-command fixed-row pipeline for the Sierra delta-impulse overlay. Done.

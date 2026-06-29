@@ -174,6 +174,29 @@ From the repository:
 The reporting workflow is documented in
 [sierra-signal-log-report.md](sierra-signal-log-report.md).
 
+## Validate The Overlay Log
+
+Manual help needed: **No** after the matching bar export and signal log exist.
+
+Run this before trusting a new Sierra replay export. It reproduces the overlay
+candidate rule from exported 3-minute OHLC plus bid/ask volume and compares the
+result to `AxonTrade_DeltaImpulseSignalLog.csv`.
+
+```bash
+.venv/bin/python scripts/check_delta_impulse_overlay_validation.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_DeltaImpulse_3Min_Large.txt \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_DeltaImpulseSignalLog.csv \
+  --fail-on-mismatch
+```
+
+Expected current result:
+
+`overlay_validation=PASS; expected=78; actual=78; matched=78`
+
+The report is written to:
+
+`reports/sierra-delta-impulse-overlay-validation.md`
+
 ## Evaluate Scaled Outcomes
 
 Manual help needed: **No** after the matching bar export exists.

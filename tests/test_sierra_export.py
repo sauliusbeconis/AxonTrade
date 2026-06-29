@@ -62,6 +62,16 @@ def test_orderflow_export_config_is_valid() -> None:
     assert "delta" in config["optional_fields"]
 
 
+def test_delta_impulse_export_config_is_valid() -> None:
+    config = load_sierra_export_config("config/research/sierra_delta_impulse_bar_export.yaml")
+
+    validate_sierra_export_config(config)
+    assert "bid_volume" in config["normalized_fields"]
+    assert "ask_volume" in config["normalized_fields"]
+    assert "vwap" not in config["normalized_fields"]
+    assert "delta" in config["optional_fields"]
+
+
 def test_volume_at_price_export_config_is_valid() -> None:
     config = load_sierra_export_config("config/research/sierra_volume_at_price_export.yaml")
 

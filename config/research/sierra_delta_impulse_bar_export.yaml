@@ -1,0 +1,101 @@
+schema_version: 1
+profile_id: sierra_delta_impulse_bar_export_v1
+description: >
+  Minimal Sierra Chart bar export contract for reproducing the delta-impulse
+  overlay rule from exported OHLC and bid/ask volume fields.
+
+normalized_fields:
+  - timestamp
+  - symbol
+  - chart_number
+  - bar_index
+  - open
+  - high
+  - low
+  - close
+  - volume
+  - number_of_trades
+  - bid_volume
+  - ask_volume
+  - delta
+  - session_phase
+
+optional_fields:
+  - volume
+  - number_of_trades
+  - delta
+
+defaults:
+  chart_number: 2
+  session_phase: rth
+
+required_cli_values:
+  - symbol
+
+column_aliases:
+  timestamp:
+    - Date Time
+    - DateTime
+    - Date-Time
+    - Timestamp
+    - Date
+  symbol:
+    - Symbol
+  chart_number:
+    - Chart Number
+    - ChartNumber
+  bar_index:
+    - Bar Index
+    - BarIndex
+    - Index
+  open:
+    - Open
+    - O
+  high:
+    - High
+    - H
+  low:
+    - Low
+    - L
+  close:
+    - Last
+    - Close
+    - C
+  volume:
+    - Volume
+    - Vol
+    - Total Volume
+  number_of_trades:
+    - "# of Trades"
+    - Number of Trades
+    - Num Trades
+    - Trades
+  bid_volume:
+    - Bid Volume
+    - BidVolume
+    - Bid Vol
+    - Total Bid Volume
+    - Number Bars Bid Volume
+  ask_volume:
+    - Ask Volume
+    - AskVolume
+    - Ask Vol
+    - Total Ask Volume
+    - Number Bars Ask Volume
+  delta:
+    - Delta
+    - Ask - Bid
+    - Ask-Bid
+    - Ask Bid Difference
+    - Ask Volume Bid Volume Difference
+    - Ask Volume - Bid Volume
+    - Ask Volume Bid Volume Diff
+  session_phase:
+    - Session Phase
+    - Session
+
+notes:
+  - bid_volume and ask_volume are required because ACSIL computes bar delta as
+    ask volume minus bid volume.
+  - VWAP and opening-range studies are intentionally not required for this
+    profile because the delta-impulse overlay does not read them.
