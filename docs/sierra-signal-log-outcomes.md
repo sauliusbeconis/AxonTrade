@@ -486,7 +486,11 @@ Template:
 
 `config/research/news_events.template.csv`
 
-Working event calendar path:
+Tracked event calendar path for the current June 2026 sample:
+
+`config/research/us_scheduled_news_events_2026_06.csv`
+
+Local working event calendar path, if testing an uncommitted calendar:
 
 `data/processed/AxonTrade_US_news_events.csv`
 
@@ -510,7 +514,7 @@ After the event calendar exists, annotate diagnostics with:
 ```bash
 .venv/bin/python scripts/run_signal_news_exclusion.py \
   reports/sierra-signal-log-quality-diagnostics-large-sample.csv \
-  data/processed/AxonTrade_US_news_events.csv \
+  config/research/us_scheduled_news_events_2026_06.csv \
   reports/sierra-signal-log-quality-diagnostics-news-annotated-large-sample.csv \
   --timestamp-field entry_time \
   --default-blackout-before-minutes 10 \
@@ -540,9 +544,9 @@ from being treated as news-filtered.
 
 Large-sample event calendar check:
 
-- Input events: BLS Employment Situation `2026-06-05 08:30`, BLS CPI
-  `2026-06-10 08:30`, BLS PPI `2026-06-11 08:30`, Census Retail Sales
-  `2026-06-17 08:30`, FOMC statement `2026-06-17 14:00`, all New York time.
+- Input events: `17` official scheduled-event rows covering `2026-06-05`
+  through `2026-06-26`, all New York time. Sources are stored per row in
+  `config/research/us_scheduled_news_events_2026_06.csv`.
 - Annotation output:
   `reports/sierra-signal-log-quality-diagnostics-news-annotated-large-sample.csv`
 - Result: `23` signal rows annotated, `0` rows inside the configured news
@@ -1262,13 +1266,19 @@ Scheduled-news exclusion status:
 
 - implementation exists
 - template CSV exists
-- local official-event sample exists at
-  `data/processed/AxonTrade_US_news_events.csv`
+- tracked official-event calendar exists at
+  `config/research/us_scheduled_news_events_2026_06.csv`
 - annotated output:
   `reports/sierra-signal-log-quality-diagnostics-news-annotated-large-sample.csv`
 - configured events removed `0` of `23` candidate rows from this sample
 - news-excluded quality-filter walk-forward remained unchanged: `4` selected
   holdout trades, `0` target hits, `4` losses, `-1064.00` net USD
+- current delta fixed-row news annotation:
+  `reports/sierra-delta-impulse-fixed-row-news-annotated-outcomes.csv`
+- current delta fixed-row news exclusion removed `1` of `78` trades: the
+  `2026-06-24 10:15:00` short inside the New Residential Sales blackout window
+- current delta fixed-row net changed from `3104` to `3411` USD after excluding
+  that one row
 - manual help needed: **No for the current checked sample**; **Yes for future
   samples** if the date range includes new official event rows not yet in the
   local event CSV

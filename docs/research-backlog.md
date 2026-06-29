@@ -73,7 +73,7 @@ Every research source should be documented with a link and retrieval date.
 - Add one-command auction-regime target/breakeven stack pipeline. Done.
 - Build walk-forward filters over normalized context features after the sample is large enough.
 - Add scheduled-news exclusion to Sierra overlay research exports. Done.
-- Populate scheduled-news calendar for the current Sierra overlay sample.
+- Populate scheduled-news calendar for the current Sierra overlay sample. Done.
 
 ## Reporting
 

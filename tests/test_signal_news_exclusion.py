@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import csv
+from pathlib import Path
+
 import pytest
 
 from axontrade.research import (
@@ -97,3 +100,26 @@ def test_annotate_reports_news_event_row_for_missing_time() -> None:
                 {"event_id": "event-2", "event_time": None},
             ],
         )
+
+
+def test_canonical_june_2026_calendar_flags_current_sample_housing_release() -> None:
+    calendar_path = Path("config/research/us_scheduled_news_events_2026_06.csv")
+    with calendar_path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        assert reader.fieldnames == NEWS_EVENT_CSV_HEADER
+        events = list(reader)
+
+    annotated_rows = annotate_rows_with_news_blackouts(
+        [
+            {
+                "signal_id": "delta_impulse_continue_10bar_2.5pt_50d_ESU26-CME_1300",
+                "entry_time": "2026-06-24 10:15:00",
+            },
+        ],
+        events,
+    )
+
+    assert len(events) == 17
+    assert annotated_rows[0]["in_news_blackout"] == "true"
+    assert annotated_rows[0]["matched_news_event_id"] == "census-new-home-sales-2026-06-24"
+    assert annotated_rows[0]["minutes_from_news_event"] == "15"

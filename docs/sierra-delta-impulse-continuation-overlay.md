@@ -218,6 +218,31 @@ For the current fixed row, use the one-command pipeline. It regenerates:
 The current sample is expected to print `acceptance=FAIL`. That is a research
 rejection, not a script error.
 
+## Annotate News Blackouts
+
+Manual help needed: **No** for the current June 2026 replay sample.
+
+The tracked June 2026 calendar is:
+
+`config/research/us_scheduled_news_events_2026_06.csv`
+
+Annotate the current fixed-row outcomes with:
+
+```bash
+.venv/bin/python scripts/run_signal_news_exclusion.py \
+  data/processed/AxonTrade_ES_delta_impulse_3min_large_scaled_outcomes_all_5_10_8_initial.csv \
+  config/research/us_scheduled_news_events_2026_06.csv \
+  reports/sierra-delta-impulse-fixed-row-news-annotated-outcomes.csv \
+  --timestamp-field entry_time \
+  --default-blackout-before-minutes 10 \
+  --default-blackout-after-minutes 15
+```
+
+Current result: `78` rows annotated, `1` row inside a blackout window. The
+diagnostic summary is:
+
+`reports/sierra-delta-impulse-fixed-row-news-exclusion.md`
+
 Use this to evaluate the original `5 / 5 / 15 / breakeven` exit when the CSV
 came from the same Sierra chart that produced the export:
 

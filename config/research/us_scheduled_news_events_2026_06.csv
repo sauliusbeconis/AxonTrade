@@ -1,0 +1,18 @@
+schema_version,event_id,event_time,event_name,currency,impact,blackout_before_minutes,blackout_after_minutes,source,notes
+1,bls-employment-2026-06-05,2026-06-05 08:30:00,Employment Situation,USD,high,15,30,https://www.bls.gov/schedule/2026/06_sched.htm,New York time; retrieved 2026-06-29
+1,bls-cpi-2026-06-10,2026-06-10 08:30:00,Consumer Price Index,USD,high,15,30,https://www.bls.gov/schedule/2026/06_sched.htm,New York time; retrieved 2026-06-29
+1,bls-ppi-2026-06-11,2026-06-11 08:30:00,Producer Price Index,USD,high,15,30,https://www.bls.gov/schedule/2026/06_sched.htm,New York time; retrieved 2026-06-29
+1,dol-weekly-claims-2026-06-11,2026-06-11 08:30:00,Unemployment Insurance Weekly Claims,USD,medium,10,15,https://oui.doleta.gov/unemploy/claims_arch.asp,New York time; retrieved 2026-06-29
+1,bls-import-export-prices-2026-06-16,2026-06-16 08:30:00,Import and Export Price Indexes,USD,medium,10,15,https://www.bls.gov/news.release/ximpim.nr0.htm,New York time; retrieved 2026-06-29
+1,census-housing-starts-2026-06-16,2026-06-16 08:30:00,New Residential Construction,USD,medium,10,15,https://www.census.gov/economic-indicators/calendar-listview.html,New York time; retrieved 2026-06-29
+1,census-retail-sales-2026-06-17,2026-06-17 08:30:00,Advance Monthly Sales for Retail and Food Services,USD,high,15,30,https://www.census.gov/retail/release_schedule.html,New York time; retrieved 2026-06-29
+1,census-business-inventories-2026-06-17,2026-06-17 10:00:00,Manufacturing and Trade Inventories and Sales,USD,medium,10,15,https://www.census.gov/economic-indicators/calendar-listview.html,New York time; retrieved 2026-06-29
+1,fed-fomc-2026-06-17,2026-06-17 14:00:00,FOMC Meeting Statement,USD,high,60,90,https://www.federalreserve.gov/monetarypolicy/fomcpresconf20260617.htm,New York time; retrieved 2026-06-29
+1,fed-fomc-presser-2026-06-17,2026-06-17 14:30:00,FOMC Press Conference,USD,high,30,60,https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm,New York time; retrieved 2026-06-29
+1,dol-weekly-claims-2026-06-18,2026-06-18 08:30:00,Unemployment Insurance Weekly Claims,USD,medium,10,15,https://oui.doleta.gov/unemploy/claims_arch.asp,New York time; retrieved 2026-06-29
+1,census-new-home-sales-2026-06-24,2026-06-24 10:00:00,New Residential Sales,USD,medium,10,15,https://www.census.gov/economic-indicators/calendar-listview.html,New York time; retrieved 2026-06-29
+1,bea-gdp-third-estimate-2026-06-25,2026-06-25 08:30:00,GDP Third Estimate 1st Quarter 2026,USD,high,15,30,https://www.bea.gov/news/2026/gdp-third-estimate-industries-corporate-profits-state-gdp-and-state-personal-income-1st,New York time; retrieved 2026-06-29
+1,bea-pce-2026-06-25,2026-06-25 08:30:00,Personal Income and Outlays,USD,high,15,30,https://www.bea.gov/news/2026/personal-income-and-outlays-may-2026,New York time; retrieved 2026-06-29
+1,census-durable-goods-2026-06-25,2026-06-25 08:30:00,Advance Report on Durable Goods,USD,high,15,30,https://www.census.gov/economic-indicators/calendar-listview.html,New York time; retrieved 2026-06-29
+1,dol-weekly-claims-2026-06-25,2026-06-25 08:30:00,Unemployment Insurance Weekly Claims,USD,medium,10,15,https://www.dol.gov/ui/data.pdf,New York time; retrieved 2026-06-29
+1,census-advance-economic-indicators-2026-06-26,2026-06-26 08:30:00,Advance Economic Indicators Report,USD,medium,10,15,https://www.census.gov/economic-indicators/calendar-listview.html,New York time; retrieved 2026-06-29
