@@ -3,6 +3,9 @@
 This report evaluates the Sierra Chart overlay output from chart
 `ESU26-CME[M] 3 Min #2`.
 
+This smaller replay result has been superseded by
+`reports/sierra-delta-impulse-3min-large-sample-outcomes.md`.
+
 As of the latest Sierra recalculation, the overlay is configured to log the
 `5 / 8 / 10 / initial` candidate variant.
 

@@ -3,7 +3,7 @@
 `AxonTradeDeltaImpulseContinuationOverlay.cpp` is an indicator-only ACSIL study
 for the current 3-minute delta impulse continuation candidate:
 
-`delta_impulse_continue_10bar_2.5pt_50d` with fixed `5 / 8 / 10 / initial`.
+`delta_impulse_continue_10bar_2.5pt_50d` with fixed `5 / 10 / 8 / initial`.
 
 Manual help needed: **Yes, to compile and load the Sierra Chart study.**
 Manual help needed after it is loaded: **No**, unless Sierra Chart reports a
@@ -40,9 +40,9 @@ These defaults match the current 3-minute replay candidate:
 - minimum delta sum: `50`
 - minimum spacing: `900` seconds
 - max signals per day: `6`
-- initial stop: `8` points
+- initial stop: `10` points
 - first target: `5` points
-- runner target: `10` points
+- runner target: `8` points
 - runner stop mode: `initial`, recorded in `notes`
 
 The CSV `target_price` field stores the runner target. The first target and
@@ -110,9 +110,9 @@ Use the ES footprint/execution chart, not the TPO context chart.
    - `Minimum Delta Sum = 50`
    - `Minimum Signal Spacing Seconds = 900`
    - `Max Signals Per Day = 6`
-   - `Initial Stop Points = 8`
+   - `Initial Stop Points = 10`
    - `First Target Points = 5`
-   - `Runner Target Points = 10`
+   - `Runner Target Points = 8`
    - `Runner Stop Mode = initial`
 10. Click `OK`.
 11. Click `OK` again to close Chart Studies.
@@ -196,19 +196,19 @@ came from the same Sierra chart that produced the export:
   --entry-match-mode auto
 ```
 
-For the current 3-minute replay sample, the best in-sample variant is:
+For the larger 3-minute replay sample, the best all-direction fixed variant is:
 
 ```bash
 .venv/bin/python scripts/run_signal_log_scaled_scalp_outcomes.py \
   /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_DeltaImpulse_3Min.txt \
   /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_DeltaImpulseSignalLog.csv \
-  data/processed/AxonTrade_ES_delta_impulse_3min_scaled_outcomes_5_8_10_initial.csv \
+  data/processed/AxonTrade_ES_delta_impulse_3min_large_scaled_outcomes_all_5_10_8_initial.csv \
   --symbol ESU26-CME \
   --chart-number 2 \
   --session-phase rth \
   --first-target-points 5 \
-  --stop-points 8 \
-  --runner-target-points 10 \
+  --stop-points 10 \
+  --runner-target-points 8 \
   --runner-stop-mode initial \
   --entry-match-mode auto
 ```
@@ -222,9 +222,9 @@ Manual help needed: **Yes**.
 3. Select `AxonTrade Delta Impulse Continuation Overlay`.
 4. Click `Settings`.
 5. Set:
-   - `Initial Stop Points = 8`
+   - `Initial Stop Points = 10`
    - `First Target Points = 5`
-   - `Runner Target Points = 10`
+   - `Runner Target Points = 8`
    - `Runner Stop Mode = initial`
 6. Click `OK`.
 7. Click `OK`.
