@@ -76,6 +76,16 @@ Required comparisons:
 - baseline versus baseline plus absorption proxy;
 - full model versus simpler versions.
 
+Source context:
+
+- Market-research summary:
+  [market-research-momentum-order-flow.md](market-research-momentum-order-flow.md)
+- Broad time-series momentum evidence supports regime context, not direct
+  proof of intraday ES/NQ edge.
+- Intraday momentum evidence supports explicit session/time-of-day controls.
+- Order-flow imbalance literature supports delta/VAP/depth features as
+  ablated inputs, not standalone signals.
+
 ## Required Output
 
 Each tested hypothesis must produce a report with instrument-specific results, rejected signals, costs, slippage, parameter log, and failure-mode review.

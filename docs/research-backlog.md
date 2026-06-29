@@ -11,9 +11,9 @@ Every research source should be documented with a link and retrieval date.
 
 ## Market Research
 
-- Research time-series momentum evidence.
-- Research intraday momentum evidence.
-- Research order-flow imbalance literature.
+- Research time-series momentum evidence. Done.
+- Research intraday momentum evidence. Done.
+- Research order-flow imbalance literature. Done.
 - Research realistic futures commissions and slippage.
 
 ## Methodology
