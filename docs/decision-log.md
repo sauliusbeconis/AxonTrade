@@ -78,6 +78,17 @@ Context:
 - The first holdout window is positive, but the next three selected windows are
   negative.
 
+Update after the continuous-contract 240D export:
+
+- Logged continuation direction stayed deeply negative: `467` selected holdout
+  trades for `-58781.50` USD.
+- Inverted/fade direction was less bad but still negative: `437` selected
+  holdout trades for `-13209` USD.
+- The best inverted full-sample sweep row was also negative: long-only
+  `5 / 8 / 15 / initial`, `426` trades, `-1482` USD.
+- This invalidates the earlier small-sample positive in-sample inversion row as
+  insufficient evidence.
+
 Consequences:
 
 - Do not promote simple "take the opposite side" logic.

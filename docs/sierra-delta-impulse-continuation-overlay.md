@@ -306,6 +306,31 @@ walk-forward. Summary:
 
 `reports/sierra-delta-impulse-direction-variant-diagnostics.md`
 
+Continuous-contract 240D rerun:
+
+```bash
+.venv/bin/python scripts/run_delta_impulse_direction_variant_diagnostics.py \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_DeltaImpulse_3Min_Continuous_240D.txt \
+  /home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_DeltaImpulseSignalLog.csv \
+  --report reports/sierra-delta-impulse-direction-variant-diagnostics-continuous-240d.md \
+  --logged-sweep-output reports/sierra-delta-impulse-direction-variant-sweep-logged-continuous-240d.csv \
+  --inverted-sweep-output reports/sierra-delta-impulse-direction-variant-sweep-inverted-continuous-240d.csv \
+  --logged-walk-forward-output reports/sierra-delta-impulse-direction-variant-walk-forward-logged-continuous-240d.csv \
+  --inverted-walk-forward-output reports/sierra-delta-impulse-direction-variant-walk-forward-inverted-continuous-240d.csv
+```
+
+Continuous 240D result:
+
+- logged-direction walk-forward: `467` selected holdout trades, `-58781.50` net USD
+- inverted-direction walk-forward: `437` selected holdout trades, `-13209` net USD
+- best inverted full-sample sweep row: long-only `5 / 8 / 15 / initial`,
+  `426` trades, `-1482` net USD
+
+Simple inversion reduces the loss, but does not create an executable edge.
+Summary:
+
+`reports/sierra-delta-impulse-direction-variant-diagnostics-continuous-240d.md`
+
 Use this to evaluate the original `5 / 5 / 15 / breakeven` exit when the CSV
 came from the same Sierra chart that produced the export:
 

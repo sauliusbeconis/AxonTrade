@@ -193,6 +193,8 @@ def render_direction_variant_report(
 
     logged_holdout = summarize_walk_forward_holdouts(logged_walk_forward)
     inverted_holdout = summarize_walk_forward_holdouts(inverted_walk_forward)
+    logged_best = best_sweep_rows(logged_sweep, limit=1)
+    inverted_best = best_sweep_rows(inverted_sweep, limit=1)
     lines = [
         "# Sierra Delta Impulse Direction Variant Diagnostics",
         "",
@@ -245,21 +247,58 @@ def render_direction_variant_report(
         "",
         "## Interpretation",
         "",
-        (
-            "The inverted/fade direction produces positive in-sample rows, which means "
-            "the failed continuation rule contains some information. However, the "
-            "walk-forward holdout remains negative. Treat this as a parameter-fit "
-            "warning, not as a tradable fade rule."
-        ),
-        "",
-        (
-            "A future Delta Impulse variant needs a materially different entry "
-            "hypothesis, such as a stricter auction regime or liquidity-sweep context, "
-            "before more exit optimization is useful."
+        *_interpretation_lines(
+            logged_best=logged_best[0] if logged_best else None,
+            inverted_best=inverted_best[0] if inverted_best else None,
+            logged_holdout=logged_holdout,
+            inverted_holdout=inverted_holdout,
         ),
         "",
     ]
     return "\n".join(lines)
+
+
+def _interpretation_lines(
+    *,
+    logged_best: dict[str, Any] | None,
+    inverted_best: dict[str, Any] | None,
+    logged_holdout: dict[str, float | int],
+    inverted_holdout: dict[str, float | int],
+) -> list[str]:
+    """Describe whether simple direction inversion shows a usable edge."""
+
+    if inverted_best is None or logged_best is None:
+        return ["No comparable sweep rows were produced."]
+
+    inverted_best_net = float(inverted_best["net_usd"])
+    logged_holdout_net = float(logged_holdout["net_usd"])
+    inverted_holdout_net = float(inverted_holdout["net_usd"])
+    delta = inverted_holdout_net - logged_holdout_net
+
+    if inverted_best_net > 0:
+        first_line = (
+            "The inverted/fade direction produces positive in-sample rows, which means "
+            "the failed continuation rule may contain directional information. However, "
+            "the walk-forward holdout remains negative."
+        )
+    else:
+        first_line = (
+            "The inverted/fade direction is less bad than the logged continuation "
+            "direction, but its best full-sample sweep row is still negative. That "
+            "is not a tradable inversion edge."
+        )
+
+    second_line = (
+        f"In walk-forward holdout, inverted direction changes net by "
+        f"{_format_money(delta)} USD versus logged direction, but remains "
+        f"{_format_money(inverted_holdout_net)} USD overall."
+    )
+    third_line = (
+        "A future Delta Impulse variant needs a materially different entry "
+        "hypothesis, such as a stricter auction regime or liquidity-sweep context, "
+        "before more exit optimization is useful."
+    )
+    return [first_line, "", second_line, "", third_line]
 
 
 def best_sweep_rows(rows: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
