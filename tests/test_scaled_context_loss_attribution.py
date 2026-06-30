@@ -4,12 +4,15 @@ from axontrade.research import (
     SCALED_CONTEXT_DAILY_SUMMARY_HEADER,
     SCALED_CONTEXT_FEATURE_BUCKET_HEADER,
     SCALED_CONTEXT_GUARD_EVALUATION_HEADER,
+    SCALED_CONTEXT_GUARD_ROBUSTNESS_HEADER,
     SCALED_CONTEXT_GUARD_WALK_FORWARD_HEADER,
     GuardCondition,
     ScaledContextGuardRule,
     bucket_scaled_context_features,
     evaluate_scaled_context_fixed_guards,
+    render_scaled_context_guard_robustness_report,
     render_scaled_context_loss_attribution_report,
+    run_scaled_context_guard_robustness,
     run_scaled_context_guard_walk_forward,
     summarize_scaled_context_daily_performance,
 )
@@ -138,6 +141,59 @@ def test_runs_guard_walk_forward_selected_on_train() -> None:
     assert split_rows[1]["input_trades"] == 2
     assert split_rows[1]["kept_trades"] == 1
     assert split_rows[1]["net_usd"] == "200"
+
+
+def test_runs_guard_robustness_summary() -> None:
+    context_rows = [
+        _context_row(1, trade_date="2026-06-10", net_usd=200, lookback_move=-3),
+        _context_row(2, trade_date="2026-06-10", net_usd=-100, lookback_move=1),
+        _context_row(3, trade_date="2026-06-11", net_usd=200, lookback_move=-3),
+        _context_row(4, trade_date="2026-06-11", net_usd=-100, lookback_move=1),
+        _context_row(5, trade_date="2026-06-12", net_usd=200, lookback_move=-3),
+        _context_row(6, trade_date="2026-06-12", net_usd=-100, lookback_move=1),
+    ]
+
+    robustness_rows = run_scaled_context_guard_robustness(
+        context_rows,
+        window_configs=[(2, 1, 1)],
+        minimum_train_trades=1,
+        minimum_train_participation_rate=0,
+        guard_rules=[ScaledContextGuardRule("none", ()), _push_guard()],
+    )
+
+    assert list(robustness_rows[0].keys()) == SCALED_CONTEXT_GUARD_ROBUSTNESS_HEADER
+    assert robustness_rows[0]["holdout_windows"] == 1
+    assert robustness_rows[0]["unfiltered_holdout_trades"] == 2
+    assert robustness_rows[0]["guarded_holdout_trades"] == 1
+    assert robustness_rows[0]["guarded_holdout_net_usd"] == "200"
+    assert robustness_rows[0]["selected_guard_counts"] == "push_guard=1"
+
+
+def test_renders_guard_robustness_report() -> None:
+    robustness_rows = [
+        {
+            "train_date_count": 2,
+            "holdout_date_count": 1,
+            "window_step_date_count": 1,
+            "holdout_windows": 1,
+            "unfiltered_holdout_net_usd": "100",
+            "guarded_holdout_net_usd": "200",
+            "guard_net_improvement_usd": "100",
+            "guarded_holdout_trades": 1,
+            "guarded_average_net_usd": "200",
+            "negative_holdout_windows": 0,
+            "worst_guarded_window_net_usd": "200",
+        },
+    ]
+
+    report = render_scaled_context_guard_robustness_report(
+        robustness_rows,
+        context_source="context.csv",
+    )
+
+    assert "Scaled Context Guard Robustness" in report
+    assert "`context.csv`" in report
+    assert "| 2 | 1 | 1 | 1 | 100 | 200 | 100 | 1 | 200 | 0 | 200 |" in report
 
 
 def test_renders_loss_attribution_report() -> None:

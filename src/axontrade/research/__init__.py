@@ -58,18 +58,23 @@ from axontrade.research.scaled_context_selected_veto import (
     run_scaled_context_selected_veto_walk_forward as run_scaled_context_selected_veto_walk_forward,
 )
 from axontrade.research.scaled_context_loss_attribution import (
+    DEFAULT_GUARD_ROBUSTNESS_WINDOW_CONFIGS as DEFAULT_GUARD_ROBUSTNESS_WINDOW_CONFIGS,
     DEFAULT_THEORY_GUARD_RULES as DEFAULT_THEORY_GUARD_RULES,
     SCALED_CONTEXT_DAILY_SUMMARY_HEADER as SCALED_CONTEXT_DAILY_SUMMARY_HEADER,
     SCALED_CONTEXT_FEATURE_BUCKET_HEADER as SCALED_CONTEXT_FEATURE_BUCKET_HEADER,
     SCALED_CONTEXT_GUARD_EVALUATION_HEADER as SCALED_CONTEXT_GUARD_EVALUATION_HEADER,
+    SCALED_CONTEXT_GUARD_ROBUSTNESS_HEADER as SCALED_CONTEXT_GUARD_ROBUSTNESS_HEADER,
     SCALED_CONTEXT_GUARD_WALK_FORWARD_HEADER as SCALED_CONTEXT_GUARD_WALK_FORWARD_HEADER,
     GuardCondition as GuardCondition,
     ScaledContextGuardRule as ScaledContextGuardRule,
     ScaledContextLossAttributionError as ScaledContextLossAttributionError,
     bucket_scaled_context_features as bucket_scaled_context_features,
     evaluate_scaled_context_fixed_guards as evaluate_scaled_context_fixed_guards,
+    render_scaled_context_guard_robustness_report as render_scaled_context_guard_robustness_report,
     render_scaled_context_loss_attribution_report as render_scaled_context_loss_attribution_report,
+    run_scaled_context_guard_robustness as run_scaled_context_guard_robustness,
     run_scaled_context_guard_walk_forward as run_scaled_context_guard_walk_forward,
+    summarize_scaled_context_guard_walk_forward as summarize_scaled_context_guard_walk_forward,
     summarize_scaled_context_daily_performance as summarize_scaled_context_daily_performance,
 )
 from axontrade.research.delta_impulse_overlay_validation import (

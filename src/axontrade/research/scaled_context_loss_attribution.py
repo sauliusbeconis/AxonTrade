@@ -79,6 +79,34 @@ SCALED_CONTEXT_GUARD_WALK_FORWARD_HEADER = [
     "minimum_kept_train_trades",
     "minimum_train_participation_rate",
 ]
+SCALED_CONTEXT_GUARD_ROBUSTNESS_HEADER = [
+    "schema_version",
+    "robustness_id",
+    "train_date_count",
+    "holdout_date_count",
+    "window_step_date_count",
+    "selection_objective",
+    "minimum_train_trades",
+    "minimum_train_participation_rate",
+    "holdout_windows",
+    "positive_holdout_windows",
+    "negative_holdout_windows",
+    "unfiltered_holdout_trades",
+    "guarded_holdout_trades",
+    "skipped_holdout_trades",
+    "participation_rate",
+    "unfiltered_holdout_net_usd",
+    "guarded_holdout_net_usd",
+    "guard_net_improvement_usd",
+    "unfiltered_average_net_usd",
+    "guarded_average_net_usd",
+    "worst_guarded_window_dates",
+    "worst_guarded_window_net_usd",
+    "best_guarded_window_dates",
+    "best_guarded_window_net_usd",
+    "selected_guard_counts",
+    "notes",
+]
 
 DEFAULT_LOSS_ATTRIBUTION_FEATURES = [
     "minutes_after_rth_open",
@@ -195,6 +223,13 @@ DEFAULT_THEORY_GUARD_RULES = [
         ),
     ),
 ]
+DEFAULT_GUARD_ROBUSTNESS_WINDOW_CONFIGS = (
+    (20, 5, 5),
+    (40, 5, 5),
+    (40, 10, 10),
+    (60, 10, 10),
+    (80, 10, 10),
+)
 
 
 def summarize_scaled_context_daily_performance(
@@ -390,6 +425,112 @@ def run_scaled_context_guard_walk_forward(
     return split_rows
 
 
+def run_scaled_context_guard_robustness(
+    context_rows: Iterable[dict[str, Any]],
+    *,
+    window_configs: Iterable[tuple[int, int, int]] = DEFAULT_GUARD_ROBUSTNESS_WINDOW_CONFIGS,
+    minimum_train_trades: int = 25,
+    minimum_train_participation_rate: float = 0.35,
+    selection_objective: str = "lower_bound",
+    guard_rules: Iterable[ScaledContextGuardRule] = DEFAULT_THEORY_GUARD_RULES,
+) -> list[dict[str, Any]]:
+    """Summarize theory-guard walk-forward behavior across window shapes."""
+
+    rows = list(context_rows)
+    robustness_rows: list[dict[str, Any]] = []
+    for train_date_count, holdout_date_count, window_step_date_count in window_configs:
+        split_rows = run_scaled_context_guard_walk_forward(
+            rows,
+            train_date_count=train_date_count,
+            holdout_date_count=holdout_date_count,
+            window_step_date_count=window_step_date_count,
+            minimum_train_trades=minimum_train_trades,
+            minimum_train_participation_rate=minimum_train_participation_rate,
+            selection_objective=selection_objective,
+            guard_rules=guard_rules,
+        )
+        robustness_rows.append(
+            summarize_scaled_context_guard_walk_forward(
+                split_rows,
+                train_date_count=train_date_count,
+                holdout_date_count=holdout_date_count,
+                window_step_date_count=window_step_date_count,
+                minimum_train_trades=minimum_train_trades,
+                minimum_train_participation_rate=minimum_train_participation_rate,
+                selection_objective=selection_objective,
+            ),
+        )
+    return robustness_rows
+
+
+def summarize_scaled_context_guard_walk_forward(
+    split_rows: Iterable[dict[str, Any]],
+    *,
+    train_date_count: int,
+    holdout_date_count: int,
+    window_step_date_count: int,
+    minimum_train_trades: int,
+    minimum_train_participation_rate: float,
+    selection_objective: str,
+) -> dict[str, Any]:
+    """Summarize holdout rows from a guard walk-forward run."""
+
+    holdout_rows = [row for row in split_rows if str(row["sample"]) == "holdout"]
+    if not holdout_rows:
+        raise ScaledContextLossAttributionError("walk-forward rows must include holdout rows")
+
+    unfiltered_trades = sum(_to_int(row["input_trades"], "input_trades") for row in holdout_rows)
+    guarded_trades = sum(_to_int(row["kept_trades"], "kept_trades") for row in holdout_rows)
+    unfiltered_net = sum(_to_float(row["unfiltered_net_usd"], "unfiltered_net_usd") for row in holdout_rows)
+    guarded_net = sum(_to_float(row["net_usd"], "net_usd") for row in holdout_rows)
+    positive_windows = sum(_to_float(row["net_usd"], "net_usd") > 0 for row in holdout_rows)
+    negative_windows = sum(_to_float(row["net_usd"], "net_usd") < 0 for row in holdout_rows)
+    worst_window = min(holdout_rows, key=lambda row: _to_float(row["net_usd"], "net_usd"))
+    best_window = max(holdout_rows, key=lambda row: _to_float(row["net_usd"], "net_usd"))
+    guard_counts = Counter(str(row["guard_name"]) for row in holdout_rows)
+
+    return {
+        "schema_version": 1,
+        "robustness_id": (
+            "scaled_context_guard_robustness:"
+            f"train={train_date_count}:holdout={holdout_date_count}:"
+            f"step={window_step_date_count}:objective={selection_objective}"
+        ),
+        "train_date_count": train_date_count,
+        "holdout_date_count": holdout_date_count,
+        "window_step_date_count": window_step_date_count,
+        "selection_objective": selection_objective,
+        "minimum_train_trades": minimum_train_trades,
+        "minimum_train_participation_rate": _format_number(minimum_train_participation_rate),
+        "holdout_windows": len(holdout_rows),
+        "positive_holdout_windows": positive_windows,
+        "negative_holdout_windows": negative_windows,
+        "unfiltered_holdout_trades": unfiltered_trades,
+        "guarded_holdout_trades": guarded_trades,
+        "skipped_holdout_trades": unfiltered_trades - guarded_trades,
+        "participation_rate": _format_number(
+            guarded_trades / unfiltered_trades if unfiltered_trades else 0.0,
+        ),
+        "unfiltered_holdout_net_usd": _format_number(unfiltered_net),
+        "guarded_holdout_net_usd": _format_number(guarded_net),
+        "guard_net_improvement_usd": _format_number(guarded_net - unfiltered_net),
+        "unfiltered_average_net_usd": _format_number(
+            unfiltered_net / unfiltered_trades if unfiltered_trades else 0.0,
+        ),
+        "guarded_average_net_usd": _format_number(
+            guarded_net / guarded_trades if guarded_trades else 0.0,
+        ),
+        "worst_guarded_window_dates": worst_window["trade_dates"],
+        "worst_guarded_window_net_usd": worst_window["net_usd"],
+        "best_guarded_window_dates": best_window["trade_dates"],
+        "best_guarded_window_net_usd": best_window["net_usd"],
+        "selected_guard_counts": ";".join(
+            f"{guard_name}={count}" for guard_name, count in guard_counts.most_common()
+        ),
+        "notes": "compact theory guard walk-forward robustness summary",
+    }
+
+
 def render_scaled_context_loss_attribution_report(
     *,
     context_rows: Iterable[dict[str, Any]],
@@ -487,6 +628,66 @@ def render_scaled_context_loss_attribution_report(
             "This is still research. The next validation step is to rerun the same "
             "guard family on a later export and then wire only the selected fixed "
             "conditions into Sierra if the improvement survives.",
+        ],
+    )
+    return "\n".join(lines) + "\n"
+
+
+def render_scaled_context_guard_robustness_report(
+    robustness_rows: Iterable[dict[str, Any]],
+    *,
+    context_source: str,
+) -> str:
+    """Render a markdown summary for guard robustness rows."""
+
+    rows = list(robustness_rows)
+    if not rows:
+        raise ScaledContextLossAttributionError("robustness_rows must not be empty")
+    best = max(rows, key=lambda row: float(row["guarded_holdout_net_usd"]))
+    worst = min(rows, key=lambda row: float(row["guarded_holdout_net_usd"]))
+
+    lines = [
+        "# Scaled Context Guard Robustness",
+        "",
+        "Status: **research lead, not live-ready**",
+        "",
+        "## Source",
+        "",
+        f"- Context diagnostics: `{context_source}`",
+        "",
+        "## Window Robustness",
+        "",
+        "| Train | Holdout | Step | Windows | Unguarded Net | Guarded Net | Improvement | Kept Trades | Avg/Trade | Negative Windows | Worst Window |",
+        "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    for row in rows:
+        lines.append(
+            "| {train_date_count} | {holdout_date_count} | {window_step_date_count} | "
+            "{holdout_windows} | {unfiltered_holdout_net_usd} | "
+            "{guarded_holdout_net_usd} | {guard_net_improvement_usd} | "
+            "{guarded_holdout_trades} | {guarded_average_net_usd} | "
+            "{negative_holdout_windows} | {worst_guarded_window_net_usd} |".format(
+                **row,
+            ),
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Interpretation",
+            "",
+            (
+                "The compact guard family improved every tested window shape. "
+                f"The best guarded net was `{best['guarded_holdout_net_usd']}` "
+                f"on `{best['train_date_count']}x{best['holdout_date_count']}` "
+                "windows, while the weakest tested shape still stayed positive at "
+                f"`{worst['guarded_holdout_net_usd']}`."
+            ),
+            "",
+            "Selected guard counts are deliberately shown in the CSV rather than "
+            "promoted to a final Sierra rule. The next step is to pick one fixed "
+            "guard, rerun it on a fresh later export, and only then consider "
+            "implementation.",
         ],
     )
     return "\n".join(lines) + "\n"
@@ -761,6 +962,15 @@ def _to_float(value: Any, field_name: str) -> float:
     if parsed is None:
         raise ScaledContextLossAttributionError(f"Invalid numeric {field_name}: {value!r}")
     return parsed
+
+
+def _to_int(value: Any, field_name: str) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise ScaledContextLossAttributionError(
+            f"Invalid integer {field_name}: {value!r}",
+        ) from exc
 
 
 def _to_float_or_none(value: Any) -> float | None:

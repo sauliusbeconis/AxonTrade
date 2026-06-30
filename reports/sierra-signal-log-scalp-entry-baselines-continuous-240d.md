@@ -280,3 +280,45 @@ conditions where the fixed stop is too large for current tape. This should not
 be wired into Sierra yet. The next step is to retest the same compact guard
 family on a later fresh export and then choose one fixed guard before any
 automation change.
+
+## Guard Robustness Pass
+
+Status: **fixed-guard candidate identified, still not live-ready**
+
+Generated outputs:
+
+- `reports/sierra-signal-log-scalp-entry-baselines-continuous-240d-vwap-delta-exhaustion-guard-robustness.md`
+- `reports/sierra-signal-log-scalp-entry-baselines-continuous-240d-vwap-delta-exhaustion-guard-robustness.csv`
+
+The compact theory guard family was retested across multiple chronological
+window shapes, always selecting the guard only from train rows.
+
+| Train | Holdout | Step | Unguarded Net | Guarded Net | Improvement | Kept Trades | Avg/Trade | Negative Windows |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `20` | `5` | `5` | `33510.50` | `71390.00` | `37879.50` | `630` | `113.32` | `6` |
+| `40` | `5` | `5` | `26979.50` | `56581.00` | `29601.50` | `517` | `109.44` | `6` |
+| `40` | `10` | `10` | `18445.50` | `50738.00` | `32292.50` | `516` | `98.33` | `3` |
+| `60` | `10` | `10` | `14367.00` | `40113.50` | `25746.50` | `432` | `92.86` | `2` |
+| `80` | `10` | `10` | `-4889.50` | `13721.00` | `18610.50` | `322` | `42.61` | `2` |
+
+The selected-guard robustness improves every tested window shape. The fixed
+guard comparison across the same windows points to this single Sierra candidate:
+
+`lookback_directional_move_points <= -2.5`
+`session_range_points >= 30`
+`risk_to_average_bar_range <= 2.5`
+
+Fixed candidate behavior across the tested holdout shapes:
+
+| Train | Holdout | Step | Kept Trades | Net USD | Avg/Trade | Negative Windows | Worst Window |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `20` | `5` | `5` | `543` | `62374.00` | `114.87` | `7` | `-6370.00` |
+| `40` | `5` | `5` | `501` | `57355.50` | `114.48` | `5` | `-6370.00` |
+| `40` | `10` | `10` | `481` | `50245.50` | `104.46` | `2` | `-4539.50` |
+| `60` | `10` | `10` | `395` | `42160.00` | `106.73` | `2` | `-4539.50` |
+| `80` | `10` | `10` | `269` | `19029.50` | `70.74` | `2` | `-4539.50` |
+
+Interpretation: the strategy candidate has narrowed from a broad optimizer to a
+single rule family. The next required test is external validation on a later
+fresh Sierra export. Without that, this remains a research candidate, not a bot
+change.
