@@ -39,7 +39,9 @@ def main() -> int:
     parser.add_argument("--min-entry-volume-to-average-volumes", default="0,0.75,1")
     parser.add_argument("--min-entry-trades-to-average-trades", default="0,0.75,1")
     parser.add_argument("--min-continuation-edge-scores", default="0")
+    parser.add_argument("--min-fade-edge-scores", default="0")
     parser.add_argument("--min-opening-range-continuation-edge-scores", default="0")
+    parser.add_argument("--min-opening-range-fade-edge-scores", default="0")
     parser.add_argument("--min-directional-opening-range-breakout-points", default="-999999")
     parser.add_argument("--min-lookback-efficiency-ratios", default="0")
     parser.add_argument("--max-lookback-choppiness-scores", default="1")
@@ -84,8 +86,12 @@ def main() -> int:
             min_continuation_edge_scores=_parse_float_list(
                 args.min_continuation_edge_scores,
             ),
+            min_fade_edge_scores=_parse_float_list(args.min_fade_edge_scores),
             min_opening_range_continuation_edge_scores=_parse_float_list(
                 args.min_opening_range_continuation_edge_scores,
+            ),
+            min_opening_range_fade_edge_scores=_parse_float_list(
+                args.min_opening_range_fade_edge_scores,
             ),
             min_directional_opening_range_breakout_points_values=_parse_float_list(
                 args.min_directional_opening_range_breakout_points,

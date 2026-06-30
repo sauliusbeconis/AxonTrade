@@ -78,7 +78,8 @@ Every research source should be documented with a link and retrieval date.
 - Add scheduled-news exclusion to Sierra overlay research exports. Done.
 - Populate scheduled-news calendar for the current Sierra overlay sample. Done.
 - Rerun synthetic scalp-entry baselines on the continuous-contract 240D export. Done.
-- Add regime and daily-health gates for the 240D VWAP/delta exhaustion fade lead.
+- Add regime and daily-health gates for the 240D VWAP/delta exhaustion fade lead. Done, rejected first broad pass.
+- Add targeted loss attribution and veto tests for the 240D VWAP/delta exhaustion fade lead.
 
 ## Reporting
 

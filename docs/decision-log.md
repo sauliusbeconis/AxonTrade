@@ -206,3 +206,16 @@ Consequences:
 - Do not build live Sierra automation until drawdown control survives
   chronological validation and execution can be modeled at or below `1.0` tick
   total slippage per contract.
+
+Update after first risk-control pass:
+
+- Aggregate health gates overfit: best aggregate net was `72131` USD, but the
+  non-overlapping `20x5` walk-forward accepted only `18159` USD while skipped
+  trades contained `15351.50` USD.
+- The same-window ungated baseline for that health-gate walk-forward was
+  `33510.50` USD, so the selected gates reduced net.
+- Scaled context filters were worse: `218` holdout trades for `2499` USD versus
+  `33510.50` USD same-window unfiltered.
+- The current broad health/context gates are rejected as Sierra rule changes.
+- Next work should isolate the worst days and blocks, then test targeted vetoes
+  derived from those failure modes.

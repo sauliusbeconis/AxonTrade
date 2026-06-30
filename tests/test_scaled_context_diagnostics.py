@@ -92,6 +92,28 @@ def test_runs_scaled_outcome_context_diagnostics() -> None:
     assert rows[0]["lookback_efficiency_ratio"] == "0.6"
 
 
+def test_scaled_outcome_context_diagnostics_accepts_audit_rows_without_outcome_id() -> None:
+    outcome = _outcome()
+    del outcome["outcome_id"]
+    del outcome["event_key"]
+
+    rows = run_scaled_outcome_context_diagnostics(
+        bar_rows=[
+            _bar(0, timestamp="2026-06-19 10:00:00", high=101, low=100),
+            _bar(1, timestamp="2026-06-19 10:01:00", high=103, low=101),
+            _bar(2, timestamp="2026-06-19 10:02:00", high=102, low=101),
+            _bar(3, timestamp="2026-06-19 10:03:00", high=104, low=102),
+        ],
+        scaled_outcome_rows=[outcome],
+        lookback_bars=3,
+    )
+
+    assert rows[0]["outcome_id"] == "strategy_ESU26-CME_3:runner_target_hit::593"
+    assert rows[0]["event_key"] == ""
+    assert rows[0]["signal_delta_sum"] == "2"
+    assert rows[0]["signal_abs_delta_sum"] == "2"
+
+
 def test_scaled_outcome_context_diagnostics_requires_entry_bar() -> None:
     with pytest.raises(ScaledContextDiagnosticError, match="No entry context bar"):
         run_scaled_outcome_context_diagnostics(

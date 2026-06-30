@@ -150,3 +150,71 @@ Next useful work:
 - only consider Sierra automation after drawdown control survives chronological
   validation and the execution model is confirmed at or below `1.0` tick total
   slippage per contract.
+
+## First Risk-Control Pass
+
+Status: **rejected as a rule change**
+
+The first pass tested realized daily health gates and entry-known context
+filters against the fixed `vwap_delta_exhaustion_fade_2pt_10d_cl0.5` row.
+
+Code changes made for this pass:
+
+- health-gate summaries now count scaled exits: `runner_target_hit` as a target
+  and `full_stop_hit` / `ambiguous_full_stop_first` as losses;
+- health-gate walk-forward supports `window_step_date_count`, allowing
+  non-overlapping validation;
+- scaled context diagnostics can read generated audit rows without a signal log
+  and derive a stable `outcome_id`;
+- synthetic scaled context diagnostics use entry-bar delta as the signal delta
+  fallback when signal-log notes are unavailable;
+- scaled context filters now include fade-edge and opening-range fade-edge
+  thresholds.
+
+Health-gate aggregate sweep:
+
+| Metric | Value |
+| --- | ---: |
+| Sweep rows | `6000` |
+| Best aggregate net | `72131.00` |
+| Accepted trades | `642` |
+| Skipped trades | `656` |
+| Best aggregate gate | daily losses `3`, daily loss `1000`, consecutive losses `4`, max drawdown `6000`, drawdown pause `1` |
+
+The aggregate result overfits. Non-overlapping `20x5` walk-forward on a
+narrowed gate grid:
+
+| Metric | Value |
+| --- | ---: |
+| Holdout windows | `25` |
+| Accepted trades | `713` |
+| Skipped trades | `398` |
+| Accepted net USD | `18159.00` |
+| Skipped net USD | `15351.50` |
+| Same-window ungated net USD | `33510.50` |
+
+Health gates improved the worst baseline block
+`2026-04-10;2026-04-13;2026-04-14;2026-04-15;2026-04-16` from `-11323.50` to
+`2415.50`, but they also skipped large positive blocks. The worst gated block
+was `2026-01-22;2026-01-23;2026-01-26;2026-01-27;2026-01-28` at `-5538.00`,
+while the skipped trades in that same block were `15504.50`.
+
+Scaled context filter:
+
+| Metric | Value |
+| --- | ---: |
+| Holdout windows | `25` |
+| Holdout trades | `218` |
+| Filtered net USD | `2499.00` |
+| Same-window unfiltered net USD | `33510.50` |
+| Filter improvement USD | `-31011.50` |
+| Positive windows | `14` |
+| Negative windows | `11` |
+
+Interpretation: the current broad risk controls are not deployable. The base
+VWAP/delta exhaustion entry remains the active research lead, but the first
+daily-health and context-filter gates should not be applied to Sierra.
+
+Next useful work is more targeted loss attribution: isolate the worst days and
+blocks first, then test a veto designed from those failure modes rather than a
+wide generic grid.

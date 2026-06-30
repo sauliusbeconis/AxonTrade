@@ -39,6 +39,12 @@ def main() -> int:
         help="Minimum accepted training trades required in each window.",
     )
     parser.add_argument(
+        "--window-step-date-count",
+        type=int,
+        default=1,
+        help="Trade-date step between walk-forward windows; use holdout count for non-overlap.",
+    )
+    parser.add_argument(
         "--maximum-daily-losses",
         default="1,2,999",
         help="Comma-separated max accepted losing trades per trade date.",
@@ -87,6 +93,7 @@ def main() -> int:
                 args.maximum_equity_drawdowns_usd,
             ),
             drawdown_pause_trade_dates=_parse_int_list(args.drawdown_pause_trade_dates),
+            window_step_date_count=args.window_step_date_count,
         )
     except (SignalHealthGateExperimentError, OSError) as exc:
         print(f"error: {exc}")

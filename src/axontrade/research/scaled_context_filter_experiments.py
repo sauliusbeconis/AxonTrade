@@ -24,7 +24,9 @@ SCALED_CONTEXT_FILTER_SWEEP_HEADER = [
     "min_entry_volume_to_average_volume",
     "min_entry_trades_to_average_trades",
     "min_continuation_edge_score",
+    "min_fade_edge_score",
     "min_opening_range_continuation_edge_score",
+    "min_opening_range_fade_edge_score",
     "min_directional_opening_range_breakout_points",
     "min_lookback_efficiency_ratio",
     "max_lookback_choppiness_score",
@@ -88,7 +90,9 @@ def run_scaled_context_filter_sweep(
     min_entry_volume_to_average_volumes: Iterable[float],
     min_entry_trades_to_average_trades: Iterable[float],
     min_continuation_edge_scores: Iterable[float] = (0,),
+    min_fade_edge_scores: Iterable[float] = (0,),
     min_opening_range_continuation_edge_scores: Iterable[float] = (0,),
+    min_opening_range_fade_edge_scores: Iterable[float] = (0,),
     min_directional_opening_range_breakout_points_values: Iterable[float] = (-999999,),
     min_lookback_efficiency_ratios: Iterable[float] = (0,),
     max_lookback_choppiness_scores: Iterable[float] = (1,),
@@ -140,9 +144,17 @@ def run_scaled_context_filter_sweep(
         min_continuation_edge_scores,
         "min_continuation_edge_scores",
     )
+    min_fade_edges = _normalize_zero_to_one_grid(
+        min_fade_edge_scores,
+        "min_fade_edge_scores",
+    )
     min_opening_range_continuation_edges = _normalize_zero_to_one_grid(
         min_opening_range_continuation_edge_scores,
         "min_opening_range_continuation_edge_scores",
+    )
+    min_opening_range_fade_edges = _normalize_zero_to_one_grid(
+        min_opening_range_fade_edge_scores,
+        "min_opening_range_fade_edge_scores",
     )
     min_opening_range_breakouts = _normalize_float_grid(
         min_directional_opening_range_breakout_points_values,
@@ -175,7 +187,9 @@ def run_scaled_context_filter_sweep(
         min_volume_ratio,
         min_trade_ratio,
         min_continuation_edge,
+        min_fade_edge,
         min_opening_range_continuation_edge,
+        min_opening_range_fade_edge,
         min_opening_range_breakout,
         min_efficiency_ratio,
         max_choppiness_score,
@@ -190,7 +204,9 @@ def run_scaled_context_filter_sweep(
         min_volume_ratios,
         min_trade_ratios,
         min_continuation_edges,
+        min_fade_edges,
         min_opening_range_continuation_edges,
+        min_opening_range_fade_edges,
         min_opening_range_breakouts,
         min_efficiency_ratios,
         max_choppiness_scores,
@@ -210,7 +226,9 @@ def run_scaled_context_filter_sweep(
             min_entry_volume_to_average_volume=min_volume_ratio,
             min_entry_trades_to_average_trades=min_trade_ratio,
             min_continuation_edge_score=min_continuation_edge,
+            min_fade_edge_score=min_fade_edge,
             min_opening_range_continuation_edge_score=min_opening_range_continuation_edge,
+            min_opening_range_fade_edge_score=min_opening_range_fade_edge,
             min_directional_opening_range_breakout_points=min_opening_range_breakout,
             min_lookback_efficiency_ratio=min_efficiency_ratio,
             max_lookback_choppiness_score=max_choppiness_score,
@@ -231,9 +249,11 @@ def run_scaled_context_filter_sweep(
                 min_entry_volume_to_average_volume=min_volume_ratio,
                 min_entry_trades_to_average_trades=min_trade_ratio,
                 min_continuation_edge_score=min_continuation_edge,
+                min_fade_edge_score=min_fade_edge,
                 min_opening_range_continuation_edge_score=(
                     min_opening_range_continuation_edge
                 ),
+                min_opening_range_fade_edge_score=min_opening_range_fade_edge,
                 min_directional_opening_range_breakout_points=min_opening_range_breakout,
                 min_lookback_efficiency_ratio=min_efficiency_ratio,
                 max_lookback_choppiness_score=max_choppiness_score,
@@ -260,7 +280,9 @@ def run_scaled_context_filter_walk_forward_sweep(
     min_entry_volume_to_average_volumes: Iterable[float],
     min_entry_trades_to_average_trades: Iterable[float],
     min_continuation_edge_scores: Iterable[float] = (0,),
+    min_fade_edge_scores: Iterable[float] = (0,),
     min_opening_range_continuation_edge_scores: Iterable[float] = (0,),
+    min_opening_range_fade_edge_scores: Iterable[float] = (0,),
     min_directional_opening_range_breakout_points_values: Iterable[float] = (-999999,),
     min_lookback_efficiency_ratios: Iterable[float] = (0,),
     max_lookback_choppiness_scores: Iterable[float] = (1,),
@@ -313,9 +335,11 @@ def run_scaled_context_filter_walk_forward_sweep(
             min_entry_volume_to_average_volumes=min_entry_volume_to_average_volumes,
             min_entry_trades_to_average_trades=min_entry_trades_to_average_trades,
             min_continuation_edge_scores=min_continuation_edge_scores,
+            min_fade_edge_scores=min_fade_edge_scores,
             min_opening_range_continuation_edge_scores=(
                 min_opening_range_continuation_edge_scores
             ),
+            min_opening_range_fade_edge_scores=min_opening_range_fade_edge_scores,
             min_directional_opening_range_breakout_points_values=(
                 min_directional_opening_range_breakout_points_values
             ),
@@ -349,9 +373,11 @@ def run_scaled_context_filter_walk_forward_sweep(
             min_entry_volume_to_average_volumes=min_entry_volume_to_average_volumes,
             min_entry_trades_to_average_trades=min_entry_trades_to_average_trades,
             min_continuation_edge_scores=min_continuation_edge_scores,
+            min_fade_edge_scores=min_fade_edge_scores,
             min_opening_range_continuation_edge_scores=(
                 min_opening_range_continuation_edge_scores
             ),
+            min_opening_range_fade_edge_scores=min_opening_range_fade_edge_scores,
             min_directional_opening_range_breakout_points_values=(
                 min_directional_opening_range_breakout_points_values
             ),
@@ -405,7 +431,9 @@ def _filter_rows(
     min_entry_volume_to_average_volume: float,
     min_entry_trades_to_average_trades: float,
     min_continuation_edge_score: float,
+    min_fade_edge_score: float,
     min_opening_range_continuation_edge_score: float,
+    min_opening_range_fade_edge_score: float,
     min_directional_opening_range_breakout_points: float,
     min_lookback_efficiency_ratio: float,
     max_lookback_choppiness_score: float,
@@ -431,9 +459,11 @@ def _filter_rows(
             min_entry_volume_to_average_volume=min_entry_volume_to_average_volume,
             min_entry_trades_to_average_trades=min_entry_trades_to_average_trades,
             min_continuation_edge_score=min_continuation_edge_score,
+            min_fade_edge_score=min_fade_edge_score,
             min_opening_range_continuation_edge_score=(
                 min_opening_range_continuation_edge_score
             ),
+            min_opening_range_fade_edge_score=min_opening_range_fade_edge_score,
             min_directional_opening_range_breakout_points=(
                 min_directional_opening_range_breakout_points
             ),
@@ -495,9 +525,19 @@ def scaled_context_row_passes_filter(
             "min_continuation_edge_score",
             0.0,
         ),
+        min_fade_edge_score=_to_float_or_default(
+            selection_row,
+            "min_fade_edge_score",
+            0.0,
+        ),
         min_opening_range_continuation_edge_score=_to_float_or_default(
             selection_row,
             "min_opening_range_continuation_edge_score",
+            0.0,
+        ),
+        min_opening_range_fade_edge_score=_to_float_or_default(
+            selection_row,
+            "min_opening_range_fade_edge_score",
             0.0,
         ),
         min_directional_opening_range_breakout_points=_to_float_or_default(
@@ -541,7 +581,9 @@ def _row_passes_filter(
     min_entry_volume_to_average_volume: float,
     min_entry_trades_to_average_trades: float,
     min_continuation_edge_score: float,
+    min_fade_edge_score: float,
     min_opening_range_continuation_edge_score: float,
+    min_opening_range_fade_edge_score: float,
     min_directional_opening_range_breakout_points: float,
     min_lookback_efficiency_ratio: float,
     max_lookback_choppiness_score: float,
@@ -588,9 +630,16 @@ def _row_passes_filter(
         return False
     if _to_float_or_default(row, "continuation_edge_score", 0.0) < min_continuation_edge_score:
         return False
+    if _to_float_or_default(row, "fade_edge_score", 0.0) < min_fade_edge_score:
+        return False
     if (
         _to_float_or_default(row, "opening_range_continuation_edge_score", 0.0)
         < min_opening_range_continuation_edge_score
+    ):
+        return False
+    if (
+        _to_float_or_default(row, "opening_range_fade_edge_score", 0.0)
+        < min_opening_range_fade_edge_score
     ):
         return False
     if (
@@ -627,7 +676,9 @@ def _experiment_row(
     min_entry_volume_to_average_volume: float,
     min_entry_trades_to_average_trades: float,
     min_continuation_edge_score: float,
+    min_fade_edge_score: float,
     min_opening_range_continuation_edge_score: float,
+    min_opening_range_fade_edge_score: float,
     min_directional_opening_range_breakout_points: float,
     min_lookback_efficiency_ratio: float,
     max_lookback_choppiness_score: float,
@@ -650,7 +701,9 @@ def _experiment_row(
         f"min_volume_avg={_format_number(min_entry_volume_to_average_volume)}:"
         f"min_trades_avg={_format_number(min_entry_trades_to_average_trades)}:"
         f"min_cont_edge={_format_number(min_continuation_edge_score)}:"
+        f"min_fade_edge={_format_number(min_fade_edge_score)}:"
         f"min_or_cont_edge={_format_number(min_opening_range_continuation_edge_score)}:"
+        f"min_or_fade_edge={_format_number(min_opening_range_fade_edge_score)}:"
         f"min_or_breakout={_format_number(min_directional_opening_range_breakout_points)}:"
         f"min_efficiency={_format_number(min_lookback_efficiency_ratio)}:"
         f"max_chop={_format_number(max_lookback_choppiness_score)}:"
@@ -677,8 +730,12 @@ def _experiment_row(
         "min_entry_volume_to_average_volume": _format_number(min_entry_volume_to_average_volume),
         "min_entry_trades_to_average_trades": _format_number(min_entry_trades_to_average_trades),
         "min_continuation_edge_score": _format_number(min_continuation_edge_score),
+        "min_fade_edge_score": _format_number(min_fade_edge_score),
         "min_opening_range_continuation_edge_score": _format_number(
             min_opening_range_continuation_edge_score,
+        ),
+        "min_opening_range_fade_edge_score": _format_number(
+            min_opening_range_fade_edge_score,
         ),
         "min_directional_opening_range_breakout_points": _format_number(
             min_directional_opening_range_breakout_points,
@@ -829,7 +886,9 @@ def _selection_key(row: dict[str, Any]) -> tuple[str, ...]:
         str(row["min_entry_volume_to_average_volume"]),
         str(row["min_entry_trades_to_average_trades"]),
         str(row["min_continuation_edge_score"]),
+        str(row["min_fade_edge_score"]),
         str(row["min_opening_range_continuation_edge_score"]),
+        str(row["min_opening_range_fade_edge_score"]),
         str(row["min_directional_opening_range_breakout_points"]),
         str(row["min_lookback_efficiency_ratio"]),
         str(row["max_lookback_choppiness_score"]),

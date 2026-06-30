@@ -76,7 +76,13 @@ _TIMESTAMP_FORMATS = (
     "%Y-%m-%d %H:%M:%S",
     "%Y-%m-%d %H:%M",
 )
-_LOSS_EXIT_REASONS = {"stop_hit", "ambiguous_stop_first"}
+_TARGET_EXIT_REASONS = {"target_hit", "runner_target_hit"}
+_LOSS_EXIT_REASONS = {
+    "stop_hit",
+    "ambiguous_stop_first",
+    "full_stop_hit",
+    "ambiguous_full_stop_first",
+}
 
 
 class SignalHealthGateExperimentError(ValueError):
@@ -184,6 +190,7 @@ def run_signal_health_gate_walk_forward_sweep(
     maximum_equity_drawdowns_usd: Iterable[float],
     drawdown_pause_trade_dates: Iterable[int],
     minimum_train_accepted_trades: int = 1,
+    window_step_date_count: int = 1,
 ) -> list[dict[str, Any]]:
     """Run rolling selection of realized-outcome health gates by trade date."""
 
@@ -195,6 +202,8 @@ def run_signal_health_gate_walk_forward_sweep(
         raise SignalHealthGateExperimentError("holdout_date_count must be positive")
     if minimum_train_accepted_trades <= 0:
         raise SignalHealthGateExperimentError("minimum_train_accepted_trades must be positive")
+    if window_step_date_count <= 0:
+        raise SignalHealthGateExperimentError("window_step_date_count must be positive")
     if train_date_count + holdout_date_count > len(dates):
         raise SignalHealthGateExperimentError(
             "train_date_count plus holdout_date_count must not exceed "
@@ -212,7 +221,7 @@ def run_signal_health_gate_walk_forward_sweep(
 
     split_rows: list[dict[str, Any]] = []
     max_start = len(dates) - train_date_count - holdout_date_count + 1
-    for window_index in range(max_start):
+    for split_index, window_index in enumerate(range(0, max_start, window_step_date_count), start=1):
         train_dates = dates[window_index:window_index + train_date_count]
         holdout_dates = dates[
             window_index + train_date_count:
@@ -248,7 +257,7 @@ def run_signal_health_gate_walk_forward_sweep(
             state_warmup_rows=len(train_rows),
         )
         split_id = (
-            f"health_gate_walk_forward_window={window_index + 1}:"
+            f"health_gate_walk_forward_window={split_index}:"
             f"train_dates={len(train_dates)}:"
             f"holdout_dates={len(holdout_dates)}"
         )
@@ -441,8 +450,8 @@ def _apply_post_trade_gates(
 
 def _outcome_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     total = len(rows)
-    target_hits = sum(row["exit_reason"] == "target_hit" for row in rows)
-    losses = sum(row["exit_reason"] in _LOSS_EXIT_REASONS for row in rows)
+    target_hits = sum(str(row["exit_reason"]) in _TARGET_EXIT_REASONS for row in rows)
+    losses = sum(str(row["exit_reason"]) in _LOSS_EXIT_REASONS for row in rows)
     net_usd = sum(_to_float(row["net_usd"], "net_usd") for row in rows)
     return {
         "total_trades": total,

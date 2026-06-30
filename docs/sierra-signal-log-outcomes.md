@@ -1606,3 +1606,16 @@ five-day holdout windows are positive, and the worst day is `2026-04-13` at
 Detailed report:
 
 `reports/sierra-signal-log-scalp-entry-baselines-continuous-240d.md`
+
+First risk-control pass:
+
+- health-gate aggregate sweep overfit: best aggregate was `72131.00` USD, but
+  non-overlapping `20x5` walk-forward accepted `18159.00` USD while skipped
+  trades contained `15351.50` USD;
+- same-window ungated health-gate baseline was `33510.50` USD;
+- scaled context filters produced `218` holdout trades for `2499.00` USD versus
+  `33510.50` USD same-window unfiltered.
+
+Read: broad health gates and context filters are rejected as Sierra rule
+changes. The next useful branch is targeted loss attribution on the worst days
+and five-day blocks.

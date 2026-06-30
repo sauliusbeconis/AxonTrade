@@ -204,9 +204,12 @@ def _context_row(
     average_trades = _mean_optional(bar.trades for bar in previous_bars)
     average_abs_delta = _mean_optional(bar.abs_delta for bar in previous_bars)
     signal_notes = notes_by_signal_id.get(signal_id, _SignalNotes())
-    signal_abs_delta_sum = (
-        None if signal_notes.delta_sum is None else abs(signal_notes.delta_sum)
+    signal_delta_sum = (
+        signal_notes.delta_sum
+        if signal_notes.delta_sum is not None
+        else entry_bar.delta
     )
+    signal_abs_delta_sum = None if signal_delta_sum is None else abs(signal_delta_sum)
     session_open = bars_so_far[0].open
     session_high = max(bar.high for bar in bars_so_far)
     session_low = min(bar.low for bar in bars_so_far)
@@ -247,11 +250,12 @@ def _context_row(
     lookback_efficiency = _lookback_efficiency_ratio([*previous_bars, entry_bar])
     lookback_choppiness = None if lookback_efficiency is None else 1.0 - lookback_efficiency
 
+    outcome_id = _outcome_id(row, signal_id=signal_id)
     return {
         "schema_version": 1,
-        "context_id": f"{row['outcome_id']}:scaled_context:{lookback_bars}",
-        "outcome_id": row["outcome_id"],
-        "event_key": row["event_key"],
+        "context_id": f"{outcome_id}:scaled_context:{lookback_bars}",
+        "outcome_id": outcome_id,
+        "event_key": str(row.get("event_key", "")),
         "signal_id": signal_id,
         "symbol": symbol,
         "direction": row["direction"],
@@ -269,7 +273,7 @@ def _context_row(
         "runner_target_points": _format_number(runner_target_points),
         "runner_reward_risk": _format_optional(_ratio_or_none(runner_target_points, risk_points)),
         "signal_price_move": _format_optional(signal_notes.price_move),
-        "signal_delta_sum": _format_optional(signal_notes.delta_sum),
+        "signal_delta_sum": _format_optional(signal_delta_sum),
         "signal_abs_delta_sum": _format_optional(signal_abs_delta_sum),
         "lookback_range_points": _format_number(
             max(bar.high for bar in previous_bars) - min(bar.low for bar in previous_bars),
@@ -361,6 +365,18 @@ def _context_row(
             "scaled-scalp outcome row"
         ),
     }
+
+
+def _outcome_id(row: dict[str, Any], *, signal_id: str) -> str:
+    raw_outcome_id = str(row.get("outcome_id", "")).strip()
+    if raw_outcome_id:
+        return raw_outcome_id
+    return (
+        f"{signal_id}:"
+        f"{row.get('exit_reason', '')}:"
+        f"{row.get('exit_bar_index', '')}:"
+        f"{row.get('net_usd', '')}"
+    )
 
 
 def _bars_by_symbol_date(rows: Iterable[dict[str, Any]]) -> dict[tuple[str, str], list[_ContextBar]]:

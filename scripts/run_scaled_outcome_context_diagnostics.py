@@ -29,8 +29,22 @@ def main() -> int:
     )
     parser.add_argument("bars_export", help="Path to Sierra exported orderflow bar file.")
     parser.add_argument("scaled_outcomes", help="Path to fixed scaled-scalp outcome CSV rows.")
-    parser.add_argument("signal_log", help="Path to matching signal-log CSV rows.")
-    parser.add_argument("output", help="Path to write scaled context diagnostic CSV rows.")
+    parser.add_argument(
+        "signal_log_or_output",
+        help=(
+            "Path to matching signal-log CSV rows, or output path when no signal "
+            "log is available."
+        ),
+    )
+    parser.add_argument(
+        "output",
+        nargs="?",
+        help="Path to write scaled context diagnostic CSV rows.",
+    )
+    parser.add_argument(
+        "--signal-log",
+        help="Optional matching signal-log CSV rows when using three positional arguments.",
+    )
     parser.add_argument("--symbol", default="ESU26-CME")
     parser.add_argument("--chart-number", type=int, default=2)
     parser.add_argument("--session-phase", default="rth")
@@ -48,7 +62,8 @@ def main() -> int:
             compute_opening_range=False,
         )
         outcome_rows = _read_csv(Path(args.scaled_outcomes))
-        signal_rows = load_signal_log_rows_csv(args.signal_log)
+        signal_log_path, output_path = _resolve_signal_log_and_output(args)
+        signal_rows = load_signal_log_rows_csv(signal_log_path) if signal_log_path else []
         context_rows = run_scaled_outcome_context_diagnostics(
             bar_rows=normalized_rows,
             scaled_outcome_rows=outcome_rows,
@@ -59,9 +74,15 @@ def main() -> int:
         print(f"error: {exc}")
         return 2
 
-    _write_csv(Path(args.output), SCALED_CONTEXT_DIAGNOSTIC_HEADER, context_rows)
-    print(f"wrote {len(context_rows)} scaled context diagnostics to {args.output}")
+    _write_csv(output_path, SCALED_CONTEXT_DIAGNOSTIC_HEADER, context_rows)
+    print(f"wrote {len(context_rows)} scaled context diagnostics to {output_path}")
     return 0
+
+
+def _resolve_signal_log_and_output(args: argparse.Namespace) -> tuple[str | None, Path]:
+    if args.output is None:
+        return args.signal_log, Path(args.signal_log_or_output)
+    return args.signal_log or args.signal_log_or_output, Path(args.output)
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:

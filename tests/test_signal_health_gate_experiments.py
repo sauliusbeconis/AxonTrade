@@ -92,6 +92,37 @@ def test_health_gate_pauses_next_trade_date_after_consecutive_loss() -> None:
     assert experiment_rows[0]["skipped_net_usd"] == "500"
 
 
+def test_health_gate_counts_scaled_exit_labels() -> None:
+    rows = [
+        _diagnostic_row(
+            1,
+            entry_time="2026-06-10 10:00:00",
+            exit_reason="runner_target_hit",
+            net_usd=718,
+        ),
+        _diagnostic_row(
+            2,
+            entry_time="2026-06-10 11:00:00",
+            exit_reason="full_stop_hit",
+            net_usd=-1032,
+        ),
+    ]
+
+    experiment_rows = run_signal_health_gate_sweep(
+        rows,
+        maximum_daily_losses=[999],
+        daily_loss_limits_usd=[999999],
+        maximum_consecutive_losses=[999],
+        consecutive_loss_pause_trade_dates=[0],
+        maximum_equity_drawdowns_usd=[999999],
+        drawdown_pause_trade_dates=[0],
+    )
+
+    assert experiment_rows[0]["target_hits"] == 1
+    assert experiment_rows[0]["losses"] == 1
+    assert experiment_rows[0]["other_exits"] == 0
+
+
 def test_health_gate_walk_forward_warms_holdout_state_from_train() -> None:
     rows = [
         _diagnostic_row(1, entry_time="2026-06-10 10:00:00", net_usd=100),
@@ -122,6 +153,32 @@ def test_health_gate_walk_forward_warms_holdout_state_from_train() -> None:
     assert split_rows[1]["skipped_trades"] == 1
     assert split_rows[1]["skipped_target_hits"] == 1
     assert split_rows[1]["selected_on_train"] == "true"
+
+
+def test_health_gate_walk_forward_supports_nonoverlapping_step() -> None:
+    rows = [
+        _diagnostic_row(index, entry_time=f"2026-06-{index:02d} 10:00:00")
+        for index in range(1, 8)
+    ]
+
+    split_rows = run_signal_health_gate_walk_forward_sweep(
+        rows,
+        train_date_count=2,
+        holdout_date_count=2,
+        window_step_date_count=2,
+        maximum_daily_losses=[999],
+        daily_loss_limits_usd=[999999],
+        maximum_consecutive_losses=[999],
+        consecutive_loss_pause_trade_dates=[0],
+        maximum_equity_drawdowns_usd=[999999],
+        drawdown_pause_trade_dates=[0],
+        minimum_train_accepted_trades=2,
+    )
+
+    assert [row["trade_dates"] for row in split_rows if row["sample"] == "holdout"] == [
+        "2026-06-03;2026-06-04",
+        "2026-06-05;2026-06-06",
+    ]
 
 
 def test_health_gate_walk_forward_requires_enough_dates() -> None:
