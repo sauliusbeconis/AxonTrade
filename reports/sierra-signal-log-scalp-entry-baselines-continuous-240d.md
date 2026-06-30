@@ -218,3 +218,65 @@ daily-health and context-filter gates should not be applied to Sierra.
 Next useful work is more targeted loss attribution: isolate the worst days and
 blocks first, then test a veto designed from those failure modes rather than a
 wide generic grid.
+
+## Targeted Loss Attribution Pass
+
+Status: **active research lead, not live-ready**
+
+The targeted pass reran the fixed VWAP/delta exhaustion context diagnostics with
+a compact theory guard family:
+
+- require a direction-aware lookback push into the fade:
+  `lookback_directional_move_points <= -2.5`;
+- prefer at least `30` points of session range already built;
+- optionally avoid compressed tape where the fixed `10` point stop is more than
+  `2.5x` the recent average bar range;
+- optionally ignore the first `90` minutes after RTH open.
+
+Generated outputs:
+
+- `reports/sierra-signal-log-scalp-entry-baselines-continuous-240d-vwap-delta-exhaustion-loss-attribution.md`
+- `reports/sierra-signal-log-scalp-entry-baselines-continuous-240d-vwap-delta-exhaustion-loss-attribution-daily-summary.csv`
+- `reports/sierra-signal-log-scalp-entry-baselines-continuous-240d-vwap-delta-exhaustion-loss-attribution-feature-buckets.csv`
+- `reports/sierra-signal-log-scalp-entry-baselines-continuous-240d-vwap-delta-exhaustion-loss-attribution-fixed-guards.csv`
+- `reports/sierra-signal-log-scalp-entry-baselines-continuous-240d-vwap-delta-exhaustion-loss-attribution-theory-guard-walk-forward.csv`
+
+Best fixed guard over the full context sample:
+
+| Metric | Value |
+| --- | ---: |
+| Guard | `lookback_fade_push_session_range_30_risk_avg_2.5` |
+| Kept trades | `603` of `1298` |
+| Net USD | `67241.50` |
+| Average/trade | `111.51` |
+| Profit factor | `1.367` |
+| Max trade-sequence drawdown | `-10274.00` |
+| Worst day | `2026-03-09`, `-5160.00` |
+
+Chronological compact-guard walk-forward, `40` train dates by `5` holdout dates,
+stepping `5` dates, selected by train-side average-net lower bound:
+
+| Metric | Unguarded Same Windows | Guarded Holdout |
+| --- | ---: | ---: |
+| Holdout windows | `21` | `21` |
+| Trades | `944` | `517` |
+| Net USD | `26979.50` | `56581.00` |
+| Average/trade | `28.58` | `109.44` |
+| Negative windows | n/a | `6` |
+| Worst guarded window | n/a | `-6018.00` |
+
+Selected holdout guard counts:
+
+| Guard | Holdout Windows |
+| --- | ---: |
+| `lookback_fade_push_session_range_30_after_90m` | `14` |
+| `lookback_fade_push_session_range_30_risk_avg_2.5` | `5` |
+| `lookback_fade_push_session_range_30` | `2` |
+
+Interpretation: the original idea is not destroyed by the tests. The broad
+filters were too wide, but this targeted guard preserves the auction hypothesis:
+fade only after a real push into the fade, and avoid low-range or compressed
+conditions where the fixed stop is too large for current tape. This should not
+be wired into Sierra yet. The next step is to retest the same compact guard
+family on a later fresh export and then choose one fixed guard before any
+automation change.
