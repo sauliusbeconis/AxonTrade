@@ -361,3 +361,59 @@ Interpretation: the candidate now has an executable pass/fail gate. This makes
 the next fresh Sierra export straightforward: regenerate fixed guards and
 robustness rows, run `check_scaled_context_guard_acceptance.py`, and only
 consider Sierra implementation if the fresh-export report also passes.
+
+## Fresh 480D Historical Recheck
+
+Status: **FAIL for implementation promotion**
+
+Source export:
+
+`/home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/AxonTrade_ES_OrderflowExport_DeltaImpulse_3Min_Fresh.txt`
+
+Important scope note: although this file was exported on `2026-06-30`, its rows
+run from `2025-09-15 09:30:00` through `2026-06-29 16:12:00`. It contains no
+`2026-06-30` bars, so this is a larger historical recheck, not a same-day/live
+validation sample.
+
+Generated outputs:
+
+- `reports/sierra-session-clock-alignment-fresh-480d.csv`
+- `reports/sierra-signal-log-scalp-entry-baselines-fresh-480d-fixed-vwap-delta-exhaustion-slip1-walk-forward.csv`
+- `reports/sierra-signal-log-scalp-entry-baselines-fresh-480d-fixed-vwap-delta-exhaustion-slip1-trade-audit.csv`
+- `reports/sierra-signal-log-scalp-entry-baselines-fresh-480d-vwap-delta-exhaustion-context-diagnostics.csv`
+- `reports/sierra-signal-log-scalp-entry-baselines-fresh-480d-vwap-delta-exhaustion-loss-attribution.md`
+- `reports/sierra-signal-log-scalp-entry-baselines-fresh-480d-vwap-delta-exhaustion-guard-robustness.md`
+- `reports/sierra-signal-log-scalp-entry-baselines-fresh-480d-vwap-delta-exhaustion-guard-acceptance.md`
+
+Fresh export checks:
+
+| Check | Result |
+| --- | ---: |
+| Session-clock rows | `203` |
+| Aligned dates | `203` |
+| Unguarded fixed holdout trades | `1639` |
+| Unguarded fixed holdout net USD | `19352.00` |
+| Fixed guard kept trades | `780` |
+| Fixed guard net USD | `52052.50` |
+| Fixed guard average/trade | `66.73` |
+| Fixed guard profit factor | `1.2014` |
+| Fixed guard drawdown/net | `0.3607` |
+| Weakest guarded robustness net | `44320.50` |
+| Worst guarded window loss | `7446.00` |
+
+Acceptance gate result:
+
+| Gate | Observed | Required | Status |
+| --- | ---: | ---: | --- |
+| Fixed guard average/trade | `66.73` | `>= 75.00` | FAIL |
+| Fixed guard profit factor | `1.2014` | `>= 1.25` | FAIL |
+| Fixed drawdown/net | `0.3607` | `<= 0.25` | FAIL |
+| Max negative-window rate | `0.3571` | `<= 0.35` | FAIL |
+| Worst guarded window loss | `7446.00` | `<= 7000.00` | FAIL |
+
+Interpretation: the guard still improves the larger historical export in every
+tested robustness shape, but the fixed rule is not strong enough under the
+current promotion gates. Do not wire this guard into Sierra automation yet. The
+next work should either wait for a true future out-of-sample export or research
+a stricter guard/exit variant that improves profit factor and drawdown without
+collapsing trade count.
