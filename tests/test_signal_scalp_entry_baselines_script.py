@@ -74,6 +74,40 @@ def test_generates_vwap_reclaim_session_signal() -> None:
     assert reclaim_signals[0]["bar_index"] == 3
 
 
+def test_feature_rows_compute_session_vwap_when_export_is_missing() -> None:
+    module = _load_baseline_module()
+    raw_rows = [
+        _raw_row(volume=10, hlc_avg=100),
+        _raw_row(volume=30, hlc_avg=110),
+        _raw_row(volume=20, hlc_avg=90),
+    ]
+    normalized_rows = [
+        _normalized_row(0, "2026-06-17 09:30:00", high=101, low=99, close=100),
+        _normalized_row(1, "2026-06-17 09:33:00", high=111, low=109, close=110),
+        _normalized_row(2, "2026-06-18 09:30:00", high=91, low=89, close=90),
+    ]
+
+    rows = module._feature_rows(raw_rows, normalized_rows)
+
+    assert rows[0]["vwap"] == 100
+    assert rows[0]["vwap_source"] == "computed_session"
+    assert rows[1]["vwap"] == 107.5
+    assert rows[2]["vwap"] == 90
+
+
+def test_feature_rows_prefer_exported_vwap() -> None:
+    module = _load_baseline_module()
+    raw_rows = [_raw_row(volume=10, hlc_avg=100, vwap=99.25)]
+    normalized_rows = [
+        _normalized_row(0, "2026-06-17 09:30:00", high=101, low=99, close=100),
+    ]
+
+    rows = module._feature_rows(raw_rows, normalized_rows)
+
+    assert rows[0]["vwap"] == 99.25
+    assert rows[0]["vwap_source"] == "exported"
+
+
 def _feature_row(
     bar_index: int,
     timestamp: str,
@@ -109,4 +143,40 @@ def _feature_row(
         "delta": delta,
         "delta_change": delta,
         "close_location": close_location,
+    }
+
+
+def _raw_row(*, volume: float, hlc_avg: float, vwap: float | None = None) -> dict[str, str]:
+    row = {
+        "Volume": str(volume),
+        "HLC Avg": str(hlc_avg),
+        "# of Trades": "1",
+        "Bid Volume": "1",
+        "Ask Volume": "1",
+        "Ask Volume Bid Volume Difference": "0",
+        "Ask Volume Bid Volume Difference Change": "0",
+    }
+    if vwap is not None:
+        row["VWAP"] = str(vwap)
+    return row
+
+
+def _normalized_row(
+    bar_index: int,
+    timestamp: str,
+    *,
+    high: float,
+    low: float,
+    close: float,
+) -> dict[str, object]:
+    return {
+        "symbol": "ESU26-CME",
+        "chart_number": "2",
+        "bar_index": bar_index,
+        "timestamp": timestamp,
+        "session_phase": "rth",
+        "open": close,
+        "high": high,
+        "low": low,
+        "close": close,
     }

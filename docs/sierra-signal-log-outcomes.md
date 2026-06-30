@@ -1574,3 +1574,35 @@ Read: fixed exits are better than adaptive train-selected exits for this sample.
 This is now the lead Sierra overlay candidate, but still needs more dates before
 bot work because `2026-06-16` lost `-$1092.00` and the sample is only `56`
 holdout trades.
+
+Continuous 240D synthetic-entry rerun:
+
+The continuous-contract 240D export invalidates the old Delta Impulse lead and
+changes the active research direction. The export has `22212` rows across `168`
+trade dates from `2025-11-03` through `2026-06-29`. Because it does not include
+a Sierra VWAP study column, the baseline generator now computes a session VWAP
+fallback from cumulative `HLC Avg * Volume` by trade date.
+
+Broad `900` second spacing sweeps over `33` synthetic entry families showed:
+
+- default ES cost model, one tick per side: `0` positive best rows;
+- zero-slippage sensitivity: `19` of `33` strategy-family best rows positive;
+- `1.0` tick total slippage per contract: aggregate best row
+  `vwap_delta_exhaustion_fade_2pt_10d_cl0.5`, `1513` trades, `21409.00` USD.
+
+Adaptive walk-forward exit selection did not hold up at `1.0` tick total
+slippage per contract. The fixed aggregate row did:
+
+| Strategy | Exit | Slippage | Holdout trades | Net USD | Avg/trade | Profit factor | Max DD |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `vwap_delta_exhaustion_fade_2pt_10d_cl0.5` | `5 / 10 / 10 / initial` | `1.0` tick total/contract | `1298` | `27101.50` | `20.88` | `1.061` | `-23636.00` |
+
+Read: this is the current active lead, but not live-ready. It has enough sample
+size to matter, but drawdown and window stability are weak: only `14` of `29`
+five-day holdout windows are positive, and the worst day is `2026-04-13` at
+`-12012.00`. Next work should be regime and daily-health gates for
+`vwap_delta_exhaustion_fade_2pt_10d_cl0.5`, not more Delta Impulse exit tuning.
+
+Detailed report:
+
+`reports/sierra-signal-log-scalp-entry-baselines-continuous-240d.md`

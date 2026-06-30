@@ -169,3 +169,40 @@ Update after the continuous-contract 240D export:
   holdout trades for `-22339` USD.
 - The small positive selected-veto result is invalidated as an overfit/thin
   sample result.
+
+## 2026-06-30: Keep VWAP Delta Exhaustion Fade As Research Lead
+
+Decision: keep `vwap_delta_exhaustion_fade_2pt_10d_cl0.5` as the active scalp
+research lead, but do not promote it to live automation.
+
+Context:
+
+- The continuous-contract 240D export covers `168` trade dates from
+  `2025-11-03` through `2026-06-29`.
+- The export lacked a Sierra VWAP column, so the synthetic baseline generator
+  now computes a session VWAP fallback from cumulative `HLC Avg * Volume` by
+  trade date.
+- Default ES costs, one tick per side, rejected all `33` broad synthetic entry
+  families.
+- Zero-slippage and reduced-slippage sensitivity showed real entry information,
+  led by VWAP/delta exhaustion fade.
+- Fixed `vwap_delta_exhaustion_fade_2pt_10d_cl0.5` with `5 / 10 / 10 /
+  initial` exits survived chronological `20x5` walk-forward at `1.0` tick total
+  slippage per contract: `1298` holdout trades, `27101.50` USD net, `20.88`
+  USD/trade.
+
+Risks:
+
+- Profit factor is only `1.061`.
+- Only `14` of `29` five-day holdout windows are positive.
+- Max trade-sequence drawdown is `-23636` USD.
+- Worst day is `2026-04-13`, `-12012` USD.
+
+Consequences:
+
+- Stop spending time on raw Delta Impulse continuation as the main lead.
+- Focus next on regime filters and daily health gates for VWAP/delta exhaustion
+  fade.
+- Do not build live Sierra automation until drawdown control survives
+  chronological validation and execution can be modeled at or below `1.0` tick
+  total slippage per contract.

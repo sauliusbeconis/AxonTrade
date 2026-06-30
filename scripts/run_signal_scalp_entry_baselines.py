@@ -344,21 +344,45 @@ def _feature_rows(
     normalized_rows: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     rows = []
+    cumulative_price_volume_by_date: dict[str, float] = defaultdict(float)
+    cumulative_volume_by_date: dict[str, float] = defaultdict(float)
     for raw_row, normalized_row in zip(raw_rows, normalized_rows):
         timestamp = _parse_timestamp(str(normalized_row["timestamp"]))
+        trade_date = timestamp.date().isoformat()
         close = float(normalized_row["close"])
+        high = float(normalized_row["high"])
+        low = float(normalized_row["low"])
+        volume = _to_float(raw_row.get("Volume"), 0.0)
+        exported_vwap = _optional_float(
+            _first_raw_value(
+                raw_row,
+                "VWAP",
+                "Volume Weighted Average Price - VWAP",
+            ),
+        )
+        computed_vwap = _computed_session_vwap(
+            raw_row,
+            trade_date=trade_date,
+            high=high,
+            low=low,
+            close=close,
+            volume=volume,
+            cumulative_price_volume_by_date=cumulative_price_volume_by_date,
+            cumulative_volume_by_date=cumulative_volume_by_date,
+        )
         rows.append(
             {
                 **normalized_row,
                 "parsed_timestamp": timestamp,
-                "trade_date": timestamp.date().isoformat(),
+                "trade_date": trade_date,
                 "open_float": float(normalized_row["open"]),
-                "high_float": float(normalized_row["high"]),
-                "low_float": float(normalized_row["low"]),
+                "high_float": high,
+                "low_float": low,
                 "close_float": close,
-                "bar_range": float(normalized_row["high"]) - float(normalized_row["low"]),
-                "vwap": _to_float(raw_row.get("VWAP"), close),
-                "volume": _to_float(raw_row.get("Volume"), 0.0),
+                "bar_range": high - low,
+                "vwap": exported_vwap if exported_vwap is not None else computed_vwap,
+                "vwap_source": "exported" if exported_vwap is not None else "computed_session",
+                "volume": volume,
                 "trades": _to_float(raw_row.get("# of Trades"), 0.0),
                 "bid_volume": _to_float(raw_row.get("Bid Volume"), 0.0),
                 "ask_volume": _to_float(raw_row.get("Ask Volume"), 0.0),
@@ -375,6 +399,26 @@ def _feature_rows(
             close=rows[-1]["close_float"],
         )
     return rows
+
+
+def _computed_session_vwap(
+    raw_row: dict[str, str],
+    *,
+    trade_date: str,
+    high: float,
+    low: float,
+    close: float,
+    volume: float,
+    cumulative_price_volume_by_date: dict[str, float],
+    cumulative_volume_by_date: dict[str, float],
+) -> float:
+    typical_price = _to_float(raw_row.get("HLC Avg"), (high + low + close) / 3)
+    if volume > 0:
+        cumulative_price_volume_by_date[trade_date] += typical_price * volume
+        cumulative_volume_by_date[trade_date] += volume
+    if cumulative_volume_by_date[trade_date] <= 0:
+        return close
+    return cumulative_price_volume_by_date[trade_date] / cumulative_volume_by_date[trade_date]
 
 
 def _generate_strategy_signals(
@@ -927,6 +971,20 @@ def _to_float(value: str | None, default: float) -> float:
     if value is None or not str(value).strip():
         return default
     return float(value)
+
+
+def _optional_float(value: str | None) -> float | None:
+    if value is None or not str(value).strip():
+        return None
+    return float(value)
+
+
+def _first_raw_value(raw_row: dict[str, str], *field_names: str) -> str | None:
+    for field_name in field_names:
+        value = raw_row.get(field_name)
+        if value is not None and str(value).strip():
+            return value
+    return None
 
 
 def _close_location(*, low: float, high: float, close: float) -> float:
