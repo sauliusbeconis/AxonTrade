@@ -1,10 +1,13 @@
 # Safety Case
 
-AxonTrade is currently in a foundation and simulation-safe research phase. Live order routing is prohibited.
+AxonTrade is currently in a foundation, simulation-safe research, and simulation
+execution-mechanics phase. Live order routing is prohibited.
 
 ## Safety Claims
 
-- The repository must not contain platform-side code that submits, modifies, cancels, or flattens orders.
+- The repository must not contain live trade-service routing code.
+- Platform-side order functions are allowed only inside the approved
+  simulation-only execution harness.
 - Strategy code and research scripts must treat account rules as external configuration, not hardcoded assumptions.
 - Risk limits during development must be stricter than the relevant prop-firm limits.
 - Every strategy must be documented as a hypothesis before it is tested.
@@ -20,11 +23,14 @@ AxonTrade is currently in a foundation and simulation-safe research phase. Live 
 ## Required Controls
 
 - Manual safety review before any execution work.
-- Static search for prohibited ACSIL order-routing calls in source files.
+- Static search to ensure ACSIL order-routing calls are isolated to the approved
+  simulation-only execution harness.
 - Recalculation-safe Sierra Chart drawings and logging.
 - Chronological walk-forward testing.
 - Untouched holdout periods.
 - Cost and slippage assumptions in every strategy report.
+- Sierra Chart simulation mode, explicit arming, symbol-prefix gating, and
+  confirmation-text gating before simulation entries are allowed.
 
 ## Open Verification Items
 

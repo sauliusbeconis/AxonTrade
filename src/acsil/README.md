@@ -2,7 +2,13 @@
 
 This directory contains Sierra Chart ACSIL C++ source files.
 
-Phase 0 studies must be indicator-only. They may draw chart objects and write simulation-safe research logs, but they must not submit, modify, cancel, flatten, or route orders.
+Most Phase 0 studies are indicator-only. They may draw chart objects and write
+simulation-safe research logs, but they must not submit, modify, cancel,
+flatten, or route orders.
+
+The only approved exception is `AxonTradeVwapDeltaExecutionBot.cpp`, which is a
+simulation-only mechanics harness. It rejects live trade-service routing in code
+and is isolated by `scripts/check_repo.sh`.
 
 ## Smoke Test
 
@@ -59,6 +65,16 @@ simulation-only and does not route orders.
 
 Build and load instructions are documented in
 `docs/sierra-vwap-delta-live-sim-bot.md`.
+
+## VWAP Delta Execution Bot
+
+`AxonTradeVwapDeltaExecutionBot.cpp` submits Sierra Chart simulation orders for
+mechanics testing of the selected VWAP/delta exhaustion fade. It uses explicit
+arming, simulation-mode, confirmation-text, symbol-prefix, position, daily-loss,
+and daily-profit gates. Live trade-service routing is rejected in this build.
+
+Build, load, and first mechanics-test instructions are documented in
+`docs/sierra-vwap-delta-execution-bot.md`.
 
 ## Build Workflow
 

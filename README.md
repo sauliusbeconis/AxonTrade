@@ -6,11 +6,13 @@ It is not a get-rich-quick trading bot, signal service, black-box system, martin
 
 ## Current Phase
 
-Phase 0 is foundation and simulation-safe research tooling.
+Phase 0 is foundation, simulation-safe research tooling, and controlled
+simulation execution mechanics testing.
 
 Forward simulation on rolling Sierra Chart data is supported for selected
-research candidates. Live order routing is disabled by policy and is not
-implemented in this repository.
+research candidates. A dedicated Sierra Chart execution harness can submit
+simulation orders for mechanics testing only. Live trade-service routing remains
+disabled by policy and is rejected by the execution harness.
 
 ## Platform Stack
 
@@ -91,6 +93,8 @@ Candidate outcome evaluation for those Sierra overlay logs is documented in
 [docs/sierra-signal-log-outcomes.md](docs/sierra-signal-log-outcomes.md).
 The current VWAP/delta exhaustion forward-simulation bot is documented in
 [docs/sierra-vwap-delta-live-sim-bot.md](docs/sierra-vwap-delta-live-sim-bot.md).
+The simulation-only mechanics execution harness is documented in
+[docs/sierra-vwap-delta-execution-bot.md](docs/sierra-vwap-delta-execution-bot.md).
 
 ## Pop!_OS And Wine Notes
 
@@ -111,6 +115,7 @@ The sync script copies `src/acsil/*.cpp` into Sierra Chart's `ACS_Source` direct
 
 ## Safety Status
 
-This repository currently contains no live order-routing implementation.
-Strategy material remains simulation-only until it passes the documented
-research, replay, forward-simulation, and safety-review gates.
+This repository contains no live trade-service routing implementation. The only
+approved ACSIL order-routing calls are isolated in
+`src/acsil/AxonTradeVwapDeltaExecutionBot.cpp`, which rejects live trade-service
+routing and is for Sierra Chart simulation mechanics tests only.

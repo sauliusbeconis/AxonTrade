@@ -248,3 +248,19 @@ Update after mapping to LucidFlex 25K:
 - Suggested forward-sim profile for LucidFlex 25K funded start is ES signal
   chart with `5 MES + 5 MES` modeled by `First Leg Quantity = 5`,
   `Runner Quantity = 5`, `Point Value USD = 5`, and `Tick Value USD = 1.25`.
+
+Update after switching from forward-log collection to mechanics testing:
+
+- Months of live forward logs are not required for the next step. The immediate
+  task is a real-time Sierra mechanics test: confirm order submission, attached
+  targets, attached stop, flatten behavior, arming gates, and logging.
+- Add a separate simulation-only execution harness instead of converting the
+  live-sim logger into an order router.
+- Keep live trade-service routing disabled. The execution harness rejects
+  `Send Orders To Trade Service = Yes` in this build.
+- Use MES-sized defaults for mechanics: `First Leg Quantity = 1`,
+  `Runner Quantity = 1`, `Max Position Quantity = 2`, `Daily Loss Lock USD =
+  200`, and `Daily Profit Lock USD = 650`.
+- The daily loss lock is not a substitute for sizing. With a 10-point stop,
+  `5 MES + 5 MES` can lose roughly `-$500` before costs, so it does not fit the
+  preferred `-$150` to `-$250` daily-loss band.

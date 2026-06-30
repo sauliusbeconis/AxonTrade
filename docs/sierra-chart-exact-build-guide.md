@@ -397,7 +397,8 @@ Goal: clean secondary context chart.
 - Footprint uses RTH only.
 - If heatmap is built, market depth recording is enabled.
 - VWAP and levels use the intended session.
-- No live order-routing study or ACSIL order function is attached.
+- No live order-routing study is attached. Only attach the simulation execution
+  harness when following `docs/sierra-vwap-delta-execution-bot.md`.
 - Chartbook saves and reopens cleanly.
 
 ## Duplicate For MES

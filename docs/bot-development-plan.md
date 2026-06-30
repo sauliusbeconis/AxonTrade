@@ -2,7 +2,8 @@
 
 AxonTrade is a bot project, but not a live-order-routing project in the current
 phase. The near-term goal is to build a research and simulation pipeline that can
-produce, log, replay, and evaluate signals before any execution work is allowed.
+produce, log, replay, evaluate signals, and run controlled Sierra simulation
+mechanics tests before any live execution work is allowed.
 
 ## Current Bot Definition
 
@@ -14,6 +15,7 @@ In the current phase, "bot" means:
 - rejected signal logging;
 - chart overlays for review;
 - replay and simulation validation;
+- simulation-only execution mechanics tests;
 - offline reports with costs and slippage.
 
 It does not mean:
@@ -114,8 +116,9 @@ Use Sierra Chart replay to confirm:
 
 ### 6. Simulation-Only Execution Research
 
-Only after baseline reports and safety checks are stable, consider a separate
-simulation-only assistant phase. This still does not authorize live automation.
+The separate simulation-only execution harness is allowed for mechanics tests
+after baseline reports and safety checks are stable. This still does not
+authorize live automation.
 
 ## Completed Foundation
 

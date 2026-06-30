@@ -1,6 +1,8 @@
 # Sierra Chart Development
 
-AxonTrade uses ACSIL C++ for Sierra Chart studies. Phase 0 studies are indicator-only.
+AxonTrade uses ACSIL C++ for Sierra Chart studies. Most Phase 0 studies are
+indicator-only. The approved exception is the dedicated simulation-only
+execution harness documented in `docs/sierra-vwap-delta-execution-bot.md`.
 
 ## ACSIL Workflow
 

@@ -6,18 +6,32 @@ cd "$repo_root"
 
 echo "== AxonTrade repository checks =="
 
+order_call_regex='sc\.(BuyEntry|SellEntry|BuyOrder|SellOrder|BuyExit|SellExit|FlattenAndCancelAllOrders)'
+approved_order_file="src/acsil/AxonTradeVwapDeltaExecutionBot.cpp"
+
 if command -v rg >/dev/null 2>&1; then
-  if rg --glob '*.cpp' --glob '*.h' 'sc\.(BuyEntry|SellEntry|BuyOrder|SellOrder|BuyExit|SellExit|FlattenAndCancelAllOrders)' src/acsil; then
-    echo "ERROR: prohibited ACSIL order-routing call found in src/acsil." >&2
+  if rg --glob '*.cpp' --glob '*.h' --glob "!$(basename "$approved_order_file")" "$order_call_regex" src/acsil; then
+    echo "ERROR: prohibited ACSIL order-routing call found outside $approved_order_file." >&2
     exit 1
   fi
-  echo "Safety scan passed for src/acsil."
+  if [[ -f "$approved_order_file" ]] && rg "$order_call_regex" "$approved_order_file" >/dev/null; then
+    echo "Safety scan passed: order-routing calls are isolated to $approved_order_file."
+  else
+    echo "Safety scan passed: no ACSIL order-routing calls found."
+  fi
 else
-  if grep -R -E --include='*.cpp' --include='*.h' 'sc\.(BuyEntry|SellEntry|BuyOrder|SellOrder|BuyExit|SellExit|FlattenAndCancelAllOrders)' src/acsil; then
-    echo "ERROR: prohibited ACSIL order-routing call found in src/acsil." >&2
-    exit 1
+  mapfile -d '' acsil_files < <(find src/acsil -type f \( -name '*.cpp' -o -name '*.h' \) ! -path "$approved_order_file" -print0)
+  if ((${#acsil_files[@]} > 0)); then
+    if grep -H -E "$order_call_regex" "${acsil_files[@]}"; then
+      echo "ERROR: prohibited ACSIL order-routing call found outside $approved_order_file." >&2
+      exit 1
+    fi
   fi
-  echo "Safety scan passed for src/acsil."
+  if [[ -f "$approved_order_file" ]] && grep -E "$order_call_regex" "$approved_order_file" >/dev/null; then
+    echo "Safety scan passed: order-routing calls are isolated to $approved_order_file."
+  else
+    echo "Safety scan passed: no ACSIL order-routing calls found."
+  fi
 fi
 
 python_bin="${PYTHON:-}"
