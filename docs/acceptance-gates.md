@@ -97,6 +97,46 @@ additional evaluated trades and `7` additional trade dates are required before
 the fixed row can pass the minimum evidence-count gates, before considering the
 other failed stability gates.
 
+The current VWAP/delta exhaustion context-guard candidate has a separate
+executable gate profile in
+`config/research/scaled_context_guard_acceptance_gates.yaml`.
+
+Current fixed guard:
+
+- `lookback_directional_move_points <= -2.5`;
+- `session_range_points >= 30`;
+- `risk_to_average_bar_range <= 2.5`.
+
+Current thresholds:
+
+- at least `500` fixed-guard kept trades;
+- fixed-guard net must be at least `$50,000`;
+- fixed-guard average net per trade must be at least `$75`;
+- fixed-guard profit factor must be at least `1.25`;
+- fixed-guard drawdown/net ratio must be no more than `0.25`;
+- fixed-guard worst-day loss must be no more than `$6,500`;
+- at least `5` chronological robustness window shapes;
+- every robustness shape must have positive guarded net;
+- every robustness shape must improve versus unguarded rows;
+- weakest robustness net must be at least `$10,000`;
+- weakest robustness average net per trade must be at least `$40`;
+- highest robustness negative-window rate must be no more than `0.35`;
+- worst guarded holdout-window loss must be no more than `$7,000`.
+
+Manual help needed: **No** after the fixed-guard and robustness CSVs exist.
+
+Run the check from the repository:
+
+```bash
+.venv/bin/python scripts/check_scaled_context_guard_acceptance.py
+```
+
+The command writes
+`reports/sierra-signal-log-scalp-entry-baselines-continuous-240d-vwap-delta-exhaustion-guard-acceptance.md`.
+The current 240-day sample passes these gates, but that does not authorize live
+routing. A fresh later Sierra export must pass the same gates before the guard
+is promoted into the Sierra study.
+
 ## Risk Gates
 
 - Average holding time is comfortably above microscalping thresholds.

@@ -322,3 +322,42 @@ Interpretation: the strategy candidate has narrowed from a broad optimizer to a
 single rule family. The next required test is external validation on a later
 fresh Sierra export. Without that, this remains a research candidate, not a bot
 change.
+
+## Guard Acceptance Gate
+
+Status: **PASS on current sample, still requires fresh-export validation**
+
+Generated output:
+
+- `reports/sierra-signal-log-scalp-entry-baselines-continuous-240d-vwap-delta-exhaustion-guard-acceptance.md`
+
+Command:
+
+```bash
+.venv/bin/python scripts/check_scaled_context_guard_acceptance.py
+```
+
+Gate profile:
+
+`config/research/scaled_context_guard_acceptance_gates.yaml`
+
+Acceptance summary:
+
+| Gate Area | Observed | Required |
+| --- | ---: | ---: |
+| Fixed kept trades | `603` | `>= 500` |
+| Fixed net USD | `67241.50` | `>= 50000.00` |
+| Fixed average/trade | `111.51` | `>= 75.00` |
+| Fixed profit factor | `1.3671` | `>= 1.25` |
+| Fixed drawdown/net | `0.1528` | `<= 0.25` |
+| Fixed worst-day loss | `5160.00` | `<= 6500.00` |
+| Robustness window shapes | `5` | `>= 5` |
+| Weakest guarded robustness net | `13721.00` | `>= 10000.00` |
+| Weakest guarded average/trade | `42.61` | `>= 40.00` |
+| Max negative-window rate | `0.3333` | `<= 0.35` |
+| Worst guarded window loss | `6018.00` | `<= 7000.00` |
+
+Interpretation: the candidate now has an executable pass/fail gate. This makes
+the next fresh Sierra export straightforward: regenerate fixed guards and
+robustness rows, run `check_scaled_context_guard_acceptance.py`, and only
+consider Sierra implementation if the fresh-export report also passes.

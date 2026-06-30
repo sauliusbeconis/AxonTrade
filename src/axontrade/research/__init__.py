@@ -77,6 +77,19 @@ from axontrade.research.scaled_context_loss_attribution import (
     summarize_scaled_context_guard_walk_forward as summarize_scaled_context_guard_walk_forward,
     summarize_scaled_context_daily_performance as summarize_scaled_context_daily_performance,
 )
+from axontrade.research.scaled_context_guard_acceptance import (
+    DEFAULT_SCALED_CONTEXT_GUARD_ACCEPTANCE_CONFIG_PATH as DEFAULT_SCALED_CONTEXT_GUARD_ACCEPTANCE_CONFIG_PATH,
+    ScaledContextGuardAcceptanceError as ScaledContextGuardAcceptanceError,
+    ScaledContextGuardAcceptanceFinding as ScaledContextGuardAcceptanceFinding,
+    ScaledContextGuardAcceptanceSummary as ScaledContextGuardAcceptanceSummary,
+    evaluate_scaled_context_guard_acceptance as evaluate_scaled_context_guard_acceptance,
+    load_scaled_context_guard_acceptance_config as load_scaled_context_guard_acceptance_config,
+    render_scaled_context_guard_acceptance_report as render_scaled_context_guard_acceptance_report,
+    scaled_context_guard_acceptance_passed as scaled_context_guard_acceptance_passed,
+    summarize_scaled_context_guard_acceptance_sample as summarize_scaled_context_guard_acceptance_sample,
+    validate_scaled_context_guard_acceptance_config as validate_scaled_context_guard_acceptance_config,
+    write_scaled_context_guard_acceptance_report as write_scaled_context_guard_acceptance_report,
+)
 from axontrade.research.delta_impulse_overlay_validation import (
     DELTA_IMPULSE_STRATEGY_ID,
     DeltaImpulseOverlayComparison,

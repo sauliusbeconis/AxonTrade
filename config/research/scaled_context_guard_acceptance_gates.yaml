@@ -1,0 +1,26 @@
+schema_version: 1
+profile_id: scaled_context_guard_acceptance_gates_v1
+description: >
+  Evidence gates for the fixed VWAP/delta exhaustion context guard candidate.
+  These gates require the full fixed guard and multiple chronological robustness
+  windows to remain positive before a Sierra implementation change is allowed.
+candidate:
+  guard_name: lookback_fade_push_session_range_30_risk_avg_2.5
+  conditions:
+    - lookback_directional_move_points <= -2.5
+    - session_range_points >= 30
+    - risk_to_average_bar_range <= 2.5
+gates:
+  minimum_fixed_guard_trades: 500
+  minimum_fixed_guard_net_usd: 50000
+  minimum_fixed_guard_average_net_usd: 75
+  minimum_fixed_guard_profit_factor: 1.25
+  maximum_fixed_guard_drawdown_to_net_ratio: 0.25
+  maximum_fixed_guard_worst_day_loss_usd: 6500
+  minimum_robustness_rows: 5
+  require_all_robustness_guarded_net_positive: true
+  require_all_robustness_improved_vs_unguarded: true
+  minimum_worst_robustness_guarded_net_usd: 10000
+  minimum_worst_robustness_average_net_usd: 40
+  maximum_robustness_negative_window_rate: 0.35
+  maximum_worst_guarded_window_loss_usd: 7000
