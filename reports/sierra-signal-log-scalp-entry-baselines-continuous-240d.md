@@ -417,3 +417,47 @@ current promotion gates. Do not wire this guard into Sierra automation yet. The
 next work should either wait for a true future out-of-sample export or research
 a stricter guard/exit variant that improves profit factor and drawdown without
 collapsing trade count.
+
+## Fresh 480D Guard/Exit Tightening
+
+Status: **research candidate preserved, implementation rejected**
+
+Generated outputs:
+
+- `reports/sierra-signal-log-scalp-entry-baselines-fresh-480d-vwap-delta-exhaustion-guard-exit-variant-sweep.csv`
+- `reports/sierra-signal-log-scalp-entry-baselines-fresh-480d-vwap-delta-exhaustion-guard-exit-variant-research.md`
+
+This pass tested `800` exit/guard combinations on the same fresh historical
+holdout sample. No row passed all `12` promotion gates.
+
+Best structural row:
+
+| Metric | Value |
+| --- | ---: |
+| Exit | `6 / 12 / 15 / initial` |
+| Guard | `lookback_directional_move_points <= -2.5; session_range_points >= 30; risk_to_average_bar_range <= 1.75` |
+| Kept trades | `414` |
+| Net USD | `60277.00` |
+| Average/trade | `145.60` |
+| Profit factor | `1.3807` |
+| Drawdown/net | `0.1459` |
+| Failed gate | `minimum_fixed_guard_trades` |
+
+Best row that keeps at least `500` trades:
+
+| Metric | Value |
+| --- | ---: |
+| Exit | `6 / 10 / 12 / initial` |
+| Guard | `lookback_directional_move_points <= -2.5; session_range_points >= 30; risk_to_average_bar_range <= 1.75` |
+| Kept trades | `550` |
+| Net USD | `55112.50` |
+| Average/trade | `100.20` |
+| Profit factor | `1.2786` |
+| Drawdown/net | `0.3161` |
+| Failed gate | `maximum_fixed_guard_drawdown_to_net_ratio` |
+
+Interpretation: the setup is not dead, but the implementation candidate is not
+ready. Tightening compression to `risk_to_average_bar_range <= 1.75` improves
+the structure materially. The cleanest version lacks sample size, while the
+sample-size-compliant version still needs a separate drawdown or day-risk veto.
+No Sierra automation change should be made from this pass.
