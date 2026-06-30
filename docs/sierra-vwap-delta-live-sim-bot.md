@@ -54,7 +54,10 @@ research pass:
 - first target: `6` points
 - runner target: `12` points
 - runner stop mode: `initial`
+- first leg quantity: `1`
+- runner quantity: `1`
 - paper daily loss limit: `$3600`
+- paper daily profit lock: disabled with `0`
 - paper accepted-equity drawdown limit: `$4000`
 - ES point value: `$50`
 - tick value: `$12.50`
@@ -63,6 +66,61 @@ research pass:
 
 The study uses the chart timestamps. Keep Sierra Chart time set to New York for
 this test.
+
+## LucidFlex 25K Notes
+
+Manual help needed: **No** for reading this section. Manual help is needed later
+to enter the selected profile values in Sierra Chart.
+
+LucidFlex 25K rules checked on `2026-06-30`:
+
+- evaluation target: `$1,250`;
+- evaluation max loss limit: `$1,000`;
+- evaluation consistency: `50%`;
+- evaluation max size: `2 minis or 20 micros`;
+- evaluation daily loss limit: none;
+- funded max loss limit: `$1,000`;
+- funded daily loss limit: none;
+- funded consistency: none;
+- funded scaling plan at `$0 - $999` simulated profit: `1 mini or 10 micros`;
+- live starting drawdown: `$1,000`;
+- live max contract limit: `2 minis or 20 micros`;
+- live daily loss limit and consistency: none.
+
+Sources:
+
+- `https://support.lucidtrading.com/en/articles/12945790-lucidflex-evaluation-account`
+- `https://support.lucidtrading.com/en/articles/12945795-lucidflex-funded-account`
+- `https://support.lucidtrading.com/en/articles/12945808-lucidflex-scaling-plan`
+- `https://support.lucidtrading.com/en/articles/12945805-lucidflex-consistency-percentage`
+- `https://support.lucidtrading.com/en/articles/13425130-new-live-structure`
+
+Important sizing consequence:
+
+- `1 ES = 10 MES`;
+- the research default `1 ES + 1 ES` has a full-stop loss of about `$1,000`
+  before costs;
+- that is too close to the LucidFlex 25K `$1,000` max loss limit;
+- `5 MES + 5 MES` keeps the same two-leg structure with about half the ES
+  research exposure and fits the funded starting scaling tier of `10 micros`.
+
+For clean strategy continuity, run the signal on the ES chart and use MES point
+values/quantities for paper P&L modeling. Running the signal directly on an MES
+chart can change bid/ask volume and delta behavior versus the ES research
+sample.
+
+Suggested forward-sim profiles:
+
+| Profile | First Leg Quantity | Runner Quantity | Point Value USD | Tick Value USD | Paper Daily Profit Lock USD | Notes |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Research ES | `1` | `1` | `50` | `12.5` | `0` | Matches historical ES research sizing. |
+| LucidFlex 25K Eval MES | `5` | `5` | `5` | `1.25` | `650` | Models `5 MES + 5 MES`; use only if the dashboard consistency cushion allows it. |
+| LucidFlex 25K Funded Start MES | `5` | `5` | `5` | `1.25` | `0` | Fits funded `$0 - $999` scaling tier of `10 micros`. |
+| LucidFlex 25K Conservative MES | `2` | `2` | `5` | `1.25` | `0` | Lower exposure for first live-sim/live mechanics tests. |
+
+The `650` profit lock is not a universal fixed Lucid rule. Lucid publishes it
+as an example cushion for a 25K Flex evaluation at the target. Confirm the
+dashboard before relying on it.
 
 ## Sync Source Into Sierra
 
@@ -140,7 +198,10 @@ the same chart type you used for the fresh 480D export.
     - `Initial Stop Points = 10`
     - `First Target Points = 6`
     - `Runner Target Points = 12`
+    - `First Leg Quantity = 1`
+    - `Runner Quantity = 1`
     - `Paper Daily Loss Limit USD = 3600`
+    - `Paper Daily Profit Lock USD = 0`
     - `Paper Accepted Equity Drawdown USD = 4000`
     - `Point Value USD = 50`
     - `Tick Value USD = 12.5`
@@ -158,6 +219,32 @@ Expected chart result:
   target segment, and runner target segment;
 - full virtual exits draw a yellow diamond and label;
 - entry and exit rows append to the CSV log.
+
+## Set A LucidFlex MES Profile
+
+Manual help needed: **Yes**.
+
+Use this when you want ES signals but MES-sized paper P&L:
+
+1. Click the ES 3-minute footprint/execution chart window.
+2. Click `Analysis >> Studies`.
+3. In `Studies to Graph`, select `AxonTrade VWAP Delta Live Sim Bot`.
+4. Click `Settings`.
+5. In `Settings and Inputs`, set:
+   - `First Leg Quantity = 5`
+   - `Runner Quantity = 5`
+   - `Point Value USD = 5`
+   - `Tick Value USD = 1.25`
+   - `Paper Daily Profit Lock USD = 650` for LucidFlex 25K evaluation testing,
+     or `0` for funded/live-sim testing without consistency caps
+6. For a stricter prop-risk approximation, set:
+   - `Paper Daily Loss Limit USD = 900`
+   - `Paper Accepted Equity Drawdown USD = 900`
+7. Click `OK`.
+8. Click `OK` again to close Chart Studies.
+
+These settings do not change the signal rule, stop, or targets. They only
+change the virtual exposure and paper risk controls.
 
 ## Rolling Live-Sim Use
 
@@ -193,4 +280,3 @@ time:
 Leaving `Process Full Recalculation = Yes` can repeat historical backfills
 during recalculations. Turning `Log Rejections = Yes` during a full backfill can
 write a very large diagnostic file.
-

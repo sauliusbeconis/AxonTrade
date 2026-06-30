@@ -236,3 +236,15 @@ Update after the fresh 480D export and drawdown-control pass:
   gate.
 - Build only a Sierra forward-simulation harness for this candidate. Do not add
   broker order routing.
+
+Update after mapping to LucidFlex 25K:
+
+- The research-size `1 ES + 1 ES` profile is too close to the LucidFlex 25K
+  `$1,000` max loss limit because a full stop is about `-$1,000` before costs.
+- Keep the signal, stop, and target rules fixed, and scale exposure with MES
+  quantities for prop-account fitting.
+- Add explicit first-leg and runner quantities plus a paper daily profit lock
+  to the Sierra live-sim study.
+- Suggested forward-sim profile for LucidFlex 25K funded start is ES signal
+  chart with `5 MES + 5 MES` modeled by `First Leg Quantity = 5`,
+  `Runner Quantity = 5`, `Point Value USD = 5`, and `Tick Value USD = 1.25`.

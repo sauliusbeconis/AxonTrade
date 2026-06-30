@@ -28,6 +28,8 @@ struct PaperTrade
     double stop_price = 0.0;
     double first_target_price = 0.0;
     double runner_target_price = 0.0;
+    int first_leg_quantity = 1;
+    int runner_quantity = 1;
     bool leg1_open = true;
     bool runner_open = true;
     double leg1_exit_price = 0.0;
@@ -380,12 +382,15 @@ double TradeNetUsd(
     double& commission_usd,
     double& slippage_usd)
 {
+    const int total_quantity = trade.first_leg_quantity + trade.runner_quantity;
     gross_points =
         GrossPoints(trade.direction, trade.entry_price, trade.leg1_exit_price)
-        + GrossPoints(trade.direction, trade.entry_price, trade.runner_exit_price);
+            * static_cast<double>(trade.first_leg_quantity)
+        + GrossPoints(trade.direction, trade.entry_price, trade.runner_exit_price)
+            * static_cast<double>(trade.runner_quantity);
     gross_usd = gross_points * point_value_usd;
-    commission_usd = commission_per_side_usd * 2.0 * 2.0;
-    slippage_usd = slippage_ticks_per_contract * tick_value_usd * 2.0;
+    commission_usd = commission_per_side_usd * 2.0 * static_cast<double>(total_quantity);
+    slippage_usd = slippage_ticks_per_contract * tick_value_usd * static_cast<double>(total_quantity);
     return gross_usd - commission_usd - slippage_usd;
 }
 
@@ -556,11 +561,13 @@ void EnsureHealthDate(SCStudyInterfaceRef sc, int bar_index)
 {
     int& health_date = sc.GetPersistentInt(6);
     int& health_block_day = sc.GetPersistentInt(7);
+    int& health_block_reason = sc.GetPersistentInt(10);
     const int current_date = sc.BaseDateTimeIn[bar_index].GetDate();
     if (health_date != current_date)
     {
         health_date = current_date;
         health_block_day = 0;
+        health_block_reason = 0;
         sc.GetPersistentDouble(1) = 0.0;
     }
 }
@@ -577,6 +584,7 @@ void ApplyRealizedHealthUpdate(
     int bar_index,
     double net_usd,
     double daily_loss_limit_usd,
+    double daily_profit_lock_usd,
     double max_accepted_drawdown_usd)
 {
     EnsureHealthDate(sc, bar_index);
@@ -584,6 +592,7 @@ void ApplyRealizedHealthUpdate(
     double& accepted_equity = sc.GetPersistentDouble(2);
     double& peak_equity = sc.GetPersistentDouble(3);
     int& health_block_day = sc.GetPersistentInt(7);
+    int& health_block_reason = sc.GetPersistentInt(10);
 
     daily_net += net_usd;
     accepted_equity += net_usd;
@@ -591,11 +600,20 @@ void ApplyRealizedHealthUpdate(
         peak_equity = accepted_equity;
 
     const double drawdown = accepted_equity - peak_equity;
-    if (daily_net <= -daily_loss_limit_usd)
-        health_block_day = 1;
-    if (drawdown <= -max_accepted_drawdown_usd)
+    if (daily_loss_limit_usd > 0.0 && daily_net <= -daily_loss_limit_usd)
     {
         health_block_day = 1;
+        health_block_reason = 1;
+    }
+    if (daily_profit_lock_usd > 0.0 && daily_net >= daily_profit_lock_usd)
+    {
+        health_block_day = 1;
+        health_block_reason = 3;
+    }
+    if (max_accepted_drawdown_usd > 0.0 && drawdown <= -max_accepted_drawdown_usd)
+    {
+        health_block_day = 1;
+        health_block_reason = 2;
         peak_equity = accepted_equity;
     }
 }
@@ -606,8 +624,27 @@ bool HealthAllowsNewEntry(SCStudyInterfaceRef sc, int bar_index, std::string& re
     if (sc.GetPersistentInt(7) == 0)
         return true;
 
-    rejection_reason = "health_gate_blocked";
-    notes = "paper bot is blocked for the rest of this chart date by realized daily loss or accepted-equity drawdown";
+    const int health_block_reason = sc.GetPersistentInt(10);
+    if (health_block_reason == 1)
+    {
+        rejection_reason = "daily_loss_gate_blocked";
+        notes = "paper bot is blocked for the rest of this chart date by realized daily loss";
+    }
+    else if (health_block_reason == 2)
+    {
+        rejection_reason = "accepted_equity_drawdown_gate_blocked";
+        notes = "paper bot is blocked by accepted-equity drawdown";
+    }
+    else if (health_block_reason == 3)
+    {
+        rejection_reason = "daily_profit_lock_blocked";
+        notes = "paper bot is locked for the rest of this chart date after reaching the daily profit lock";
+    }
+    else
+    {
+        rejection_reason = "health_gate_blocked";
+        notes = "paper bot is blocked for the rest of this chart date by realized health gate";
+    }
     return false;
 }
 
@@ -819,13 +856,16 @@ SCSFExport scsf_AxonTradeVwapDeltaLiveSimBot(SCStudyInterfaceRef sc)
     SCInputRef InitialStopPoints = sc.Input[18];
     SCInputRef FirstTargetPoints = sc.Input[19];
     SCInputRef RunnerTargetPoints = sc.Input[20];
-    SCInputRef DailyLossLimitUsd = sc.Input[21];
-    SCInputRef MaxAcceptedDrawdownUsd = sc.Input[22];
-    SCInputRef PointValueUsd = sc.Input[23];
-    SCInputRef TickValueUsd = sc.Input[24];
-    SCInputRef CommissionPerSideUsd = sc.Input[25];
-    SCInputRef SlippageTicksPerContract = sc.Input[26];
-    SCInputRef MaxOpenPaperTrades = sc.Input[27];
+    SCInputRef FirstLegQuantity = sc.Input[21];
+    SCInputRef RunnerQuantity = sc.Input[22];
+    SCInputRef DailyLossLimitUsd = sc.Input[23];
+    SCInputRef DailyProfitLockUsd = sc.Input[24];
+    SCInputRef MaxAcceptedDrawdownUsd = sc.Input[25];
+    SCInputRef PointValueUsd = sc.Input[26];
+    SCInputRef TickValueUsd = sc.Input[27];
+    SCInputRef CommissionPerSideUsd = sc.Input[28];
+    SCInputRef SlippageTicksPerContract = sc.Input[29];
+    SCInputRef MaxOpenPaperTrades = sc.Input[30];
 
     if (sc.SetDefaults)
     {
@@ -901,8 +941,19 @@ SCSFExport scsf_AxonTradeVwapDeltaLiveSimBot(SCStudyInterfaceRef sc)
         RunnerTargetPoints.Name = "Runner Target Points";
         RunnerTargetPoints.SetFloat(12.0f);
 
+        FirstLegQuantity.Name = "First Leg Quantity";
+        FirstLegQuantity.SetInt(1);
+        FirstLegQuantity.SetIntLimits(1, 100);
+
+        RunnerQuantity.Name = "Runner Quantity";
+        RunnerQuantity.SetInt(1);
+        RunnerQuantity.SetIntLimits(1, 100);
+
         DailyLossLimitUsd.Name = "Paper Daily Loss Limit USD";
         DailyLossLimitUsd.SetFloat(3600.0f);
+
+        DailyProfitLockUsd.Name = "Paper Daily Profit Lock USD";
+        DailyProfitLockUsd.SetFloat(0.0f);
 
         MaxAcceptedDrawdownUsd.Name = "Paper Accepted Equity Drawdown USD";
         MaxAcceptedDrawdownUsd.SetFloat(4000.0f);
@@ -957,6 +1008,7 @@ SCSFExport scsf_AxonTradeVwapDeltaLiveSimBot(SCStudyInterfaceRef sc)
             sc.GetPersistentInt(6) = 0;
             sc.GetPersistentInt(7) = 0;
             sc.GetPersistentInt(8) = 0;
+            sc.GetPersistentInt(10) = 0;
             processing_initialized = 1;
             sc.GetPersistentDouble(1) = 0.0;
             sc.GetPersistentDouble(2) = 0.0;
@@ -1060,11 +1112,14 @@ SCSFExport scsf_AxonTradeVwapDeltaLiveSimBot(SCStudyInterfaceRef sc)
                         trade->first_target_price,
                         trade->runner_target_price,
                         "first_target_hit",
-                        1,
+                        trade->first_leg_quantity,
                         trade->leg1_open,
                         trade->runner_open,
-                        GrossPoints(trade->direction, trade->entry_price, trade->first_target_price),
-                        0.0,
+                        GrossPoints(trade->direction, trade->entry_price, trade->first_target_price)
+                            * static_cast<double>(trade->first_leg_quantity),
+                        GrossPoints(trade->direction, trade->entry_price, trade->first_target_price)
+                            * static_cast<double>(trade->first_leg_quantity)
+                            * PointValueUsd.GetFloat(),
                         0.0,
                         0.0,
                         0.0,
@@ -1152,6 +1207,7 @@ SCSFExport scsf_AxonTradeVwapDeltaLiveSimBot(SCStudyInterfaceRef sc)
                     bar_index,
                     net_usd,
                     DailyLossLimitUsd.GetFloat(),
+                    DailyProfitLockUsd.GetFloat(),
                     MaxAcceptedDrawdownUsd.GetFloat());
 
                 AppendBotLogRow(
@@ -1172,7 +1228,7 @@ SCSFExport scsf_AxonTradeVwapDeltaLiveSimBot(SCStudyInterfaceRef sc)
                     trade->first_target_price,
                     trade->runner_target_price,
                     exit_reason,
-                    2,
+                    trade->first_leg_quantity + trade->runner_quantity,
                     trade->leg1_open,
                     trade->runner_open,
                     gross_points,
@@ -1243,6 +1299,15 @@ SCSFExport scsf_AxonTradeVwapDeltaLiveSimBot(SCStudyInterfaceRef sc)
             continue;
         }
 
+        if (FirstLegQuantity.GetInt() <= 0 || RunnerQuantity.GetInt() <= 0)
+        {
+            candidate.rejection_reason = "configuration_error";
+            candidate.notes = "first leg quantity and runner quantity must both be positive";
+            LogCandidateRejection(sc, csv_log_path, symbol, trade_mode, bar_index, candidate, signal_id);
+            last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
+            continue;
+        }
+
         if (EnablePaperEntries.GetYesNo() == 0)
         {
             candidate.rejection_reason = "paper_entries_disabled";
@@ -1283,7 +1348,14 @@ SCSFExport scsf_AxonTradeVwapDeltaLiveSimBot(SCStudyInterfaceRef sc)
         trade.stop_price = candidate.stop_price;
         trade.first_target_price = candidate.first_target_price;
         trade.runner_target_price = candidate.runner_target_price;
+        trade.first_leg_quantity = FirstLegQuantity.GetInt();
+        trade.runner_quantity = RunnerQuantity.GetInt();
         open_trades->push_back(trade);
+
+        std::ostringstream entry_notes;
+        entry_notes << candidate.notes
+                    << "; first_leg_quantity=" << trade.first_leg_quantity
+                    << "; runner_quantity=" << trade.runner_quantity;
 
         AppendBotLogRow(
             csv_log_path,
@@ -1303,7 +1375,7 @@ SCSFExport scsf_AxonTradeVwapDeltaLiveSimBot(SCStudyInterfaceRef sc)
             trade.first_target_price,
             trade.runner_target_price,
             "",
-            2,
+            trade.first_leg_quantity + trade.runner_quantity,
             trade.leg1_open,
             trade.runner_open,
             0.0,
@@ -1315,7 +1387,7 @@ SCSFExport scsf_AxonTradeVwapDeltaLiveSimBot(SCStudyInterfaceRef sc)
             sc.GetPersistentDouble(2),
             AcceptedDrawdown(sc),
             "not_applicable",
-            candidate.notes);
+            entry_notes.str());
         DrawEntryOverlay(sc, trade);
         DrawTradeLevels(sc, trade);
 
