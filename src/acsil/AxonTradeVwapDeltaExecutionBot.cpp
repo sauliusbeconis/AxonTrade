@@ -965,9 +965,13 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
 
         const int bar_time = sc.BaseDateTimeIn[bar_index].GetTimeInSeconds();
         const int current_date = sc.BaseDateTimeIn[bar_index].GetDate();
+        const bool chart_downloading_historical_data =
+            sc.DownloadingHistoricalData != 0
+            || sc.ChartIsDownloadingHistoricalData(sc.ChartNumber) != 0;
         const bool order_functions_allowed =
             SendOrdersToTradeService.GetYesNo() == 0
-            && (RequireTradeSimulationMode.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn != 0);
+            && (RequireTradeSimulationMode.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn != 0)
+            && !chart_downloading_historical_data;
         int& flatten_date = sc.GetPersistentInt(9);
         if (order_functions_allowed && bar_time >= FlattenTime.GetTime() && flatten_date != current_date)
         {
@@ -1224,6 +1228,33 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
                 position_data,
                 "trade_simulation_mode_required",
                 "Trade >> Trade Simulation Mode On is not enabled");
+            last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
+            continue;
+        }
+
+        if (chart_downloading_historical_data)
+        {
+            LogCandidateEvent(
+                sc,
+                csv_log_path,
+                "execution_entry_rejected",
+                symbol,
+                trade_account,
+                trade_mode,
+                bar_index,
+                candidate,
+                signal_id,
+                total_quantity,
+                FirstLegQuantity.GetInt(),
+                RunnerQuantity.GetInt(),
+                0,
+                0,
+                0,
+                0,
+                0,
+                position_data,
+                "historical_download_in_progress",
+                "chart is downloading historical data; entry submission skipped");
             last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
             continue;
         }
