@@ -461,3 +461,53 @@ ready. Tightening compression to `risk_to_average_bar_range <= 1.75` improves
 the structure materially. The cleanest version lacks sample size, while the
 sample-size-compliant version still needs a separate drawdown or day-risk veto.
 No Sierra automation change should be made from this pass.
+
+## Fresh 480D Drawdown Control
+
+Status: **next validation candidate, not live-ready**
+
+Generated outputs:
+
+- `reports/sierra-signal-log-scalp-entry-baselines-fresh-480d-vwap-delta-exhaustion-drawdown-control.md`
+- `reports/sierra-signal-log-scalp-entry-baselines-fresh-480d-vwap-delta-exhaustion-drawdown-control-trade-diagnostics.csv`
+- `reports/sierra-signal-log-scalp-entry-baselines-fresh-480d-vwap-delta-exhaustion-drawdown-control-summary.csv`
+- `reports/sierra-signal-log-scalp-entry-baselines-fresh-480d-vwap-delta-exhaustion-drawdown-control-walk-forward.csv`
+- `reports/sierra-signal-log-scalp-entry-baselines-fresh-480d-vwap-delta-exhaustion-drawdown-control-fixed-health-gates.csv`
+
+The rolling health-gate optimizer was rejected because it changed settings
+between windows and often cut too many trades. Its useful contribution was
+identifying a simple fixed risk-control shape:
+
+`daily_loss_limit_usd = 3600; maximum_equity_drawdown_usd = 4000`
+
+Applied to the `6 / 10 / 12 / initial` exit and the fixed entry guard
+`lookback_directional_move_points <= -2.5; session_range_points >= 30; risk_to_average_bar_range <= 1.75`,
+the fixed health gate produced:
+
+| Metric | Value |
+| --- | ---: |
+| Accepted trades | `526` |
+| Skipped trades | `24` |
+| Net USD | `63080.50` |
+| Average/trade | `119.92` |
+| Profit factor | `1.3449` |
+| Max drawdown USD | `-15172.00` |
+| Drawdown/net | `0.2405` |
+| Worst day | `2026-03-09`, `-4128.00` |
+
+Robustness summary for the fixed health gate:
+
+| Train | Holdout | Step | Base Net | Health Net | Accepted Trades | Drawdown/Net | Negative Window Rate |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `20` | `5` | `5` | `65316.50` | `72464.50` | `439` | `0.0736` | `0.0455` |
+| `40` | `5` | `5` | `55016.50` | `60736.50` | `368` | `0.0879` | `0.0556` |
+| `40` | `10` | `10` | `55016.50` | `60736.50` | `368` | `0.0879` | `0.0000` |
+| `60` | `10` | `10` | `42696.50` | `46188.50` | `307` | `0.1155` | `0.0000` |
+| `80` | `10` | `10` | `29232.50` | `32724.50` | `209` | `0.1631` | `0.0000` |
+
+Interpretation: this is the strongest version so far. It clears the historical
+sample-size, net, average/trade, profit-factor, drawdown, worst-day, and
+robustness shape checks. It should still not be treated as live-ready because
+the fixed health gate was selected from this same historical export. The next
+required evidence is a true future export or replay/live-sim sample after
+`2026-06-30` with the rule frozen.
