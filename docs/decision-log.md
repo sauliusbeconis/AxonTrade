@@ -219,3 +219,20 @@ Update after first risk-control pass:
 - The current broad health/context gates are rejected as Sierra rule changes.
 - Next work should isolate the worst days and blocks, then test targeted vetoes
   derived from those failure modes.
+
+Update after the fresh 480D export and drawdown-control pass:
+
+- The fresh export was produced on `2026-06-30`, but its bars ended at
+  `2026-06-29 16:12:00`, so it is historical validation rather than a current
+  live-session test.
+- The `risk_to_average_bar_range <= 2.5` fixed guard failed fresh 480D
+  acceptance gates.
+- The next validation candidate is
+  `vwap_delta_exhaustion_fade_2pt_10d_cl0.5` with
+  `lookback_directional_move_points <= -2.5`,
+  `session_range_points >= 30`, `risk_to_average_bar_range <= 1.75`,
+  `6 / 10 / 12 / initial` exits, and the realized
+  `daily_loss_limit_usd = 3600; maximum_equity_drawdown_usd = 4000` health
+  gate.
+- Build only a Sierra forward-simulation harness for this candidate. Do not add
+  broker order routing.

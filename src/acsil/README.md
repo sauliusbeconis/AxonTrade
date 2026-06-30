@@ -47,6 +47,18 @@ backfills small.
 Build and load instructions are documented in
 `docs/sierra-delta-impulse-continuation-overlay.md`.
 
+## VWAP Delta Live Sim Bot
+
+`AxonTradeVwapDeltaLiveSimBot.cpp` forward-tests the current
+`vwap_delta_exhaustion_fade_2pt_10d_cl0.5` validation candidate on rolling
+Sierra Chart data. It draws and logs virtual two-contract paper trades with the
+fixed context guard, `6 / 10 / 12 / initial` exits, and realized
+`daily3600_dd4000` health gate. It is simulation-only and does not route
+orders.
+
+Build and load instructions are documented in
+`docs/sierra-vwap-delta-live-sim-bot.md`.
+
 ## Build Workflow
 
 1. Sync sources with `bash scripts/sync_to_sierra.sh`.

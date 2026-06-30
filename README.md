@@ -8,7 +8,9 @@ It is not a get-rich-quick trading bot, signal service, black-box system, martin
 
 Phase 0 is foundation and simulation-safe research tooling.
 
-Live order routing is disabled by policy and is not implemented in this repository.
+Forward simulation on rolling Sierra Chart data is supported for selected
+research candidates. Live order routing is disabled by policy and is not
+implemented in this repository.
 
 ## Platform Stack
 
@@ -87,6 +89,8 @@ Signal-log validation and replay summaries are documented in
 [docs/sierra-signal-log-report.md](docs/sierra-signal-log-report.md).
 Candidate outcome evaluation for those Sierra overlay logs is documented in
 [docs/sierra-signal-log-outcomes.md](docs/sierra-signal-log-outcomes.md).
+The current VWAP/delta exhaustion forward-simulation bot is documented in
+[docs/sierra-vwap-delta-live-sim-bot.md](docs/sierra-vwap-delta-live-sim-bot.md).
 
 ## Pop!_OS And Wine Notes
 
@@ -107,4 +111,6 @@ The sync script copies `src/acsil/*.cpp` into Sierra Chart's `ACS_Source` direct
 
 ## Safety Status
 
-This repository currently contains no live order-routing implementation. All strategy material is hypothesis documentation until it passes the documented research, replay, forward-simulation, and safety-review gates.
+This repository currently contains no live order-routing implementation.
+Strategy material remains simulation-only until it passes the documented
+research, replay, forward-simulation, and safety-review gates.
