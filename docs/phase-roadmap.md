@@ -31,14 +31,15 @@
 
 ## Phase 3: Supervised Execution Research
 
-Requires explicit future authorization.
-
 - One-click or manually approved simulated entries only if safety gates approve.
 - Protective-exit design review.
 - Prop-firm rule compliance review.
+- Controlled MES evaluation deployment with explicit account whitelist,
+  confirmation text, daily loss/profit locks, and trailing drawdown lock.
 
 ## Phase 4: Live Automation Review
 
-Requires explicit future authorization and a separate safety case.
+Requires a separate safety case before expanding beyond the current MES eval
+study.
 
-Live automation is not part of the current phase.
+Live automation is limited to the explicitly gated `AxonTrade MES Eval Live Bot`.

@@ -14,6 +14,26 @@ This build rejects live trade-service routing. Even if the input
 `Send Orders To Trade Service` is changed to `Yes`, the study logs a rejection
 and does not submit the entry.
 
+Current replay mechanics status:
+
+- `PASS` for simulation mechanics on `2026-06-30`;
+- evidence report:
+  `reports/sierra-vwap-delta-execution-bot-mechanics-replay-2026-06-30.md`;
+- live routing remains disabled.
+
+Current research profile:
+
+- candidate:
+  `space300_all_exit7_12_10_initial_lb-15_smin30_risk1.71429_omin-80_smax100_after0_daily2400`;
+- full expanded ES sample: `588` accepted trades, `$66,584` net, `$113.24`
+  average/trade, `1.2953` profit factor, `-$12,462` max trade-sequence
+  drawdown, `-$3,160` worst day;
+- rolling robustness: passed all five tested window shapes;
+- evidence reports:
+  `reports/sierra-vwap-delta-execution-bot-space300-candidate-robustness.md`
+  and
+  `reports/sierra-vwap-delta-execution-bot-space300-7-12-10-primary.md`.
+
 ## What It Does
 
 - evaluates the same selected VWAP/delta exhaustion fade rule as the live-sim
@@ -23,7 +43,11 @@ and does not submit the entry.
 - attaches two limit targets and one common stop;
 - optionally moves the common stop to breakeven after target 1;
 - flattens and cancels working orders at the configured session flatten time;
-- blocks new entries after the daily loss lock or daily profit lock is reached;
+- blocks new entries after the daily loss lock is reached;
+- rejects entries during strong session-open trend-day extension;
+- plays a Sierra alert sound when a fully accepted setup appears;
+- draws submitted trade entry/stop/target levels and bot fill markers on the
+  chart;
 - writes mechanics rows to:
 
 `C:\SierraChart\Data\AxonTrade_VwapDeltaExecutionBot.csv`
@@ -34,28 +58,36 @@ Linux/Wine path:
 
 ## Risk Defaults
 
-Defaults are deliberately small for mechanics testing:
+Defaults now match the accepted 300-second ES research candidate. The earlier
+`$200 / $650` locks were LucidFlex evaluation-account constraints, not research
+defaults.
 
-- chart symbol gate: `MES`
+- chart symbol gate: `ES`
 - first leg quantity: `1`
 - runner quantity: `1`
 - total max position quantity: `2`
-- initial stop: `10` points
-- first target: `6` points
-- runner target: `12` points
-- daily loss lock: `$200`
-- daily profit lock: `$650`
+- initial stop: `12` points
+- first target: `7` points
+- runner target: `10` points
+- raw candidate spacing: `300` seconds
+- lookback directional move guard: `<= -15` points
+- risk-to-average-bar-range guard: `<= 1.7142857`
+- session-open trend-day veto: directional open distance must be at least
+  `-80` points and session range must be no more than `100` points
+- daily loss lock: `$2400`
+- daily profit lock: disabled, `0`
 - move stop to breakeven after target 1: `No`
+- accepted setup alert sound: `Alert 1`
+- chart trade markers and levels: `Yes`, projected `24` bars forward when the
+  chart already has visible fill space
 
-Sizing reality:
+Sizing reality for ES:
 
-- `1 + 1 MES` with a 10-point full stop is about `-$100` before costs;
-- `2 + 2 MES` is about `-$200` before costs;
-- `5 + 5 MES` is about `-$500` before costs.
+- `1 + 1 ES` with a 12-point full stop is about `-$1200` before costs.
 
-So for your preferred `-$150` to `-$250` daily loss band, do not use `5 + 5`
-with the current 10-point stop. Use `1 + 1 MES` for mechanics, or at most
-`2 + 2 MES` if you intentionally want the larger test.
+For a LucidFlex-style evaluation account, set the chart/symbol and quantities
+manually for MES and use evaluation-specific daily locks. Do not treat those
+MES/evaluation settings as the research baseline.
 
 ## Sync Source Into Sierra
 
@@ -92,32 +124,25 @@ If the build output says:
 you clicked the local Visual C++ build path. In the same build window, click
 `Build >> Remote Build`.
 
-## Prepare A MES Mechanics Chart
+## Prepare An ES Mechanics Chart
 
 Manual help needed: **Yes**.
 
-Use MES for the mechanics bot. The study default rejects ES symbols because
-`Required Symbol Prefix = MES`.
+Use ES for the current research mechanics bot. The study default rejects other
+symbols because `Required Symbol Prefix = ES`.
 
 Fast path from your existing ES orderflow chart:
 
 1. Click the ES 3-minute orderflow chart window.
-2. Click `Chart >> Duplicate Chart`.
-3. Click the duplicated chart window.
-4. Click `Chart >> Chart Settings`.
-5. In the `Symbol` field, set the current MES contract, for example
-   `MESU26-CME` for the September 2026 contract.
-6. Confirm the bar period is still `3 Min`.
-7. Click `Apply`.
-8. Click `OK`.
-9. Click `Trade >> Trade Simulation Mode On` and confirm it is checked.
-10. Confirm the chart title bar shows `[Sim]`.
+2. Confirm the bar period is `3 Min`.
+3. Click `Trade >> Trade Simulation Mode On` and confirm it is checked.
+4. Confirm the chart title bar shows `[Sim]`.
 
 If Sierra does not accept the typed symbol:
 
 1. Click `File >> Find Symbol`.
-2. Find the CME Micro E-mini S&P 500 futures list.
-3. Select the current MES contract.
+2. Find the CME E-mini S&P 500 futures list.
+3. Select the current ES contract.
 4. Click `Open Intraday Chart`.
 5. Set it to a `3 Min` chart with `Chart >> Chart Settings`.
 
@@ -125,7 +150,7 @@ If Sierra does not accept the typed symbol:
 
 Manual help needed: **Yes**.
 
-1. Click the MES 3-minute mechanics chart window.
+1. Click the ES 3-minute mechanics chart window.
 2. Click `Analysis >> Studies`.
 3. Click `Add Custom Study`.
 4. Expand or find `AxonTrade VWAP Delta Execution Bot`.
@@ -140,7 +165,7 @@ Manual help needed: **Yes**.
    - `Send Orders To Trade Service = No`
    - `Require Trade Simulation Mode = Yes`
    - `Confirmation Text = SIM_ONLY`
-   - `Required Symbol Prefix = MES`
+   - `Required Symbol Prefix = ES`
    - `Log Rejections = No`
    - `Process Full Recalculation = No`
    - `Reset CSV On Full Recalculation = Yes`
@@ -150,22 +175,27 @@ Manual help needed: **Yes**.
    - `VWAP Extension Points = 2`
    - `Minimum Bar Delta = 10`
    - `Close Location Threshold = 0.5`
-   - `Minimum Raw Candidate Spacing Seconds = 900`
+   - `Minimum Raw Candidate Spacing Seconds = 300`
    - `Max Raw Candidates Per Day = 20`
    - `Context Lookback Bars = 20`
-   - `Maximum Lookback Directional Move Points = -2.5`
+   - `Maximum Lookback Directional Move Points = -15`
    - `Minimum Session Range Points = 30`
-   - `Max Risk To Average Bar Range = 1.75`
-   - `Initial Stop Points = 10`
-   - `First Target Points = 6`
-   - `Runner Target Points = 12`
+   - `Max Risk To Average Bar Range = 1.7142857`
+   - `Minimum Directional Open Distance Points = -80`
+   - `Maximum Session Range Points = 100`
+   - `Initial Stop Points = 12`
+   - `First Target Points = 7`
+   - `Runner Target Points = 10`
    - `First Leg Quantity = 1`
    - `Runner Quantity = 1`
    - `Max Position Quantity = 2`
-   - `Daily Loss Lock USD = 200`
-   - `Daily Profit Lock USD = 650`
+   - `Daily Loss Lock USD = 2400`
+   - `Daily Profit Lock USD = 0`
    - `Move Stop To Break Even After First Target = No`
    - `Break Even Offset Ticks = 0`
+   - `Accepted Setup Alert Sound = Alert 1`
+   - `Draw Trade Markers And Levels = Yes`
+   - `Trade Level Forward Bars = 24`
 10. Click `OK`.
 11. Click `OK` again to close Chart Studies.
 
@@ -177,7 +207,7 @@ Manual help needed: **Yes**.
 
 1. Confirm `Trade >> Trade Simulation Mode On` is checked.
 2. Confirm the chart title bar shows `[Sim]`.
-3. Confirm the chart symbol starts with `MES`.
+3. Confirm the chart symbol starts with `ES`.
 4. Click `Analysis >> Studies`.
 5. Select `AxonTrade VWAP Delta Execution Bot`.
 6. Click `Settings`.

@@ -6,13 +6,17 @@ It is not a get-rich-quick trading bot, signal service, black-box system, martin
 
 ## Current Phase
 
-Phase 0 is foundation, simulation-safe research tooling, and controlled
-simulation execution mechanics testing.
+The current active path is a guarded MES live-evaluation bot built from the
+accepted ES VWAP/delta exhaustion research candidate. The strategy outline is in
+[docs/strategy-outline.md](docs/strategy-outline.md).
 
-Forward simulation on rolling Sierra Chart data is supported for selected
-research candidates. A dedicated Sierra Chart execution harness can submit
-simulation orders for mechanics testing only. Live trade-service routing remains
-disabled by policy and is rejected by the execution harness.
+There are two separate Sierra order-routing studies:
+
+- `AxonTrade VWAP Delta Execution Bot`: simulation-only ES mechanics and replay;
+  live trade-service routing is rejected.
+- `AxonTrade MES Eval Live Bot`: live-capable MES prop-eval study with explicit
+  confirmation text, exact account whitelist, simulation-mode-off gate, daily
+  loss/profit locks, and eval trailing drawdown lock.
 
 ## Platform Stack
 
@@ -95,6 +99,10 @@ The current VWAP/delta exhaustion forward-simulation bot is documented in
 [docs/sierra-vwap-delta-live-sim-bot.md](docs/sierra-vwap-delta-live-sim-bot.md).
 The simulation-only mechanics execution harness is documented in
 [docs/sierra-vwap-delta-execution-bot.md](docs/sierra-vwap-delta-execution-bot.md).
+The live-capable MES evaluation bot is documented in
+[docs/sierra-vwap-delta-mes-eval-live-bot.md](docs/sierra-vwap-delta-mes-eval-live-bot.md).
+Repo artifact policy is documented in
+[docs/repo-hygiene.md](docs/repo-hygiene.md).
 
 ## Pop!_OS And Wine Notes
 
@@ -115,7 +123,9 @@ The sync script copies `src/acsil/*.cpp` into Sierra Chart's `ACS_Source` direct
 
 ## Safety Status
 
-This repository contains no live trade-service routing implementation. The only
-approved ACSIL order-routing calls are isolated in
-`src/acsil/AxonTradeVwapDeltaExecutionBot.cpp`, which rejects live trade-service
-routing and is for Sierra Chart simulation mechanics tests only.
+The only approved ACSIL order-routing calls are isolated in
+`src/acsil/AxonTradeVwapDeltaExecutionBot.cpp`.
+
+Live routing is allowed only through `AxonTrade MES Eval Live Bot` when all
+live/eval gates pass. The separate `AxonTrade VWAP Delta Execution Bot` remains
+simulation-only and rejects live trade-service routing.

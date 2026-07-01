@@ -41,6 +41,12 @@ data/raw/*
 data/processed/*
 !data/processed/.gitkeep
 
+# Generated research artifacts
+artifacts/
+reports/*.csv
+reports/generated/
+reports/tmp/
+
 # OS/editor noise
 .DS_Store
 Thumbs.db

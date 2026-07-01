@@ -13,8 +13,17 @@ SCDLLName("AxonTrade VWAP Delta Execution Bot")
 namespace
 {
 const char* kStrategyId =
-    "vwap_delta_exhaustion_fade_2pt_10d_cl0.5_guard_risk175_exit6_10_12_execution";
+    "vwap_delta_exhaustion_fade_2pt_10d_cl0.5_space300_exit7_12_10_lb15_risk171_open_m80_range100_daily2400_execution";
 const char* kRequiredConfirmationText = "SIM_ONLY";
+const char* kRequiredLiveEvalConfirmationText = "MES_EVAL_LIVE";
+const int kTradeDrawingBase = 7600000;
+const int kTrackedOrdersPointerKey = 101;
+const int kFillTrackingInitializedKey = 10;
+const int kProcessedFillCountKey = 11;
+const int kEvalPnlBaselineInitializedKey = 12;
+const int kEvalTrailingLockKey = 13;
+const int kEvalPnlBaselineDoubleKey = 201;
+const int kEvalHighWaterDoubleKey = 202;
 
 enum DailyLockReason
 {
@@ -40,14 +49,30 @@ struct SignalCandidate
     double delta = 0.0;
     double close_location = 0.5;
     double session_range_points = 0.0;
+    double session_open_price = 0.0;
+    double directional_open_distance_points = 0.0;
     double average_bar_range_points = 0.0;
     double risk_to_average_bar_range = 0.0;
     double lookback_directional_move_points = 0.0;
 };
 
+struct TrackedBotOrder
+{
+    uint32_t internal_order_id = 0;
+    int entry_bar_index = 0;
+    std::string direction;
+    std::string role;
+    std::string signal_id;
+};
+
 std::string ToStdString(const SCString& value)
 {
     return std::string(value.GetChars());
+}
+
+int MinInt(int left, int right)
+{
+    return left < right ? left : right;
 }
 
 int MaxInt(int left, int right)
@@ -179,6 +204,28 @@ double SessionRangeAtBar(SCStudyInterfaceRef sc, int bar_index)
     return high - low;
 }
 
+double SessionOpenPriceAtBar(SCStudyInterfaceRef sc, int bar_index)
+{
+    const SCDateTime current_date_time = sc.BaseDateTimeIn[bar_index];
+    int first_session_index = bar_index;
+
+    for (int index = bar_index - 1; index >= 0; --index)
+    {
+        if (!SameChartDate(sc.BaseDateTimeIn[index], current_date_time))
+            break;
+        first_session_index = index;
+    }
+
+    return sc.BaseDataIn[SC_OPEN][first_session_index];
+}
+
+double DirectionalOpenDistancePoints(double entry_price, double session_open_price, const std::string& direction)
+{
+    if (direction == "long")
+        return entry_price - session_open_price;
+    return session_open_price - entry_price;
+}
+
 bool PreviousContextStats(
     SCStudyInterfaceRef sc,
     int bar_index,
@@ -251,6 +298,11 @@ double DailyProfitView(const s_SCPositionData& position_data)
     return MaxDouble(position_data.DailyProfitLoss, MaxDouble(trade_stats_view, daily_with_open_view));
 }
 
+double AccountProfitLossView(const s_SCPositionData& position_data)
+{
+    return position_data.CumulativeProfitLoss + position_data.OpenProfitLoss;
+}
+
 void EnsureDailyLockDate(SCStudyInterfaceRef sc, int bar_index)
 {
     int& daily_lock_date = sc.GetPersistentInt(7);
@@ -261,6 +313,55 @@ void EnsureDailyLockDate(SCStudyInterfaceRef sc, int bar_index)
         daily_lock_date = current_date;
         daily_lock_reason = DAILY_LOCK_NONE;
     }
+}
+
+void ResetEvalTrailingState(SCStudyInterfaceRef sc, const s_SCPositionData& position_data)
+{
+    sc.GetPersistentDouble(kEvalPnlBaselineDoubleKey) = AccountProfitLossView(position_data);
+    sc.GetPersistentDouble(kEvalHighWaterDoubleKey) = 0.0;
+    sc.GetPersistentInt(kEvalPnlBaselineInitializedKey) = 1;
+    sc.GetPersistentInt(kEvalTrailingLockKey) = 0;
+}
+
+void EnsureEvalTrailingState(SCStudyInterfaceRef sc, const s_SCPositionData& position_data)
+{
+    if (sc.GetPersistentInt(kEvalPnlBaselineInitializedKey) == 0)
+        ResetEvalTrailingState(sc, position_data);
+}
+
+bool EvalTrailingDrawdownBlocks(
+    SCStudyInterfaceRef sc,
+    const s_SCPositionData& position_data,
+    double max_trailing_drawdown_usd,
+    std::string& rejection_reason,
+    std::string& notes)
+{
+    EnsureEvalTrailingState(sc, position_data);
+
+    if (max_trailing_drawdown_usd <= 0.0)
+        return false;
+
+    double& high_water = sc.GetPersistentDouble(kEvalHighWaterDoubleKey);
+    const double baseline = sc.GetPersistentDouble(kEvalPnlBaselineDoubleKey);
+    const double relative_pnl = AccountProfitLossView(position_data) - baseline;
+    if (relative_pnl > high_water)
+        high_water = relative_pnl;
+
+    const double trailing_floor = MinDouble(0.0, high_water - max_trailing_drawdown_usd);
+    if (sc.GetPersistentInt(kEvalTrailingLockKey) != 0 || relative_pnl <= trailing_floor)
+    {
+        sc.GetPersistentInt(kEvalTrailingLockKey) = 1;
+        rejection_reason = "eval_trailing_drawdown_lock";
+        std::ostringstream output;
+        output << "eval trailing drawdown lock active; relative_pnl="
+               << FormatNumber(relative_pnl)
+               << "; high_water=" << FormatNumber(high_water)
+               << "; floor=" << FormatNumber(trailing_floor)
+               << "; max_trailing_drawdown_usd=" << FormatNumber(max_trailing_drawdown_usd);
+        notes = output.str();
+        return true;
+    }
+    return false;
 }
 
 bool RawPacingAllowed(
@@ -421,6 +522,8 @@ SignalCandidate EvaluateCandidate(
     double minimum_lookback_directional_move_points,
     double minimum_session_range_points,
     double max_risk_to_average_bar_range,
+    double minimum_directional_open_distance_points,
+    double maximum_session_range_points,
     double stop_points,
     double first_target_points,
     double runner_target_points)
@@ -480,6 +583,11 @@ SignalCandidate EvaluateCandidate(
     candidate.first_target_price = is_long ? close + first_target_points : close - first_target_points;
     candidate.runner_target_price = is_long ? close + runner_target_points : close - runner_target_points;
     candidate.session_range_points = SessionRangeAtBar(sc, bar_index);
+    candidate.session_open_price = SessionOpenPriceAtBar(sc, bar_index);
+    candidate.directional_open_distance_points = DirectionalOpenDistancePoints(
+        close,
+        candidate.session_open_price,
+        candidate.direction);
 
     if (!PreviousContextStats(
             sc,
@@ -534,6 +642,27 @@ SignalCandidate EvaluateCandidate(
         candidate.notes = notes.str();
         return candidate;
     }
+    if (candidate.directional_open_distance_points < minimum_directional_open_distance_points)
+    {
+        std::ostringstream notes;
+        notes << "directional_open_distance_points="
+              << FormatNumber(candidate.directional_open_distance_points)
+              << " is below trend-day veto threshold "
+              << FormatNumber(minimum_directional_open_distance_points);
+        candidate.rejection_reason = "directional_open_distance_guard";
+        candidate.notes = notes.str();
+        return candidate;
+    }
+    if (maximum_session_range_points > 0.0 && candidate.session_range_points > maximum_session_range_points)
+    {
+        std::ostringstream notes;
+        notes << "session_range_points=" << FormatNumber(candidate.session_range_points)
+              << " is above trend-day veto threshold "
+              << FormatNumber(maximum_session_range_points);
+        candidate.rejection_reason = "maximum_session_range_guard";
+        candidate.notes = notes.str();
+        return candidate;
+    }
 
     candidate.accepted = true;
     candidate.action = "execution_entry";
@@ -545,6 +674,8 @@ SignalCandidate EvaluateCandidate(
           << "close_location=" << FormatNumber(candidate.close_location) << "; "
           << "lookback_directional_move_points=" << FormatNumber(candidate.lookback_directional_move_points) << "; "
           << "session_range_points=" << FormatNumber(candidate.session_range_points) << "; "
+          << "session_open_price=" << FormatNumber(candidate.session_open_price) << "; "
+          << "directional_open_distance_points=" << FormatNumber(candidate.directional_open_distance_points) << "; "
           << "risk_to_average_bar_range=" << FormatNumber(candidate.risk_to_average_bar_range);
     candidate.notes = notes.str();
     return candidate;
@@ -646,6 +777,319 @@ void LogOperationalEvent(
         notes);
 }
 
+void AlertAcceptedSetup(
+    SCStudyInterfaceRef sc,
+    int bar_index,
+    const std::string& symbol,
+    const SignalCandidate& candidate,
+    unsigned int alert_sound_number)
+{
+    if (alert_sound_number == 0)
+        return;
+    if (sc.IsFullRecalculation != 0 || sc.DownloadingHistoricalData != 0)
+        return;
+    if (sc.ChartIsDownloadingHistoricalData(sc.ChartNumber) != 0)
+        return;
+
+    SCString message;
+    message.Format(
+        "AxonTrade accepted setup: %s %s at %s entry=%s",
+        symbol.c_str(),
+        candidate.direction.c_str(),
+        sc.FormatDateTime(sc.BaseDateTimeIn[bar_index]).GetChars(),
+        FormatNumber(candidate.entry_price).c_str());
+    sc.SetAlert(static_cast<int>(alert_sound_number) - 1, bar_index, message);
+}
+
+std::vector<TrackedBotOrder>& TrackedBotOrders(SCStudyInterfaceRef sc)
+{
+    std::vector<TrackedBotOrder>* tracked_orders =
+        static_cast<std::vector<TrackedBotOrder>*>(sc.GetPersistentPointer(kTrackedOrdersPointerKey));
+    if (tracked_orders == 0)
+    {
+        tracked_orders = new std::vector<TrackedBotOrder>();
+        sc.SetPersistentPointer(kTrackedOrdersPointerKey, tracked_orders);
+    }
+    return *tracked_orders;
+}
+
+void DeleteTrackedBotOrders(SCStudyInterfaceRef sc)
+{
+    std::vector<TrackedBotOrder>* tracked_orders =
+        static_cast<std::vector<TrackedBotOrder>*>(sc.GetPersistentPointer(kTrackedOrdersPointerKey));
+    delete tracked_orders;
+    sc.SetPersistentPointer(kTrackedOrdersPointerKey, 0);
+}
+
+void EnsureFillTrackingInitialized(SCStudyInterfaceRef sc)
+{
+    int& fill_tracking_initialized = sc.GetPersistentInt(kFillTrackingInitializedKey);
+    int& processed_fill_count = sc.GetPersistentInt(kProcessedFillCountKey);
+    if (fill_tracking_initialized == 0)
+    {
+        processed_fill_count = sc.GetOrderFillArraySize();
+        fill_tracking_initialized = 1;
+    }
+}
+
+void AddTrackedBotOrder(
+    SCStudyInterfaceRef sc,
+    uint32_t internal_order_id,
+    int entry_bar_index,
+    const std::string& direction,
+    const std::string& role,
+    const std::string& signal_id)
+{
+    if (internal_order_id == 0)
+        return;
+
+    std::vector<TrackedBotOrder>& tracked_orders = TrackedBotOrders(sc);
+    for (std::vector<TrackedBotOrder>::const_iterator order = tracked_orders.begin();
+         order != tracked_orders.end();
+         ++order)
+    {
+        if (order->internal_order_id == internal_order_id)
+            return;
+    }
+
+    TrackedBotOrder tracked_order;
+    tracked_order.internal_order_id = internal_order_id;
+    tracked_order.entry_bar_index = entry_bar_index;
+    tracked_order.direction = direction;
+    tracked_order.role = role;
+    tracked_order.signal_id = signal_id;
+    tracked_orders.push_back(tracked_order);
+
+    if (tracked_orders.size() > 400)
+        tracked_orders.erase(tracked_orders.begin(), tracked_orders.begin() + 100);
+}
+
+void TrackSubmittedBotOrders(
+    SCStudyInterfaceRef sc,
+    const s_SCNewOrder& new_order,
+    int entry_bar_index,
+    const SignalCandidate& candidate,
+    const std::string& signal_id)
+{
+    AddTrackedBotOrder(sc, new_order.InternalOrderID, entry_bar_index, candidate.direction, "entry", signal_id);
+    AddTrackedBotOrder(sc, new_order.Target1InternalOrderID, entry_bar_index, candidate.direction, "target1", signal_id);
+    AddTrackedBotOrder(sc, new_order.Target2InternalOrderID, entry_bar_index, candidate.direction, "target2", signal_id);
+    AddTrackedBotOrder(sc, new_order.StopAllInternalOrderID, entry_bar_index, candidate.direction, "stop", signal_id);
+}
+
+const TrackedBotOrder* FindTrackedBotOrder(SCStudyInterfaceRef sc, uint32_t internal_order_id)
+{
+    std::vector<TrackedBotOrder>* tracked_orders =
+        static_cast<std::vector<TrackedBotOrder>*>(sc.GetPersistentPointer(kTrackedOrdersPointerKey));
+    if (tracked_orders == 0)
+        return 0;
+
+    for (std::vector<TrackedBotOrder>::const_iterator order = tracked_orders->begin();
+         order != tracked_orders->end();
+         ++order)
+    {
+        if (order->internal_order_id == internal_order_id)
+            return &(*order);
+    }
+    return 0;
+}
+
+int TradeDrawingBase(int bar_index, const std::string& direction)
+{
+    const int direction_offset = direction == "long" ? 0 : 250000;
+    return kTradeDrawingBase + direction_offset + bar_index * 20;
+}
+
+void DrawTradeLevelLine(
+    SCStudyInterfaceRef sc,
+    int drawing_number,
+    int bar_index,
+    int forward_bars,
+    double price,
+    COLORREF color,
+    int line_width)
+{
+    s_UseTool tool;
+    tool.Clear();
+    tool.ChartNumber = sc.ChartNumber;
+    tool.DrawingType = DRAWING_LINE;
+    tool.LineNumber = drawing_number;
+    tool.Region = 0;
+    tool.BeginIndex = bar_index;
+    tool.EndIndex = bar_index + MaxInt(1, forward_bars);
+    tool.BeginValue = price;
+    tool.EndValue = price;
+    tool.Color = color;
+    tool.LineWidth = line_width;
+    tool.AddMethod = UTAM_ADD_OR_ADJUST;
+    sc.UseTool(tool);
+}
+
+void DrawSubmittedTradeOverlay(
+    SCStudyInterfaceRef sc,
+    int bar_index,
+    const SignalCandidate& candidate,
+    int first_leg_quantity,
+    int runner_quantity,
+    int forward_bars)
+{
+    const bool is_long = candidate.direction == "long";
+    const int drawing_base = TradeDrawingBase(bar_index, candidate.direction);
+    const COLORREF signal_color = is_long ? RGB(0, 180, 255) : RGB(255, 96, 80);
+    const double tick_offset = sc.TickSize > 0.0 ? sc.TickSize * 2.0 : 1.0;
+    const double marker_price = is_long
+        ? sc.BaseDataIn[SC_LOW][bar_index] - tick_offset
+        : sc.BaseDataIn[SC_HIGH][bar_index] + tick_offset;
+
+    s_UseTool marker;
+    marker.Clear();
+    marker.ChartNumber = sc.ChartNumber;
+    marker.DrawingType = DRAWING_MARKER;
+    marker.LineNumber = drawing_base + 1;
+    marker.Region = 0;
+    marker.BeginIndex = bar_index;
+    marker.BeginValue = marker_price;
+    marker.MarkerType = is_long ? MARKER_ARROWUP : MARKER_ARROWDOWN;
+    marker.MarkerSize = 8;
+    marker.LineWidth = 5;
+    marker.Color = signal_color;
+    marker.AddMethod = UTAM_ADD_OR_ADJUST;
+    sc.UseTool(marker);
+
+    SCString label_text;
+    label_text.Format(
+        "AT submitted %s %d+%d\nE %s\nT1 %s  T2 %s\nS %s",
+        candidate.direction.c_str(),
+        first_leg_quantity,
+        runner_quantity,
+        FormatNumber(candidate.entry_price).c_str(),
+        FormatNumber(candidate.first_target_price).c_str(),
+        FormatNumber(candidate.runner_target_price).c_str(),
+        FormatNumber(candidate.stop_price).c_str());
+
+    s_UseTool label;
+    label.Clear();
+    label.ChartNumber = sc.ChartNumber;
+    label.DrawingType = DRAWING_TEXT;
+    label.LineNumber = drawing_base + 2;
+    label.Region = 0;
+    label.BeginIndex = bar_index;
+    label.BeginValue = marker_price;
+    label.Color = signal_color;
+    label.FontSize = 8;
+    label.FontBold = 1;
+    label.TransparentLabelBackground = 1;
+    label.Text = label_text;
+    label.AddMethod = UTAM_ADD_OR_ADJUST;
+    sc.UseTool(label);
+
+    DrawTradeLevelLine(sc, drawing_base + 3, bar_index, forward_bars, candidate.entry_price, RGB(235, 235, 235), 1);
+    DrawTradeLevelLine(sc, drawing_base + 4, bar_index, forward_bars, candidate.stop_price, RGB(220, 64, 64), 2);
+    DrawTradeLevelLine(sc, drawing_base + 5, bar_index, forward_bars, candidate.first_target_price, RGB(64, 180, 255), 1);
+    DrawTradeLevelLine(sc, drawing_base + 6, bar_index, forward_bars, candidate.runner_target_price, RGB(64, 220, 120), 2);
+}
+
+void DrawOrderFillMarker(
+    SCStudyInterfaceRef sc,
+    int fill_index,
+    int bar_index,
+    const s_SCOrderFillData& fill_data,
+    const TrackedBotOrder& tracked_order)
+{
+    if (bar_index < 0 || sc.ArraySize <= 0)
+        return;
+
+    const bool is_entry = tracked_order.role == "entry";
+    const bool is_long = tracked_order.direction == "long";
+    COLORREF fill_color = RGB(255, 205, 64);
+    if (is_entry)
+        fill_color = is_long ? RGB(0, 180, 255) : RGB(255, 96, 80);
+    else if (tracked_order.role == "stop")
+        fill_color = RGB(255, 80, 80);
+    else if (tracked_order.role == "target2")
+        fill_color = RGB(64, 220, 120);
+    else if (tracked_order.role == "target1")
+        fill_color = RGB(64, 180, 255);
+
+    const int drawing_base = kTradeDrawingBase + 900000 + fill_index * 4;
+
+    s_UseTool marker;
+    marker.Clear();
+    marker.ChartNumber = sc.ChartNumber;
+    marker.DrawingType = DRAWING_MARKER;
+    marker.LineNumber = drawing_base + 1;
+    marker.Region = 0;
+    marker.BeginIndex = bar_index;
+    marker.BeginValue = fill_data.FillPrice;
+    marker.MarkerType = is_entry ? (is_long ? MARKER_ARROWUP : MARKER_ARROWDOWN) : MARKER_DIAMOND;
+    marker.MarkerSize = is_entry ? 7 : 8;
+    marker.LineWidth = 4;
+    marker.Color = fill_color;
+    marker.AddMethod = UTAM_ADD_OR_ADJUST;
+    sc.UseTool(marker);
+
+    SCString label_text;
+    label_text.Format(
+        "AT fill %s q=%d @ %s",
+        tracked_order.role.c_str(),
+        static_cast<int>(fill_data.Quantity),
+        FormatNumber(fill_data.FillPrice).c_str());
+
+    s_UseTool label;
+    label.Clear();
+    label.ChartNumber = sc.ChartNumber;
+    label.DrawingType = DRAWING_TEXT;
+    label.LineNumber = drawing_base + 2;
+    label.Region = 0;
+    label.BeginIndex = bar_index;
+    label.BeginValue = fill_data.FillPrice;
+    label.Color = fill_color;
+    label.FontSize = 8;
+    label.TransparentLabelBackground = 1;
+    label.Text = label_text;
+    label.AddMethod = UTAM_ADD_OR_ADJUST;
+    sc.UseTool(label);
+}
+
+void DrawTrackedOrderFills(
+    SCStudyInterfaceRef sc,
+    const std::string& symbol,
+    const std::string& trade_account,
+    bool draw_trade_markers_and_levels)
+{
+    EnsureFillTrackingInitialized(sc);
+
+    int& processed_fill_count = sc.GetPersistentInt(kProcessedFillCountKey);
+    const int current_fill_count = sc.GetOrderFillArraySize();
+    if (current_fill_count < processed_fill_count)
+        processed_fill_count = current_fill_count;
+
+    for (int fill_index = processed_fill_count; fill_index < current_fill_count; ++fill_index)
+    {
+        s_SCOrderFillData fill_data;
+        sc.GetOrderFillEntry(fill_index, fill_data);
+        if (ToStdString(fill_data.Symbol) != symbol)
+            continue;
+        if (!trade_account.empty() && ToStdString(fill_data.TradeAccount) != trade_account)
+            continue;
+
+        const TrackedBotOrder* tracked_order = FindTrackedBotOrder(sc, fill_data.InternalOrderID);
+        if (tracked_order == 0)
+            continue;
+
+        if (draw_trade_markers_and_levels)
+        {
+            int bar_index = sc.GetContainingIndexForSCDateTime(sc.ChartNumber, fill_data.FillDateTime);
+            if (bar_index < 0)
+                bar_index = sc.GetNearestMatchForSCDateTime(sc.ChartNumber, fill_data.FillDateTime);
+            bar_index = MinInt(sc.ArraySize - 1, MaxInt(0, bar_index));
+            DrawOrderFillMarker(sc, fill_index, bar_index, fill_data, *tracked_order);
+        }
+    }
+
+    processed_fill_count = current_fill_count;
+}
+
 bool DailyLockBlocksNewEntry(
     SCStudyInterfaceRef sc,
     int bar_index,
@@ -725,9 +1169,7 @@ bool FlattenIfNeeded(
     return result > 0;
 }
 
-} // namespace
-
-SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
+void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
 {
     SCInputRef CsvLogPath = sc.Input[0];
     SCInputRef TradeMode = sc.Input[1];
@@ -761,11 +1203,23 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
     SCInputRef DailyProfitLockUsd = sc.Input[29];
     SCInputRef MoveStopToBreakEvenAfterFirstTarget = sc.Input[30];
     SCInputRef BreakEvenOffsetTicks = sc.Input[31];
+    SCInputRef MinimumDirectionalOpenDistancePoints = sc.Input[32];
+    SCInputRef MaximumSessionRangePoints = sc.Input[33];
+    SCInputRef AcceptedSetupAlertSound = sc.Input[34];
+    SCInputRef DrawTradeMarkersAndLevels = sc.Input[35];
+    SCInputRef TradeLevelForwardBars = sc.Input[36];
+    SCInputRef AllowedTradeAccount = sc.Input[37];
+    SCInputRef MaxEvalTrailingDrawdownUsd = sc.Input[38];
+    SCInputRef ResetEvalDrawdownTracking = sc.Input[39];
 
     if (sc.SetDefaults)
     {
-        sc.GraphName = "AxonTrade VWAP Delta Execution Bot";
-        sc.StudyDescription = "Simulation-only execution mechanics harness for the AxonTrade VWAP/delta setup. Live trade-service routing is rejected in this build.";
+        sc.GraphName = live_eval_profile
+            ? "AxonTrade MES Eval Live Bot"
+            : "AxonTrade VWAP Delta Execution Bot";
+        sc.StudyDescription = live_eval_profile
+            ? "Guarded live-capable MES prop-eval execution bot for the AxonTrade VWAP/delta setup."
+            : "Simulation-only execution mechanics harness for the AxonTrade VWAP/delta setup. Live trade-service routing is rejected in this build.";
         sc.AutoLoop = 0;
         sc.GraphRegion = 0;
         sc.UpdateAlways = 1;
@@ -783,10 +1237,12 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
         sc.MaintainTradeStatisticsAndTradesData = true;
 
         CsvLogPath.Name = "CSV Log Path";
-        CsvLogPath.SetString("C:\\SierraChart\\Data\\AxonTrade_VwapDeltaExecutionBot.csv");
+        CsvLogPath.SetString(live_eval_profile
+            ? "C:\\SierraChart\\Data\\AxonTrade_MesEvalLiveBot.csv"
+            : "C:\\SierraChart\\Data\\AxonTrade_VwapDeltaExecutionBot.csv");
 
         TradeMode.Name = "Trade Mode";
-        TradeMode.SetString("execution_sim");
+        TradeMode.SetString(live_eval_profile ? "mes_eval_live" : "execution_sim");
 
         ArmExecution.Name = "Arm Execution";
         ArmExecution.SetYesNo(0);
@@ -794,14 +1250,16 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
         SendOrdersToTradeService.Name = "Send Orders To Trade Service";
         SendOrdersToTradeService.SetYesNo(0);
 
-        RequireTradeSimulationMode.Name = "Require Trade Simulation Mode";
+        RequireTradeSimulationMode.Name = live_eval_profile
+            ? "Require Trade Simulation Mode Off"
+            : "Require Trade Simulation Mode";
         RequireTradeSimulationMode.SetYesNo(1);
 
         ConfirmationText.Name = "Confirmation Text";
         ConfirmationText.SetString("");
 
         RequiredSymbolPrefix.Name = "Required Symbol Prefix";
-        RequiredSymbolPrefix.SetString("MES");
+        RequiredSymbolPrefix.SetString(live_eval_profile ? "MES" : "ES");
 
         LogRejections.Name = "Log Rejections";
         LogRejections.SetYesNo(0);
@@ -831,7 +1289,7 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
         CloseLocationThreshold.SetFloat(0.5f);
 
         MinimumSpacingSeconds.Name = "Minimum Raw Candidate Spacing Seconds";
-        MinimumSpacingSeconds.SetInt(900);
+        MinimumSpacingSeconds.SetInt(300);
         MinimumSpacingSeconds.SetIntLimits(0, 7200);
 
         MaxRawCandidatesPerDay.Name = "Max Raw Candidates Per Day";
@@ -843,22 +1301,22 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
         ContextLookbackBars.SetIntLimits(1, 200);
 
         MinimumLookbackDirectionalMovePoints.Name = "Maximum Lookback Directional Move Points";
-        MinimumLookbackDirectionalMovePoints.SetFloat(-2.5f);
+        MinimumLookbackDirectionalMovePoints.SetFloat(-15.0f);
 
         MinimumSessionRangePoints.Name = "Minimum Session Range Points";
         MinimumSessionRangePoints.SetFloat(30.0f);
 
         MaxRiskToAverageBarRange.Name = "Max Risk To Average Bar Range";
-        MaxRiskToAverageBarRange.SetFloat(1.75f);
+        MaxRiskToAverageBarRange.SetFloat(1.7142857f);
 
         InitialStopPoints.Name = "Initial Stop Points";
-        InitialStopPoints.SetFloat(10.0f);
+        InitialStopPoints.SetFloat(12.0f);
 
         FirstTargetPoints.Name = "First Target Points";
-        FirstTargetPoints.SetFloat(6.0f);
+        FirstTargetPoints.SetFloat(7.0f);
 
         RunnerTargetPoints.Name = "Runner Target Points";
-        RunnerTargetPoints.SetFloat(12.0f);
+        RunnerTargetPoints.SetFloat(10.0f);
 
         FirstLegQuantity.Name = "First Leg Quantity";
         FirstLegQuantity.SetInt(1);
@@ -873,10 +1331,10 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
         MaxPositionQuantity.SetIntLimits(1, 100);
 
         DailyLossLimitUsd.Name = "Daily Loss Lock USD";
-        DailyLossLimitUsd.SetFloat(200.0f);
+        DailyLossLimitUsd.SetFloat(live_eval_profile ? 240.0f : 2400.0f);
 
         DailyProfitLockUsd.Name = "Daily Profit Lock USD";
-        DailyProfitLockUsd.SetFloat(650.0f);
+        DailyProfitLockUsd.SetFloat(live_eval_profile ? 650.0f : 0.0f);
 
         MoveStopToBreakEvenAfterFirstTarget.Name = "Move Stop To Break Even After First Target";
         MoveStopToBreakEvenAfterFirstTarget.SetYesNo(0);
@@ -885,10 +1343,44 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
         BreakEvenOffsetTicks.SetInt(0);
         BreakEvenOffsetTicks.SetIntLimits(-20, 20);
 
+        MinimumDirectionalOpenDistancePoints.Name = "Minimum Directional Open Distance Points";
+        MinimumDirectionalOpenDistancePoints.SetFloat(-80.0f);
+
+        MaximumSessionRangePoints.Name = "Maximum Session Range Points";
+        MaximumSessionRangePoints.SetFloat(100.0f);
+
+        AcceptedSetupAlertSound.Name = "Accepted Setup Alert Sound";
+        AcceptedSetupAlertSound.SetAlertSoundNumber(1);
+
+        DrawTradeMarkersAndLevels.Name = "Draw Trade Markers And Levels";
+        DrawTradeMarkersAndLevels.SetYesNo(1);
+
+        TradeLevelForwardBars.Name = "Trade Level Forward Bars";
+        TradeLevelForwardBars.SetInt(24);
+        TradeLevelForwardBars.SetIntLimits(1, 500);
+
+        if (live_eval_profile)
+        {
+            AllowedTradeAccount.Name = "Allowed Trade Account";
+            AllowedTradeAccount.SetString("");
+
+            MaxEvalTrailingDrawdownUsd.Name = "Max Eval Trailing Drawdown USD";
+            MaxEvalTrailingDrawdownUsd.SetFloat(1000.0f);
+
+            ResetEvalDrawdownTracking.Name = "Reset Eval Drawdown Tracking";
+            ResetEvalDrawdownTracking.SetYesNo(0);
+        }
+
         return;
     }
 
-    sc.SendOrdersToTradeService = false;
+    if (sc.LastCallToFunction)
+    {
+        DeleteTrackedBotOrders(sc);
+        return;
+    }
+
+    sc.SendOrdersToTradeService = live_eval_profile && SendOrdersToTradeService.GetYesNo() != 0;
     sc.MaximumPositionAllowed = MaxPositionQuantity.GetInt();
     sc.SupportTradingScaleIn = 0;
     sc.SupportTradingScaleOut = 0;
@@ -938,10 +1430,11 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
     }
 
     int start_bar_index = latest_closed_bar_index;
+    bool has_new_closed_bar = true;
     if (ProcessFullRecalculation.GetYesNo() != 0 && sc.IsFullRecalculation)
         start_bar_index = 0;
     else if (latest_closed_bar_index <= last_processed_bar_index)
-        return;
+        has_new_closed_bar = false;
     else
         start_bar_index = MaxInt(0, last_processed_bar_index + 1);
 
@@ -949,7 +1442,98 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
     const std::string trade_account = ToStdString(sc.SelectedTradeAccount);
     const std::string trade_mode = ToStdString(TradeMode.GetString());
     const std::string required_symbol_prefix = ToStdString(RequiredSymbolPrefix.GetString());
+    const std::string required_confirmation_text = live_eval_profile
+        ? kRequiredLiveEvalConfirmationText
+        : kRequiredConfirmationText;
+    const std::string allowed_trade_account = live_eval_profile
+        ? ToStdString(AllowedTradeAccount.GetString())
+        : "";
     const int total_quantity = FirstLegQuantity.GetInt() + RunnerQuantity.GetInt();
+    const int trade_level_forward_bars = MaxInt(1, TradeLevelForwardBars.GetInt());
+
+    DrawTrackedOrderFills(
+        sc,
+        symbol,
+        trade_account,
+        DrawTradeMarkersAndLevels.GetYesNo() != 0);
+
+    s_SCPositionData immediate_position_data;
+    sc.GetTradePosition(immediate_position_data);
+
+    if (live_eval_profile)
+    {
+        if (ResetEvalDrawdownTracking.GetYesNo() != 0)
+        {
+            ResetEvalTrailingState(sc, immediate_position_data);
+            ResetEvalDrawdownTracking.SetYesNo(0);
+            sc.AddMessageToLog("AxonTrade MES eval drawdown tracking reset to current account P/L view.", false);
+        }
+        else
+        {
+            EnsureEvalTrailingState(sc, immediate_position_data);
+        }
+    }
+
+    const bool current_chart_downloading_historical_data =
+        sc.DownloadingHistoricalData != 0
+        || sc.ChartIsDownloadingHistoricalData(sc.ChartNumber) != 0;
+    const bool live_operational_controls_allowed =
+        live_eval_profile
+        && ArmExecution.GetYesNo() != 0
+        && SendOrdersToTradeService.GetYesNo() != 0
+        && ToStdString(ConfirmationText.GetString()) == required_confirmation_text
+        && (RequireTradeSimulationMode.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn == 0)
+        && !allowed_trade_account.empty()
+        && trade_account == allowed_trade_account
+        && StartsWith(symbol, required_symbol_prefix)
+        && !current_chart_downloading_historical_data;
+
+    if (live_operational_controls_allowed)
+    {
+        std::string risk_rejection_reason;
+        std::string risk_rejection_notes;
+        if (DailyLockBlocksNewEntry(
+                sc,
+                latest_closed_bar_index,
+                immediate_position_data,
+                DailyLossLimitUsd.GetFloat(),
+                DailyProfitLockUsd.GetFloat(),
+                risk_rejection_reason,
+                risk_rejection_notes))
+        {
+            FlattenIfNeeded(
+                sc,
+                csv_log_path,
+                symbol,
+                trade_account,
+                trade_mode,
+                latest_closed_bar_index,
+                "daily_lock_flatten",
+                risk_rejection_notes);
+            sc.GetTradePosition(immediate_position_data);
+        }
+
+        if (EvalTrailingDrawdownBlocks(
+                sc,
+                immediate_position_data,
+                MaxEvalTrailingDrawdownUsd.GetFloat(),
+                risk_rejection_reason,
+                risk_rejection_notes))
+        {
+            FlattenIfNeeded(
+                sc,
+                csv_log_path,
+                symbol,
+                trade_account,
+                trade_mode,
+                latest_closed_bar_index,
+                "eval_trailing_drawdown_flatten",
+                risk_rejection_notes);
+        }
+    }
+
+    if (!has_new_closed_bar)
+        return;
 
     for (int bar_index = start_bar_index; bar_index <= latest_closed_bar_index; ++bar_index)
     {
@@ -968,10 +1552,20 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
         const bool chart_downloading_historical_data =
             sc.DownloadingHistoricalData != 0
             || sc.ChartIsDownloadingHistoricalData(sc.ChartNumber) != 0;
-        const bool order_functions_allowed =
-            SendOrdersToTradeService.GetYesNo() == 0
-            && (RequireTradeSimulationMode.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn != 0)
-            && !chart_downloading_historical_data;
+        const bool order_functions_allowed = live_eval_profile
+            ? (
+                ArmExecution.GetYesNo() != 0
+                && SendOrdersToTradeService.GetYesNo() != 0
+                && ToStdString(ConfirmationText.GetString()) == required_confirmation_text
+                && (RequireTradeSimulationMode.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn == 0)
+                && !allowed_trade_account.empty()
+                && trade_account == allowed_trade_account
+                && StartsWith(symbol, required_symbol_prefix)
+                && !chart_downloading_historical_data)
+            : (
+                SendOrdersToTradeService.GetYesNo() == 0
+                && (RequireTradeSimulationMode.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn != 0)
+                && !chart_downloading_historical_data);
         int& flatten_date = sc.GetPersistentInt(9);
         if (order_functions_allowed && bar_time >= FlattenTime.GetTime() && flatten_date != current_date)
         {
@@ -1026,6 +1620,8 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
             MinimumLookbackDirectionalMovePoints.GetFloat(),
             MinimumSessionRangePoints.GetFloat(),
             MaxRiskToAverageBarRange.GetFloat(),
+            MinimumDirectionalOpenDistancePoints.GetFloat(),
+            MaximumSessionRangePoints.GetFloat(),
             InitialStopPoints.GetFloat(),
             FirstTargetPoints.GetFloat(),
             RunnerTargetPoints.GetFloat());
@@ -1126,6 +1722,12 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
 
         if (ArmExecution.GetYesNo() == 0)
         {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
             LogCandidateEvent(
                 sc,
                 csv_log_path,
@@ -1151,8 +1753,14 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
             continue;
         }
 
-        if (ToStdString(ConfirmationText.GetString()) != kRequiredConfirmationText)
+        if (ToStdString(ConfirmationText.GetString()) != required_confirmation_text)
         {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
             LogCandidateEvent(
                 sc,
                 csv_log_path,
@@ -1173,13 +1781,21 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
                 0,
                 position_data,
                 "confirmation_text_missing",
-                "Confirmation Text must be SIM_ONLY");
+                live_eval_profile
+                    ? "Confirmation Text must be MES_EVAL_LIVE"
+                    : "Confirmation Text must be SIM_ONLY");
             last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
             continue;
         }
 
-        if (SendOrdersToTradeService.GetYesNo() != 0)
+        if (!live_eval_profile && SendOrdersToTradeService.GetYesNo() != 0)
         {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
             LogCandidateEvent(
                 sc,
                 csv_log_path,
@@ -1205,8 +1821,47 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
             continue;
         }
 
-        if (RequireTradeSimulationMode.GetYesNo() != 0 && sc.GlobalTradeSimulationIsOn == 0)
+        if (live_eval_profile && SendOrdersToTradeService.GetYesNo() == 0)
         {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
+            LogCandidateEvent(
+                sc,
+                csv_log_path,
+                "execution_entry_rejected",
+                symbol,
+                trade_account,
+                trade_mode,
+                bar_index,
+                candidate,
+                signal_id,
+                total_quantity,
+                FirstLegQuantity.GetInt(),
+                RunnerQuantity.GetInt(),
+                0,
+                0,
+                0,
+                0,
+                0,
+                position_data,
+                "live_trade_service_not_enabled",
+                "Send Orders To Trade Service must be Yes for the MES eval live bot");
+            last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
+            continue;
+        }
+
+        if (!live_eval_profile && RequireTradeSimulationMode.GetYesNo() != 0 && sc.GlobalTradeSimulationIsOn == 0)
+        {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
             LogCandidateEvent(
                 sc,
                 csv_log_path,
@@ -1228,6 +1883,108 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
                 position_data,
                 "trade_simulation_mode_required",
                 "Trade >> Trade Simulation Mode On is not enabled");
+            last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
+            continue;
+        }
+
+        if (live_eval_profile && RequireTradeSimulationMode.GetYesNo() != 0 && sc.GlobalTradeSimulationIsOn != 0)
+        {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
+            LogCandidateEvent(
+                sc,
+                csv_log_path,
+                "execution_entry_rejected",
+                symbol,
+                trade_account,
+                trade_mode,
+                bar_index,
+                candidate,
+                signal_id,
+                total_quantity,
+                FirstLegQuantity.GetInt(),
+                RunnerQuantity.GetInt(),
+                0,
+                0,
+                0,
+                0,
+                0,
+                position_data,
+                "trade_simulation_mode_must_be_off",
+                "Trade >> Trade Simulation Mode On must be off for the MES eval live bot");
+            last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
+            continue;
+        }
+
+        if (live_eval_profile && allowed_trade_account.empty())
+        {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
+            LogCandidateEvent(
+                sc,
+                csv_log_path,
+                "execution_entry_rejected",
+                symbol,
+                trade_account,
+                trade_mode,
+                bar_index,
+                candidate,
+                signal_id,
+                total_quantity,
+                FirstLegQuantity.GetInt(),
+                RunnerQuantity.GetInt(),
+                0,
+                0,
+                0,
+                0,
+                0,
+                position_data,
+                "allowed_trade_account_missing",
+                "Allowed Trade Account must exactly match the selected trade account");
+            last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
+            continue;
+        }
+
+        if (live_eval_profile && trade_account != allowed_trade_account)
+        {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
+            std::ostringstream notes;
+            notes << "selected trade account " << trade_account
+                  << " does not match allowed account " << allowed_trade_account;
+            LogCandidateEvent(
+                sc,
+                csv_log_path,
+                "execution_entry_rejected",
+                symbol,
+                trade_account,
+                trade_mode,
+                bar_index,
+                candidate,
+                signal_id,
+                total_quantity,
+                FirstLegQuantity.GetInt(),
+                RunnerQuantity.GetInt(),
+                0,
+                0,
+                0,
+                0,
+                0,
+                position_data,
+                "trade_account_gate",
+                notes.str());
             last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
             continue;
         }
@@ -1261,6 +2018,12 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
 
         if (!StartsWith(symbol, required_symbol_prefix))
         {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
             std::ostringstream notes;
             notes << "chart symbol " << symbol << " does not start with required prefix "
                   << required_symbol_prefix;
@@ -1291,6 +2054,12 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
 
         if (FirstLegQuantity.GetInt() <= 0 || RunnerQuantity.GetInt() <= 0 || total_quantity <= 0)
         {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
             LogCandidateEvent(
                 sc,
                 csv_log_path,
@@ -1318,6 +2087,12 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
 
         if (total_quantity > MaxPositionQuantity.GetInt())
         {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
             LogCandidateEvent(
                 sc,
                 csv_log_path,
@@ -1352,6 +2127,50 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
                 rejection_reason,
                 rejection_notes))
         {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
+            LogCandidateEvent(
+                sc,
+                csv_log_path,
+                "execution_entry_rejected",
+                symbol,
+                trade_account,
+                trade_mode,
+                bar_index,
+                candidate,
+                signal_id,
+                total_quantity,
+                FirstLegQuantity.GetInt(),
+                RunnerQuantity.GetInt(),
+                0,
+                0,
+                0,
+                0,
+                0,
+                position_data,
+                rejection_reason,
+                rejection_notes);
+            last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
+            continue;
+        }
+
+        if (live_eval_profile && EvalTrailingDrawdownBlocks(
+                sc,
+                position_data,
+                MaxEvalTrailingDrawdownUsd.GetFloat(),
+                rejection_reason,
+                rejection_notes))
+        {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
             LogCandidateEvent(
                 sc,
                 csv_log_path,
@@ -1379,6 +2198,12 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
 
         if (position_data.PositionQuantity != 0.0 || position_data.WorkingOrdersExist != 0)
         {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
             LogCandidateEvent(
                 sc,
                 csv_log_path,
@@ -1403,6 +2228,13 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
             last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
             continue;
         }
+
+        AlertAcceptedSetup(
+            sc,
+            bar_index,
+            symbol,
+            candidate,
+            AcceptedSetupAlertSound.GetAlertSoundNumber());
 
         s_SCNewOrder new_order;
         new_order.OrderQuantity = total_quantity;
@@ -1439,6 +2271,25 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
 
         if (order_result <= 0)
             sc.AddMessageToLog(sc.GetTradingErrorTextMessage(order_result), true);
+        else
+        {
+            TrackSubmittedBotOrders(sc, new_order, bar_index, candidate, signal_id);
+            if (DrawTradeMarkersAndLevels.GetYesNo() != 0)
+            {
+                DrawSubmittedTradeOverlay(
+                    sc,
+                    bar_index,
+                    candidate,
+                    FirstLegQuantity.GetInt(),
+                    RunnerQuantity.GetInt(),
+                    trade_level_forward_bars);
+            }
+            DrawTrackedOrderFills(
+                sc,
+                symbol,
+                trade_account,
+                DrawTradeMarkersAndLevels.GetYesNo() != 0);
+        }
 
         std::ostringstream entry_notes;
         entry_notes << candidate.notes
@@ -1474,4 +2325,16 @@ SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
 
         last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
     }
+}
+
+} // namespace
+
+SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
+{
+    RunVwapDeltaExecutionStudy(sc, false);
+}
+
+SCSFExport scsf_AxonTradeVwapDeltaMesEvalLiveBot(SCStudyInterfaceRef sc)
+{
+    RunVwapDeltaExecutionStudy(sc, true);
 }

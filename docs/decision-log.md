@@ -264,3 +264,65 @@ Update after switching from forward-log collection to mechanics testing:
 - The daily loss lock is not a substitute for sizing. With a 10-point stop,
   `5 MES + 5 MES` can lose roughly `-$500` before costs, so it does not fit the
   preferred `-$150` to `-$250` daily-loss band.
+
+Update after the first replay mechanics pass:
+
+- On `2026-06-30`, Sierra replay on `ESU26-CME` submitted the first
+  simulation entry with the current, unrelaxed guard settings.
+- Replay signal bar: `2026-06-25 12:45:00`, long
+  `vwap_delta_exhaustion_fade_2pt_10d_cl0.5`, entry `7418.50`.
+- Bot CSV row: `execution_entry_submitted`, `order_result = 2`,
+  `parent_internal_order_id = 43`, `target1_internal_order_id = 41`,
+  `target2_internal_order_id = 44`, `stop_all_internal_order_id = 42`.
+- Manual Sierra visual check passed: parent order, two targets, and common stop
+  appeared correctly; observed mechanics were clean.
+- Follow-up CSV state was consistent with attached-order behavior: position
+  moved from `2` to `1` after the first target, then later to flat with no
+  working orders and `daily_profit_loss = 900`.
+- Keep live trade-service routing disabled. The next validation is additional
+  replay/simulation coverage, especially flatten/cancel and loss-side behavior,
+  not live promotion.
+
+Update after the second replay mechanics pass:
+
+- On `2026-06-30`, Sierra replay on `ESU26-CME` submitted a short simulation
+  entry for the loss-side mechanics test.
+- Replay signal bar: `2026-06-18 10:42:00`, short
+  `vwap_delta_exhaustion_fade_2pt_10d_cl0.5`, entry `7558.50`.
+- Bot CSV row: `execution_entry_submitted`, `order_result = 2`,
+  `parent_internal_order_id = 49`, `target1_internal_order_id = 47`,
+  `target2_internal_order_id = 50`, `stop_all_internal_order_id = 48`.
+- The daily loss lock and flatten path worked: at `2026-06-18 10:45:00`, the
+  bot logged `execution_flatten_submitted` with
+  `daily loss lock active; loss_view=-825; limit=200`.
+- The bot then blocked a later valid setup at `2026-06-18 10:57:00` with
+  `daily_loss_lock_blocked`, confirming that the daily lock prevents same-day
+  re-entry after the loss condition is reached.
+- Mechanics coverage now includes long entry, short entry, attached targets,
+  common stop, first-target scale-out state, flatten/cancel submission, and
+  post-loss daily lockout.
+
+Update after expanded ES 300-second candidate research:
+
+- On `2026-07-01`, the expanded ES export produced a non-rejected
+  `AxonTradeVwapDeltaExecutionBot` candidate:
+  `space300_all_exit7_12_10_initial_lb-15_smin30_risk1.71429_omin-80_smax100_after0_daily2400`.
+- Full-sample accepted-trade result: `588` trades, `$66,584` net,
+  `$113.24` average/trade, `1.2953` profit factor, `-$12,462` max
+  trade-sequence drawdown, and `-$3,160` worst day.
+- Rolling robustness passed all five tested window shapes. Weakest total
+  guarded holdout net was `$56,660`; weakest average was `$107.93`; maximum
+  negative-window rate was `0.3478`; worst guarded window was `-$6,642`.
+- The higher-net `7 / 12 / 8 / initial` variant was rejected because it failed
+  negative-window-rate robustness on three wider window shapes.
+- The active execution bot defaults now use `300` second raw candidate spacing,
+  `7 / 12 / 10 / initial` exits, `lookback_directional_move_points <= -15`,
+  `session_range_points >= 30`, `risk_to_average_bar_range <= 1.7142857`,
+  `directional_open_distance_points >= -80`, `session_range_points <= 100`,
+  and `Daily Loss Lock USD = 2400`.
+- Evidence files:
+  `reports/sierra-vwap-delta-execution-bot-space300-candidate-robustness.md`,
+  and
+  `reports/sierra-vwap-delta-execution-bot-space300-7-12-10-primary.md`.
+  The large CSV search artifacts are generated outputs and are not required as
+  durable Git evidence unless intentionally promoted.

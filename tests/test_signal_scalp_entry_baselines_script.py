@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -12,6 +13,7 @@ def _load_baseline_module():
     spec = importlib.util.spec_from_file_location("run_signal_scalp_entry_baselines", script_path)
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
@@ -108,6 +110,52 @@ def test_feature_rows_prefer_exported_vwap() -> None:
     assert rows[0]["vwap_source"] == "exported"
 
 
+def test_parallel_output_mode_matches_single_process_sweep() -> None:
+    module = _load_baseline_module()
+    normalized_rows = [
+        _normalized_row(0, "2026-06-17 10:00:00", high=100, low=99.5, close=100),
+        _normalized_row(1, "2026-06-17 10:03:00", high=101.25, low=100.5, close=101),
+        _normalized_row(2, "2026-06-17 10:06:00", high=102.25, low=101.5, close=102),
+        _normalized_row(0, "2026-06-18 10:00:00", high=100, low=99.5, close=100),
+        _normalized_row(1, "2026-06-18 10:03:00", high=99.5, low=98.75, close=99),
+        _normalized_row(2, "2026-06-18 10:06:00", high=98.5, low=97.75, close=98),
+    ]
+    signals_by_strategy = {
+        "strategy_a": [_candidate(0, "2026-06-17 10:00:00", "long", "strategy_a")],
+        "strategy_b": [_candidate(3, "2026-06-18 10:00:00", "short", "strategy_b")],
+    }
+    kwargs = {
+        "output_mode": "sweep",
+        "normalized_rows": normalized_rows,
+        "signals_by_strategy": signals_by_strategy,
+        "first_target_points_values": [1],
+        "stop_points_values": [2],
+        "runner_target_points_values": [2],
+        "runner_stop_modes": ["breakeven"],
+        "instrument_root": "ES",
+        "slippage_ticks_per_side": None,
+        "slippage_ticks_per_contract": 1,
+        "entry_match_mode": "timestamp",
+        "train_date_count": 1,
+        "holdout_date_count": 1,
+        "minimum_train_trades": 1,
+        "window_step_date_count": 1,
+    }
+
+    single_process_rows = module._run_output_mode(**kwargs, jobs=1)
+    parallel_rows = module._run_output_mode(**kwargs, jobs=2)
+
+    assert parallel_rows == single_process_rows
+
+
+def test_resolve_jobs_caps_workers_to_task_count() -> None:
+    module = _load_baseline_module()
+
+    assert module._resolve_jobs(0, 3) == min(3, module.os.cpu_count() or 1)
+    assert module._resolve_jobs(8, 3) == 3
+    assert module._resolve_jobs(2, 1) == 1
+
+
 def _feature_row(
     bar_index: int,
     timestamp: str,
@@ -159,6 +207,25 @@ def _raw_row(*, volume: float, hlc_avg: float, vwap: float | None = None) -> dic
     if vwap is not None:
         row["VWAP"] = str(vwap)
     return row
+
+
+def _candidate(
+    bar_index: int,
+    timestamp: str,
+    direction: str,
+    strategy_id: str,
+) -> dict[str, object]:
+    return {
+        "event_type": "candidate_signal",
+        "event_key": f"ESU26-CME:{bar_index}:{strategy_id}:{direction}",
+        "strategy_id": strategy_id,
+        "signal_id": f"{strategy_id}_{bar_index}_{direction}",
+        "symbol": "ESU26-CME",
+        "bar_index": bar_index,
+        "bar_start_time": timestamp,
+        "direction": direction,
+        "signal_price": "100",
+    }
 
 
 def _normalized_row(

@@ -5,8 +5,11 @@ from __future__ import annotations
 
 import argparse
 import csv
+import multiprocessing
+import os
 import random
 from collections import defaultdict
+from concurrent.futures import ProcessPoolExecutor
 from datetime import time
 from pathlib import Path
 from typing import Any
@@ -35,6 +38,7 @@ DEFAULT_SESSION_ENTRY_START = time(10, 0)
 DEFAULT_SESSION_ENTRY_END = time(15, 15)
 DEFAULT_OPENING_RANGE_START = time(9, 30)
 DEFAULT_OPENING_RANGE_END = time(10, 0)
+_WORKER_OUTPUT_CONTEXT: dict[str, Any] | None = None
 
 
 def main() -> int:
@@ -180,6 +184,15 @@ def main() -> int:
         default=60,
         help="Maximum seconds to wait for passive_touch entry fills.",
     )
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=1,
+        help=(
+            "Number of worker processes for per-strategy evaluation. "
+            "Use 1 for the original single-process path, or 0 for all CPUs."
+        ),
+    )
     args = parser.parse_args()
 
     try:
@@ -227,6 +240,7 @@ def main() -> int:
             holdout_date_count=args.holdout_date_count,
             minimum_train_trades=args.minimum_train_trades,
             window_step_date_count=args.window_step_date_count,
+            jobs=args.jobs,
         )
     except (
         SierraExportError,
@@ -277,47 +291,228 @@ def _run_output_mode(
     holdout_date_count: int,
     minimum_train_trades: int,
     window_step_date_count: int,
+    jobs: int = 1,
 ) -> list[dict[str, Any]]:
-    rows = []
-    for signals in signals_by_strategy.values():
-        if output_mode == "sweep":
-            rows.extend(
-                run_signal_scaled_scalp_sweep(
-                    normalized_rows,
-                    signals,
-                    first_target_points_values=first_target_points_values,
-                    stop_points_values=stop_points_values,
-                    runner_target_points_values=runner_target_points_values,
-                    runner_stop_modes=runner_stop_modes,
-                    direction_filters=["all"],
-                    instrument_root=instrument_root,
-                    slippage_ticks_per_side=slippage_ticks_per_side,
-                    slippage_ticks_per_contract=slippage_ticks_per_contract,
-                    entry_match_mode=entry_match_mode,
-                ),
-            )
-            continue
+    strategy_ids = list(signals_by_strategy)
+    worker_count = _resolve_jobs(jobs, len(strategy_ids))
+    if worker_count > 1:
+        return _run_output_mode_parallel(
+            strategy_ids,
+            output_mode=output_mode,
+            normalized_rows=normalized_rows,
+            signals_by_strategy=signals_by_strategy,
+            first_target_points_values=first_target_points_values,
+            stop_points_values=stop_points_values,
+            runner_target_points_values=runner_target_points_values,
+            runner_stop_modes=runner_stop_modes,
+            instrument_root=instrument_root,
+            slippage_ticks_per_side=slippage_ticks_per_side,
+            slippage_ticks_per_contract=slippage_ticks_per_contract,
+            entry_match_mode=entry_match_mode,
+            train_date_count=train_date_count,
+            holdout_date_count=holdout_date_count,
+            minimum_train_trades=minimum_train_trades,
+            window_step_date_count=window_step_date_count,
+            worker_count=worker_count,
+        )
 
+    rows = []
+    for strategy_id in strategy_ids:
         rows.extend(
-            run_signal_scaled_scalp_walk_forward_sweep(
-                normalized_rows,
-                signals,
-                train_date_count=train_date_count,
-                holdout_date_count=holdout_date_count,
+            _run_strategy_output(
+                output_mode,
+                normalized_rows=normalized_rows,
+                signals=signals_by_strategy[strategy_id],
                 first_target_points_values=first_target_points_values,
                 stop_points_values=stop_points_values,
                 runner_target_points_values=runner_target_points_values,
                 runner_stop_modes=runner_stop_modes,
-                direction_filters=["all"],
-                minimum_train_trades=minimum_train_trades,
-                window_step_date_count=window_step_date_count,
                 instrument_root=instrument_root,
                 slippage_ticks_per_side=slippage_ticks_per_side,
                 slippage_ticks_per_contract=slippage_ticks_per_contract,
                 entry_match_mode=entry_match_mode,
+                train_date_count=train_date_count,
+                holdout_date_count=holdout_date_count,
+                minimum_train_trades=minimum_train_trades,
+                window_step_date_count=window_step_date_count,
             ),
         )
     return rows
+
+
+def _run_output_mode_parallel(
+    strategy_ids: list[str],
+    *,
+    output_mode: str,
+    normalized_rows: list[dict[str, Any]],
+    signals_by_strategy: dict[str, list[dict[str, Any]]],
+    first_target_points_values: list[float],
+    stop_points_values: list[float],
+    runner_target_points_values: list[float],
+    runner_stop_modes: list[str],
+    instrument_root: str | None,
+    slippage_ticks_per_side: int | None,
+    slippage_ticks_per_contract: float | None,
+    entry_match_mode: str,
+    train_date_count: int,
+    holdout_date_count: int,
+    minimum_train_trades: int,
+    window_step_date_count: int,
+    worker_count: int,
+) -> list[dict[str, Any]]:
+    pool_kwargs: dict[str, Any] = {}
+    if "fork" in multiprocessing.get_all_start_methods():
+        pool_kwargs["mp_context"] = multiprocessing.get_context("fork")
+    with ProcessPoolExecutor(
+        max_workers=worker_count,
+        initializer=_init_output_worker,
+        initargs=(
+            output_mode,
+            normalized_rows,
+            signals_by_strategy,
+            first_target_points_values,
+            stop_points_values,
+            runner_target_points_values,
+            runner_stop_modes,
+            instrument_root,
+            slippage_ticks_per_side,
+            slippage_ticks_per_contract,
+            entry_match_mode,
+            train_date_count,
+            holdout_date_count,
+            minimum_train_trades,
+            window_step_date_count,
+        ),
+        **pool_kwargs,
+    ) as executor:
+        rows_by_strategy = executor.map(_run_strategy_output_worker, strategy_ids)
+        return [
+            row
+            for strategy_rows in rows_by_strategy
+            for row in strategy_rows
+        ]
+
+
+def _init_output_worker(
+    output_mode: str,
+    normalized_rows: list[dict[str, Any]],
+    signals_by_strategy: dict[str, list[dict[str, Any]]],
+    first_target_points_values: list[float],
+    stop_points_values: list[float],
+    runner_target_points_values: list[float],
+    runner_stop_modes: list[str],
+    instrument_root: str | None,
+    slippage_ticks_per_side: int | None,
+    slippage_ticks_per_contract: float | None,
+    entry_match_mode: str,
+    train_date_count: int,
+    holdout_date_count: int,
+    minimum_train_trades: int,
+    window_step_date_count: int,
+) -> None:
+    global _WORKER_OUTPUT_CONTEXT
+    _WORKER_OUTPUT_CONTEXT = {
+        "output_mode": output_mode,
+        "normalized_rows": normalized_rows,
+        "signals_by_strategy": signals_by_strategy,
+        "first_target_points_values": first_target_points_values,
+        "stop_points_values": stop_points_values,
+        "runner_target_points_values": runner_target_points_values,
+        "runner_stop_modes": runner_stop_modes,
+        "instrument_root": instrument_root,
+        "slippage_ticks_per_side": slippage_ticks_per_side,
+        "slippage_ticks_per_contract": slippage_ticks_per_contract,
+        "entry_match_mode": entry_match_mode,
+        "train_date_count": train_date_count,
+        "holdout_date_count": holdout_date_count,
+        "minimum_train_trades": minimum_train_trades,
+        "window_step_date_count": window_step_date_count,
+    }
+
+
+def _run_strategy_output_worker(strategy_id: str) -> list[dict[str, Any]]:
+    if _WORKER_OUTPUT_CONTEXT is None:
+        raise RuntimeError("worker output context was not initialized")
+    context = _WORKER_OUTPUT_CONTEXT
+    return _run_strategy_output(
+        context["output_mode"],
+        normalized_rows=context["normalized_rows"],
+        signals=context["signals_by_strategy"][strategy_id],
+        first_target_points_values=context["first_target_points_values"],
+        stop_points_values=context["stop_points_values"],
+        runner_target_points_values=context["runner_target_points_values"],
+        runner_stop_modes=context["runner_stop_modes"],
+        instrument_root=context["instrument_root"],
+        slippage_ticks_per_side=context["slippage_ticks_per_side"],
+        slippage_ticks_per_contract=context["slippage_ticks_per_contract"],
+        entry_match_mode=context["entry_match_mode"],
+        train_date_count=context["train_date_count"],
+        holdout_date_count=context["holdout_date_count"],
+        minimum_train_trades=context["minimum_train_trades"],
+        window_step_date_count=context["window_step_date_count"],
+    )
+
+
+def _run_strategy_output(
+    output_mode: str,
+    *,
+    normalized_rows: list[dict[str, Any]],
+    signals: list[dict[str, Any]],
+    first_target_points_values: list[float],
+    stop_points_values: list[float],
+    runner_target_points_values: list[float],
+    runner_stop_modes: list[str],
+    instrument_root: str | None,
+    slippage_ticks_per_side: int | None,
+    slippage_ticks_per_contract: float | None,
+    entry_match_mode: str,
+    train_date_count: int,
+    holdout_date_count: int,
+    minimum_train_trades: int,
+    window_step_date_count: int,
+) -> list[dict[str, Any]]:
+    if output_mode == "sweep":
+        return run_signal_scaled_scalp_sweep(
+            normalized_rows,
+            signals,
+            first_target_points_values=first_target_points_values,
+            stop_points_values=stop_points_values,
+            runner_target_points_values=runner_target_points_values,
+            runner_stop_modes=runner_stop_modes,
+            direction_filters=["all"],
+            instrument_root=instrument_root,
+            slippage_ticks_per_side=slippage_ticks_per_side,
+            slippage_ticks_per_contract=slippage_ticks_per_contract,
+            entry_match_mode=entry_match_mode,
+        )
+
+    return run_signal_scaled_scalp_walk_forward_sweep(
+        normalized_rows,
+        signals,
+        train_date_count=train_date_count,
+        holdout_date_count=holdout_date_count,
+        first_target_points_values=first_target_points_values,
+        stop_points_values=stop_points_values,
+        runner_target_points_values=runner_target_points_values,
+        runner_stop_modes=runner_stop_modes,
+        direction_filters=["all"],
+        minimum_train_trades=minimum_train_trades,
+        window_step_date_count=window_step_date_count,
+        instrument_root=instrument_root,
+        slippage_ticks_per_side=slippage_ticks_per_side,
+        slippage_ticks_per_contract=slippage_ticks_per_contract,
+        entry_match_mode=entry_match_mode,
+    )
+
+
+def _resolve_jobs(requested_jobs: int, task_count: int) -> int:
+    if requested_jobs < 0:
+        raise ValueError("jobs must be nonnegative")
+    if task_count <= 1:
+        return 1
+    if requested_jobs == 0:
+        requested_jobs = os.cpu_count() or 1
+    return max(1, min(requested_jobs, task_count))
 
 
 def _output_summary(output_mode: str, rows: list[dict[str, Any]]) -> str:

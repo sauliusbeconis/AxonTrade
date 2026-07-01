@@ -1,9 +1,9 @@
 # Bot Development Plan
 
-AxonTrade is a bot project, but not a live-order-routing project in the current
-phase. The near-term goal is to build a research and simulation pipeline that can
-produce, log, replay, evaluate signals, and run controlled Sierra simulation
-mechanics tests before any live execution work is allowed.
+AxonTrade is a bot project with one narrow live-routing exception: the guarded
+`AxonTrade MES Eval Live Bot`. The ongoing goal is to keep research,
+simulation, replay, and live-eval operation tied to explicit evidence and
+operating gates.
 
 ## Current Bot Definition
 
@@ -16,12 +16,13 @@ In the current phase, "bot" means:
 - chart overlays for review;
 - replay and simulation validation;
 - simulation-only execution mechanics tests;
+- controlled MES live-eval execution behind explicit account and risk gates;
 - offline reports with costs and slippage.
 
 It does not mean:
 
-- live order routing;
-- broker integration;
+- broad live order routing;
+- ungated broker integration;
 - hidden automated entries;
 - martingale, grid, averaging-down, or revenge logic;
 - optimization without holdout validation.

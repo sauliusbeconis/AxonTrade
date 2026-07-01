@@ -71,10 +71,25 @@ Build and load instructions are documented in
 `AxonTradeVwapDeltaExecutionBot.cpp` submits Sierra Chart simulation orders for
 mechanics testing of the selected VWAP/delta exhaustion fade. It uses explicit
 arming, simulation-mode, confirmation-text, symbol-prefix, position, daily-loss,
-and daily-profit gates. Live trade-service routing is rejected in this build.
+session-open trend-day gates, an accepted-setup alert sound, and chart drawings
+for submitted entry/stop/target levels plus bot fill markers. Live trade-service
+routing is rejected in this build. Current defaults target the accepted
+300-second ES profile with
+`7 / 12 / 10 / initial` exits, `lookback_directional_move_points <= -15`,
+`risk_to_average_bar_range <= 1.7142857`, `directional_open_distance_points >=
+-80`, `session_range_points <= 100`, and a `$2400` daily loss lock.
 
 Build, load, and first mechanics-test instructions are documented in
 `docs/sierra-vwap-delta-execution-bot.md`.
+
+The same source also exports `AxonTrade MES Eval Live Bot`, a separate
+live-capable prop-eval study. It defaults to `1 + 1 MES`, `$240` daily loss
+lock, `$650` daily profit lock, `$1000` eval trailing drawdown lock, an exact
+account whitelist, `MES_EVAL_LIVE` confirmation text, and requires Sierra trade
+simulation mode to be off before it can route to the trade service.
+
+Live/eval setup instructions are documented in
+`docs/sierra-vwap-delta-mes-eval-live-bot.md`.
 
 ## Build Workflow
 
