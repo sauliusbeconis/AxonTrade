@@ -17,6 +17,7 @@ const char* kStrategyId =
 const char* kRequiredConfirmationText = "SIM_ONLY";
 const char* kRequiredLiveEvalConfirmationText = "MES_EVAL_LIVE";
 const int kTradeDrawingBase = 7600000;
+const int kStatusDrawingLineNumberBase = 9500000;
 const int kTrackedOrdersPointerKey = 101;
 const int kFillTrackingInitializedKey = 10;
 const int kProcessedFillCountKey = 11;
@@ -1090,6 +1091,60 @@ void DrawTrackedOrderFills(
     processed_fill_count = current_fill_count;
 }
 
+std::string YesNoStatus(bool value)
+{
+    return value ? "Y" : "N";
+}
+
+void DeleteStatusBanner(SCStudyInterfaceRef sc, bool live_eval_profile)
+{
+    const int drawing_number = kStatusDrawingLineNumberBase + (live_eval_profile ? 1 : 2);
+    sc.DeleteACSChartDrawing(sc.ChartNumber, TOOL_DELETE_CHARTDRAWING, drawing_number);
+}
+
+void DrawStatusBanner(
+    SCStudyInterfaceRef sc,
+    bool live_eval_profile,
+    int latest_closed_bar_index,
+    const std::string& headline,
+    const std::string& gate_line,
+    const std::string& detail_line,
+    COLORREF text_color,
+    COLORREF background_color,
+    int vertical_position,
+    int font_size)
+{
+    if (latest_closed_bar_index < 0 || sc.ArraySize <= 0)
+        return;
+
+    SCString status_text;
+    status_text.Format(
+        "%s\n%s\n%s",
+        headline.c_str(),
+        gate_line.c_str(),
+        detail_line.c_str());
+
+    s_UseTool tool;
+    tool.Clear();
+    tool.ChartNumber = sc.ChartNumber;
+    tool.DrawingType = DRAWING_TEXT;
+    tool.LineNumber = kStatusDrawingLineNumberBase + (live_eval_profile ? 1 : 2);
+    tool.Region = 0;
+    tool.BeginIndex = MinInt(sc.ArraySize - 1, MaxInt(0, latest_closed_bar_index));
+    tool.BeginValue = static_cast<float>(MaxInt(5, MinInt(98, vertical_position)));
+    tool.UseRelativeVerticalValues = 1;
+    tool.Color = text_color;
+    tool.FontBackColor = background_color;
+    tool.TransparentLabelBackground = 0;
+    tool.FontBold = 1;
+    tool.FontSize = MaxInt(6, MinInt(24, font_size));
+    tool.MultiLineLabel = 1;
+    tool.DrawUnderneathMainGraph = 0;
+    tool.AddMethod = UTAM_ADD_OR_ADJUST;
+    tool.Text = status_text;
+    sc.UseTool(tool);
+}
+
 bool DailyLockBlocksNewEntry(
     SCStudyInterfaceRef sc,
     int bar_index,
@@ -1211,6 +1266,9 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
     SCInputRef AllowedTradeAccount = sc.Input[37];
     SCInputRef MaxEvalTrailingDrawdownUsd = sc.Input[38];
     SCInputRef ResetEvalDrawdownTracking = sc.Input[39];
+    SCInputRef DrawStatusBannerInput = sc.Input[40];
+    SCInputRef StatusBannerVerticalPosition = sc.Input[41];
+    SCInputRef StatusBannerFontSize = sc.Input[42];
 
     if (sc.SetDefaults)
     {
@@ -1371,11 +1429,23 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
             ResetEvalDrawdownTracking.SetYesNo(0);
         }
 
+        DrawStatusBannerInput.Name = "Draw Status Banner";
+        DrawStatusBannerInput.SetYesNo(live_eval_profile ? 1 : 0);
+
+        StatusBannerVerticalPosition.Name = "Status Banner Vertical Position";
+        StatusBannerVerticalPosition.SetInt(92);
+        StatusBannerVerticalPosition.SetIntLimits(5, 98);
+
+        StatusBannerFontSize.Name = "Status Banner Font Size";
+        StatusBannerFontSize.SetInt(10);
+        StatusBannerFontSize.SetIntLimits(6, 24);
+
         return;
     }
 
     if (sc.LastCallToFunction)
     {
+        DeleteStatusBanner(sc, live_eval_profile);
         DeleteTrackedBotOrders(sc);
         return;
     }
@@ -1389,9 +1459,6 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
         return;
 
     const std::string csv_log_path = ToStdString(CsvLogPath.GetString());
-    if (csv_log_path.empty())
-        return;
-
     const int latest_closed_bar_index = LatestClosedBarIndex(sc);
     if (latest_closed_bar_index < 0)
         return;
@@ -1477,29 +1544,42 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
     const bool current_chart_downloading_historical_data =
         sc.DownloadingHistoricalData != 0
         || sc.ChartIsDownloadingHistoricalData(sc.ChartNumber) != 0;
+    const bool confirmation_ok = ToStdString(ConfirmationText.GetString()) == required_confirmation_text;
+    const bool symbol_ok = StartsWith(symbol, required_symbol_prefix);
+    const bool simulation_mode_ok = live_eval_profile
+        ? (RequireTradeSimulationMode.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn == 0)
+        : (RequireTradeSimulationMode.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn != 0);
+    const bool route_ok = live_eval_profile
+        ? SendOrdersToTradeService.GetYesNo() != 0
+        : SendOrdersToTradeService.GetYesNo() == 0;
+    const bool account_ok = !live_eval_profile
+        || (!allowed_trade_account.empty() && trade_account == allowed_trade_account);
     const bool live_operational_controls_allowed =
         live_eval_profile
         && ArmExecution.GetYesNo() != 0
-        && SendOrdersToTradeService.GetYesNo() != 0
-        && ToStdString(ConfirmationText.GetString()) == required_confirmation_text
-        && (RequireTradeSimulationMode.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn == 0)
-        && !allowed_trade_account.empty()
-        && trade_account == allowed_trade_account
-        && StartsWith(symbol, required_symbol_prefix)
+        && !csv_log_path.empty()
+        && route_ok
+        && confirmation_ok
+        && simulation_mode_ok
+        && account_ok
+        && symbol_ok
         && !current_chart_downloading_historical_data;
 
+    bool daily_lock_active = false;
+    bool eval_lock_active = false;
     if (live_operational_controls_allowed)
     {
         std::string risk_rejection_reason;
         std::string risk_rejection_notes;
-        if (DailyLockBlocksNewEntry(
+        daily_lock_active = DailyLockBlocksNewEntry(
                 sc,
                 latest_closed_bar_index,
                 immediate_position_data,
                 DailyLossLimitUsd.GetFloat(),
                 DailyProfitLockUsd.GetFloat(),
                 risk_rejection_reason,
-                risk_rejection_notes))
+                risk_rejection_notes);
+        if (daily_lock_active)
         {
             FlattenIfNeeded(
                 sc,
@@ -1513,12 +1593,13 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
             sc.GetTradePosition(immediate_position_data);
         }
 
-        if (EvalTrailingDrawdownBlocks(
+        eval_lock_active = EvalTrailingDrawdownBlocks(
                 sc,
                 immediate_position_data,
                 MaxEvalTrailingDrawdownUsd.GetFloat(),
                 risk_rejection_reason,
-                risk_rejection_notes))
+                risk_rejection_notes);
+        if (eval_lock_active)
         {
             FlattenIfNeeded(
                 sc,
@@ -1531,6 +1612,131 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
                 risk_rejection_notes);
         }
     }
+
+    sc.GetTradePosition(immediate_position_data);
+
+    if (DrawStatusBannerInput.GetYesNo() != 0)
+    {
+        std::string headline;
+        COLORREF text_color = RGB(255, 255, 255);
+        COLORREF background_color = RGB(96, 72, 0);
+
+        if (live_eval_profile)
+        {
+            if (ArmExecution.GetYesNo() == 0)
+            {
+                headline = "AXON MES LIVE: STANDBY - NOT ARMED";
+                background_color = RGB(96, 72, 0);
+            }
+            else if (csv_log_path.empty())
+            {
+                headline = "AXON MES LIVE: BLOCKED - CSV PATH BLANK";
+                background_color = RGB(128, 32, 24);
+            }
+            else if (!route_ok)
+            {
+                headline = "AXON MES LIVE: BLOCKED - ROUTING OFF";
+                background_color = RGB(128, 32, 24);
+            }
+            else if (!simulation_mode_ok)
+            {
+                headline = "AXON MES LIVE: BLOCKED - SIERRA SIM MODE IS ON";
+                background_color = RGB(128, 32, 24);
+            }
+            else if (!confirmation_ok)
+            {
+                headline = "AXON MES LIVE: BLOCKED - CONFIRMATION TEXT";
+                background_color = RGB(128, 32, 24);
+            }
+            else if (allowed_trade_account.empty())
+            {
+                headline = "AXON MES LIVE: BLOCKED - ALLOWED ACCOUNT BLANK";
+                background_color = RGB(128, 32, 24);
+            }
+            else if (!account_ok)
+            {
+                headline = "AXON MES LIVE: BLOCKED - ACCOUNT MISMATCH";
+                background_color = RGB(128, 32, 24);
+            }
+            else if (!symbol_ok)
+            {
+                headline = "AXON MES LIVE: BLOCKED - SYMBOL PREFIX";
+                background_color = RGB(128, 32, 24);
+            }
+            else if (current_chart_downloading_historical_data)
+            {
+                headline = "AXON MES LIVE: WAIT - HISTORICAL DOWNLOAD";
+                background_color = RGB(96, 72, 0);
+            }
+            else if (daily_lock_active)
+            {
+                headline = "AXON MES LIVE: LOCKED - DAILY RISK";
+                background_color = RGB(128, 32, 24);
+            }
+            else if (eval_lock_active)
+            {
+                headline = "AXON MES LIVE: LOCKED - EVAL DRAWDOWN";
+                background_color = RGB(128, 32, 24);
+            }
+            else if (immediate_position_data.PositionQuantity != 0.0 || immediate_position_data.WorkingOrdersExist != 0)
+            {
+                headline = "AXON MES LIVE: ARMED - MANAGING POSITION/ORDERS";
+                background_color = RGB(0, 92, 72);
+            }
+            else
+            {
+                headline = "AXON MES LIVE: ARMED - READY FOR LIVE ORDERS";
+                background_color = RGB(0, 96, 32);
+            }
+        }
+        else
+        {
+            headline = ArmExecution.GetYesNo() != 0
+                ? "AXON ES SIM BOT: ARMED"
+                : "AXON ES SIM BOT: STANDBY";
+            background_color = ArmExecution.GetYesNo() != 0 ? RGB(0, 72, 96) : RGB(72, 72, 72);
+        }
+
+        std::ostringstream gate_line;
+        gate_line << "Gates: arm=" << YesNoStatus(ArmExecution.GetYesNo() != 0)
+                  << " route=" << YesNoStatus(route_ok)
+                  << " sim=" << (sc.GlobalTradeSimulationIsOn != 0 ? "ON" : "OFF")
+                  << " simGate=" << YesNoStatus(simulation_mode_ok)
+                  << " confirm=" << YesNoStatus(confirmation_ok)
+                  << " acct=" << YesNoStatus(account_ok)
+                  << " symbol=" << YesNoStatus(symbol_ok)
+                  << " data=" << (current_chart_downloading_historical_data ? "DL" : "OK")
+                  << " csv=" << YesNoStatus(!csv_log_path.empty())
+                  << " locks=" << (daily_lock_active || eval_lock_active ? "ON" : "OK");
+
+        std::ostringstream detail_line;
+        detail_line << "Acct=" << (trade_account.empty() ? "<none>" : trade_account)
+                    << " Sym=" << symbol
+                    << " Pos=" << FormatNumber(immediate_position_data.PositionQuantity)
+                    << " Wkg=" << immediate_position_data.WorkingOrdersExist
+                    << " DPL=" << FormatNumber(DailyProfitView(immediate_position_data));
+        if (csv_log_path.empty())
+            detail_line << " CSV=<blank>";
+
+        DrawStatusBanner(
+            sc,
+            live_eval_profile,
+            latest_closed_bar_index,
+            headline,
+            gate_line.str(),
+            detail_line.str(),
+            text_color,
+            background_color,
+            StatusBannerVerticalPosition.GetInt(),
+            StatusBannerFontSize.GetInt());
+    }
+    else
+    {
+        DeleteStatusBanner(sc, live_eval_profile);
+    }
+
+    if (csv_log_path.empty())
+        return;
 
     if (!has_new_closed_bar)
         return;

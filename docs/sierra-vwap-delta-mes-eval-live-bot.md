@@ -20,6 +20,38 @@ The study will not submit an entry unless all of these are true:
 - no existing position or working orders are present
 - daily loss/profit and eval trailing drawdown locks are not active
 
+## Chart Status Banner
+
+The study draws a three-line status banner directly on the chart by default.
+Use it as the first visual check before trusting that the bot is actually ready.
+
+Expected ready state:
+
+`AXON MES LIVE: ARMED - READY FOR LIVE ORDERS`
+
+The second line shows the live gates:
+
+`Gates: arm=Y route=Y sim=OFF simGate=Y confirm=Y acct=Y symbol=Y data=OK csv=Y locks=OK`
+
+Common blocked states:
+
+- `STANDBY - NOT ARMED`: `Arm Execution = No`
+- `BLOCKED - ROUTING OFF`: `Send Orders To Trade Service = No`
+- `BLOCKED - SIERRA SIM MODE IS ON`: Sierra trade simulation mode is still on
+- `BLOCKED - CONFIRMATION TEXT`: confirmation text is not `MES_EVAL_LIVE`
+- `BLOCKED - ALLOWED ACCOUNT BLANK`: account whitelist input is empty
+- `BLOCKED - ACCOUNT MISMATCH`: selected account does not match the whitelist
+- `BLOCKED - SYMBOL PREFIX`: chart symbol does not start with `MES`
+- `WAIT - HISTORICAL DOWNLOAD`: Sierra is still downloading chart data
+- `LOCKED - DAILY RISK`: daily loss/profit lock is active
+- `LOCKED - EVAL DRAWDOWN`: eval trailing drawdown lock is active
+
+Banner inputs:
+
+- `Draw Status Banner = Yes`
+- `Status Banner Vertical Position = 92`
+- `Status Banner Font Size = 10`
+
 ## Eval Defaults
 
 - symbol gate: `MES`
@@ -60,6 +92,9 @@ floor reaches the starting baseline, then it stays at that baseline.
    - `First Leg Quantity = 1`
    - `Runner Quantity = 1`
    - `Max Position Quantity = 2`
+   - `Draw Status Banner = Yes`
+   - `Status Banner Vertical Position = 92`
+   - `Status Banner Font Size = 10`
 7. Click `OK`, then `OK` again.
 8. Reopen the study settings.
 9. Set `Reset Eval Drawdown Tracking = Yes`.
