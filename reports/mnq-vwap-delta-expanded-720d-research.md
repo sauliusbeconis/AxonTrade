@@ -1,6 +1,6 @@
 # MNQ VWAP Delta Expanded 720D Research
 
-Status: **filtered research lead found, not implementation-ready**
+Status: **local-neighborhood research lead found, not implementation-ready**
 
 ## Source
 
@@ -177,9 +177,67 @@ risk lens:
 The kept row was the only top-100 filtered candidate with all years positive,
 at least `100` trades, and max realized equity drawdown better than `-1000`.
 
+## Local Neighborhood Sweep
+
+There was still useful room around the filtered lead. A higher-resolution local
+grid was run around the kept row:
+
+- VWAP thresholds: `60,70,80,90,100,120`
+- Delta thresholds: `400,500,600,800`
+- Close-location thresholds: `0.35,0.4,0.45`
+- Static schedule filter: no Fridays, no `11:00`/`15:00` exchange-time entries
+- Exit grid: first target `15,20,25,30,35`; stop `80,100,120,140`; runner target `30,40,50,60,80`; runner stop `initial,breakeven`
+
+Artifacts:
+
+- `reports/mnq-vwap-delta-local-neighborhood-sweep-slip1-no-friday-no-11-15.csv`
+- `reports/mnq-vwap-delta-local-neighborhood-candidate-diagnostics.csv`
+- `reports/mnq-vwap-delta-local-neighborhood-shortlist-fixed-walk-forward-summary.csv`
+- `reports/mnq-vwap-delta-local-neighborhood-shortlist-slippage-stress.csv`
+- `reports/mnq-vwap-delta-local-80pt-400d-cl04-no-friday-no-11-15-exit25-140-40-slip1-trade-audit.csv`
+
+The best candidate under the same acceptance lens is now:
+
+`mnq_vwap_delta_local_fade_80pt_400d_cl0.4_nofri_no11_15`, exit `25 / 140 / 40 / initial`.
+
+| Candidate | Exit | Trades | Net | Avg | PF | Max DD | 2024 | 2025 | 2026 | Worst Day |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| local `80pt_400d_cl0.4` | `25 / 140 / 40 / initial` | 186 | 9584.50 | 51.53 | 2.09 | -976.00 | 1676.50 | 5050.50 | 2857.50 | -563.00 |
+| local `60pt_600d_cl0.4` | `25 / 140 / 50 / initial` | 153 | 8655.50 | 56.57 | 2.07 | -857.00 | 1795.00 | 5290.50 | 1570.00 | -796.00 |
+| previous filtered `80pt_500d_cl0.4` | `20 / 120 / 40 / initial` | 133 | 5978.00 | 44.95 | 1.98 | -784.00 | 621.50 | 4486.00 | 870.50 | -483.00 |
+
+Fixed walk-forward:
+
+| Candidate | Window | Positive | Negative | Trades | Net | Avg/Trade | Worst Window |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| local `80pt_400d_cl0.4` | `20x5` | 21 | 3 | 157 | 8812.50 | 56.13 | -595.00 |
+| local `80pt_400d_cl0.4` | `40x10` | 10 | 0 | 128 | 7626.00 | 59.58 | 241.00 |
+| local `80pt_400d_cl0.4` | `60x10` | 8 | 0 | 103 | 5643.00 | 54.79 | 241.00 |
+
+Slippage stress for local `80pt_400d_cl0.4`:
+
+| Slippage Ticks/Contract | Trades | Net | Avg | Max DD | 2024 | 2025 | 2026 |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 186 | 9584.50 | 51.53 | -976.00 | 1676.50 | 5050.50 | 2857.50 |
+| 2 | 186 | 9398.50 | 50.53 | -979.00 | 1633.50 | 4961.50 | 2803.50 |
+| 3 | 186 | 9212.50 | 49.53 | -982.00 | 1590.50 | 4872.50 | 2749.50 |
+
+Loss attribution:
+
+- worst trade: `-563.00`
+- worst day: `-563.00`
+- negative trade days: `29` of `143`
+- max consecutive losing trades: `4`, total `-447.50`
+- worst months: `2024-10=-394.50`, `2026-07=-309.00`, `2025-02=-299.50`
+
+Health gates did not need to be alpha filters. The best full-sample gate skipped
+two bad trades and improved net to `9803.00`, but 40x10 walk-forward gate
+selection accepted `7106.00` while skipping `520.00` net. Keep gates as
+account-level safety, not as a research edge.
+
 ## Next Step
 
-Continue research on the filtered `80pt_500d_cl0.4` candidate:
+Continue research on the local `80pt_400d_cl0.4` candidate:
 
 1. verify mechanics in Sierra replay with MNQ before any live version;
 2. keep account-level hard loss controls, but do not add dynamic gates as alpha filters yet;
