@@ -158,9 +158,24 @@ Filtered fixed walk-forward:
 
 Filtered audit artifacts:
 
+- `reports/mnq-vwap-delta-custom-threshold-sweep-slip1-no-friday-no-11-15.csv`
+- `reports/mnq-vwap-delta-filtered-top100-candidate-diagnostics.csv`
 - `reports/mnq-vwap-delta-80pt-500d-cl04-fixed-filter-same-window-diagnostics.csv`
 - `reports/mnq-vwap-delta-80pt-500d-cl04-no-friday-no-11-15-exit20-120-40-slip1-trade-audit.csv`
 - `reports/mnq-vwap-delta-80pt-500d-cl04-no-friday-no-11-15-exit20-120-40-slip1-health-gate-sweep.csv`
+
+The filtered grid re-sweep found higher-net rows, but they were rejected by the
+risk lens:
+
+| Candidate | Exit | Trades | Net | Avg | PF | Max DD | 2024 | 2025 | 2026 | Decision |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `80pt_500d_cl0.5`, no Friday/no `11:00`/`15:00` | `40 / 120 / 200 / initial` | 258 | 8118.00 | 31.47 | 1.28 | -3045.00 | 1329.00 | 7611.50 | -822.50 | reject: 2026 loss and drawdown |
+| `80pt_500d_cl0.5`, no Friday/no `11:00`/`15:00` | `30 / 120 / 40 / initial` | 258 | 7654.50 | 29.67 | 1.41 | -1610.00 | 858.50 | 5618.00 | 1178.00 | reject: drawdown |
+| `80pt_500d_cl0.4`, no Friday/no `11:00`/`15:00` | `30 / 120 / 40 / initial` | 133 | 6575.50 | 49.44 | 1.86 | -1181.00 | 544.50 | 5080.50 | 950.50 | reject: drawdown |
+| `80pt_500d_cl0.4`, no Friday/no `11:00`/`15:00` | `20 / 120 / 40 / initial` | 133 | 5978.00 | 44.95 | 1.98 | -784.00 | 621.50 | 4486.00 | 870.50 | keep |
+
+The kept row was the only top-100 filtered candidate with all years positive,
+at least `100` trades, and max realized equity drawdown better than `-1000`.
 
 ## Next Step
 
