@@ -1,6 +1,6 @@
 # MNQ VWAP Delta Expanded 720D Research
 
-Status: **research lead found, not implementation-ready**
+Status: **filtered research lead found, not implementation-ready**
 
 ## Source
 
@@ -49,6 +49,7 @@ Artifacts:
 - `reports/mnq-vwap-delta-custom-threshold-sweep-slip1.csv`
 - `reports/mnq-vwap-delta-custom-top100-candidate-diagnostics.csv`
 - `reports/mnq-vwap-delta-shortlist-fixed-walk-forward-summary.csv`
+- `reports/mnq-vwap-delta-80pt-500d-cl04-exit20-120-40-slip1-trade-audit.csv`
 
 ## Shortlist
 
@@ -58,7 +59,7 @@ Artifacts:
 | `40pt_500d_cl0.4` | `10 / 120 / 20 / initial` | 492 | 5222.50 | 10.61 | 1.2780 | -1300.00 | 447.00 | 3696.50 | 1079.00 |
 | `20pt_1500d_cl0.4` | `60 / 120 / 100 / initial` | 57 | 4873.00 | 85.49 | 1.8245 | -1902.00 | 298.50 | 2833.50 | 1741.00 |
 
-The best balance is currently:
+The best raw balance before attribution was:
 
 `mnq_vwap_delta_exhaustion_fade_80pt_500d_cl0.4`, exit `20 / 120 / 40 / initial`.
 
@@ -94,7 +95,7 @@ full-sample rows.
 MNQ needs Nasdaq-sized thresholds. The ES/MES candidate should not be copied
 directly.
 
-The `80pt_500d_cl0.4` row is the first MNQ research lead that is not immediately
+The raw `80pt_500d_cl0.4` row was the first MNQ research lead that was not immediately
 rejected:
 
 - positive full sample
@@ -103,15 +104,69 @@ rejected:
 - survives 3 ticks total slippage per contract
 - lower drawdown than the higher-net full-sample rows
 
+After attribution, the stronger lead is the same rule with a static schedule
+filter: no Friday entries and no entries during the `11:00` or `15:00` exchange
+time hours.
+
 It is still not live-ready because the stop is wide (`120` MNQ points), the
-sample has only `236` trades, and no risk gate or mechanics replay has been
-tested yet.
+filtered sample has only `133` trades, and MNQ Sierra replay/mechanics have not
+been tested yet.
+
+## Risk Gates And Attribution
+
+The dedicated audit for `80pt_500d_cl0.4` matched the shortlist exactly:
+
+- trades: `236`
+- net: `5671.50`
+- average/trade: `24.03`
+- max realized equity drawdown: `-1257.00`
+- years: `2024=198.00`, `2025=4487.50`, `2026=986.00`
+- worst trade: `-483.00`
+- worst day: `2025-11-20`, `-849.00`
+- max consecutive losing trades: `3`, `-673.00`
+
+Health gates were not accepted as alpha filters for the raw candidate. The
+best full-sample gate was effectively the ungated path. Walk-forward
+health-gate selection reduced holdout net materially:
+
+| Candidate | Gate WF | Accepted | Skipped | Accepted Net | Skipped Net | Worst Window |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| raw `80pt_500d_cl0.4` | `40x10` | 142 | 37 | 3132.00 | 1594.50 | -787.00 |
+| raw `80pt_500d_cl0.4` | `60x10` | 125 | 24 | 2812.50 | 1435.00 | -787.00 |
+
+Interpretation: dynamic health gates can still be account-level safety locks,
+but they did not improve the research edge.
+
+Attribution found a simple static schedule filter worth keeping for the next
+round: skip Fridays and skip entries during the `11:00` and `15:00` exchange
+time hours.
+
+Same-window comparison against the raw audit:
+
+| Variant | Trades | Net | Avg | Max DD | 2024 | 2025 | 2026 | `40x10` Pos | `40x10` Net | `40x10` Worst |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| raw `80pt_500d_cl0.4` | 236 | 5671.50 | 24.03 | -1257.00 | 198.00 | 4487.50 | 986.00 | 11/13 | 4726.50 | -509.00 |
+| no Friday, no `11:00`/`15:00` | 133 | 5978.00 | 44.95 | -784.00 | 621.50 | 4486.00 | 870.50 | 12/13 | 5380.50 | -101.00 |
+
+Filtered fixed walk-forward:
+
+| Window | Positive | Negative | Trades | Net | Avg/Trade | Worst Window |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `20x5` | 21 | 9 | 112 | 5958.00 | 53.20 | -517.00 |
+| `40x10` | 12 | 1 | 97 | 5380.50 | 55.47 | -101.00 |
+| `60x10` | 10 | 1 | 84 | 4498.00 | 53.55 | -101.00 |
+
+Filtered audit artifacts:
+
+- `reports/mnq-vwap-delta-80pt-500d-cl04-fixed-filter-same-window-diagnostics.csv`
+- `reports/mnq-vwap-delta-80pt-500d-cl04-no-friday-no-11-15-exit20-120-40-slip1-trade-audit.csv`
+- `reports/mnq-vwap-delta-80pt-500d-cl04-no-friday-no-11-15-exit20-120-40-slip1-health-gate-sweep.csv`
 
 ## Next Step
 
-Continue research on the `80pt_500d_cl0.4` candidate:
+Continue research on the filtered `80pt_500d_cl0.4` candidate:
 
-1. run daily risk lock and drawdown-control sweeps;
-2. check month/day loss attribution, especially 2025 and 2026 loss clusters;
-3. verify mechanics in Sierra replay with MNQ before any live version;
-4. only then decide whether this becomes an MNQ bot branch.
+1. verify mechanics in Sierra replay with MNQ before any live version;
+2. keep account-level hard loss controls, but do not add dynamic gates as alpha filters yet;
+3. if replay is clean, implement the MNQ bot on a separate branch with the static schedule filter;
+4. after implementation, run the same safety scan and DLL syntax checks used for MES.
