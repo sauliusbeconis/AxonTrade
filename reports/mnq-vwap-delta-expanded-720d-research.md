@@ -229,6 +229,10 @@ Loss attribution:
 - negative trade days: `29` of `143`
 - max consecutive losing trades: `4`, total `-447.50`
 - worst months: `2024-10=-394.50`, `2026-07=-309.00`, `2025-02=-299.50`
+- minimum cumulative equity from start: `0.00`
+- first cumulative `+500`: trade `4`, `2024-07-18 14:30:00`
+- first cumulative `+1000`: trade `26`, `2024-09-30 14:30:00`
+- max peak-to-trough drawdown: `2025-05-19 13:12:00` through `2025-06-02 14:51:00`
 
 Health gates did not need to be alpha filters. The best full-sample gate skipped
 two bad trades and improved net to `9803.00`, but 40x10 walk-forward gate
