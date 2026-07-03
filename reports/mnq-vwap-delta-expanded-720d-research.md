@@ -239,9 +239,48 @@ two bad trades and improved net to `9803.00`, but 40x10 walk-forward gate
 selection accepted `7106.00` while skipping `520.00` net. Keep gates as
 account-level safety, not as a research edge.
 
+## Micro Neighborhood Stability
+
+A final micro-neighborhood pass tested whether the local lead was a one-cell
+optimization artifact.
+
+- VWAP thresholds: `75,80,85`
+- Delta thresholds: `300,350,400,450,500`
+- Close-location thresholds: `0.375,0.4,0.425`
+- Exit grid: first target `20,25,30`; stop `130,140,150`; runner target `35,40,45,50`; runner stop `initial`
+
+Artifact:
+
+- `reports/mnq-vwap-delta-micro-neighborhood-diagnostics.csv`
+
+Acceptance filter: at least `100` trades, all years positive, max drawdown
+better than `-1000`, at least `6` fixed `40x10` windows, and zero negative
+`40x10` windows.
+
+Result:
+
+- rows tested: `1620`
+- accepted rows: `146`
+- accepted strategies: `17`
+- best full net and best `40x10` holdout net remained local `80pt_400d_cl0.4`, exit `25 / 140 / 40 / initial`
+
+Top accepted rows:
+
+| Candidate | Exit | Trades | Net | Avg | PF | Max DD | 2024 | 2025 | 2026 | `40x10` | `40x10` Net | Worst `40x10` |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `80pt_400d_cl0.4` | `25 / 140 / 40 / initial` | 186 | 9584.50 | 51.53 | 2.09 | -976.00 | 1676.50 | 5050.50 | 2857.50 | 10/10 | 7626.00 | 241.00 |
+| `75pt_400d_cl0.4` | `25 / 140 / 35 / initial` | 205 | 9541.00 | 46.54 | 1.97 | -976.00 | 1692.00 | 4496.50 | 3352.50 | 11/11 | 7363.50 | 76.00 |
+| `80pt_400d_cl0.4` | `25 / 140 / 45 / initial` | 186 | 9315.00 | 50.08 | 1.98 | -976.00 | 1595.00 | 4993.50 | 2726.50 | 10/10 | 7466.00 | 233.50 |
+| `80pt_400d_cl0.4` | `25 / 140 / 35 / initial` | 186 | 9059.00 | 48.70 | 2.08 | -976.00 | 1488.00 | 4803.50 | 2767.50 | 10/10 | 7164.50 | 141.00 |
+
+Interpretation: there is a real plateau around the selected rule. The `75pt`
+variant is a viable fallback if we later prefer more trades, but it does not
+beat the selected rule on full net or fixed `40x10` holdout net.
+
 ## Next Step
 
-Continue research on the local `80pt_400d_cl0.4` candidate:
+Research around this idea is now close to saturated. Continue with implementation
+of the local `80pt_400d_cl0.4` candidate:
 
 1. verify mechanics in Sierra replay with MNQ before any live version;
 2. keep account-level hard loss controls, but do not add dynamic gates as alpha filters yet;
