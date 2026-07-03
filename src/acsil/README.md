@@ -82,14 +82,20 @@ routing is rejected in this build. Current defaults target the accepted
 Build, load, and first mechanics-test instructions are documented in
 `docs/sierra-vwap-delta-execution-bot.md`.
 
-The same source also exports `AxonTrade MES Eval Live Bot`, a separate
-live-capable prop-eval study. It defaults to `1 + 1 MES`, `$240` daily loss
-lock, `$650` daily profit lock, `$1000` eval trailing drawdown lock, an exact
-account whitelist, `MES_EVAL_LIVE` confirmation text, and requires Sierra trade
-simulation mode to be off before it can route to the trade service.
+The same source also exports `AxonTrade MES Eval Live Bot` and `AxonTrade MNQ
+Eval Live Bot`, separate live-capable prop-eval studies. MES defaults to
+`1 + 1 MES`, `$240` daily loss lock, `$650` daily profit lock, `$1000` eval
+trailing drawdown lock, an exact account whitelist, and `MES_EVAL_LIVE`
+confirmation text. MNQ defaults to the local `80pt_400d_cl0.4` research lead
+with `25 / 140 / 40 / initial` exits, no Friday entries, no `11:00` or `15:00`
+exchange-time entries, `$650` daily loss/profit locks, `$1000` eval trailing
+drawdown lock, an exact account whitelist, and `MNQ_EVAL_LIVE` confirmation
+text. Both live profiles require Sierra trade simulation mode to be off before
+they can route to the trade service.
 
 Live/eval setup instructions are documented in
-`docs/sierra-vwap-delta-mes-eval-live-bot.md`.
+`docs/sierra-vwap-delta-mes-eval-live-bot.md` and
+`docs/sierra-vwap-delta-mnq-eval-live-bot.md`.
 
 ## Build Workflow
 

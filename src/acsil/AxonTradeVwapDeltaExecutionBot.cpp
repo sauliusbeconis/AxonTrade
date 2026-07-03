@@ -14,8 +14,11 @@ namespace
 {
 const char* kStrategyId =
     "vwap_delta_exhaustion_fade_2pt_10d_cl0.5_space300_exit7_12_10_lb15_risk171_open_m80_range100_daily2400_execution";
+const char* kMnqEvalStrategyId =
+    "mnq_vwap_delta_local_fade_80pt_400d_cl0.4_nofri_no11_15_exit25_140_40_initial";
 const char* kRequiredConfirmationText = "SIM_ONLY";
 const char* kRequiredLiveEvalConfirmationText = "MES_EVAL_LIVE";
+const char* kRequiredMnqEvalConfirmationText = "MNQ_EVAL_LIVE";
 const int kTradeDrawingBase = 7600000;
 const int kStatusDrawingLineNumberBase = 9500000;
 const int kTrackedOrdersPointerKey = 101;
@@ -121,9 +124,50 @@ std::string FormatBool(bool value)
     return value ? "true" : "false";
 }
 
+const char* StrategyIdForTradeMode(const std::string& trade_mode)
+{
+    if (trade_mode == "mnq_eval_live")
+        return kMnqEvalStrategyId;
+    return kStrategyId;
+}
+
 bool SameChartDate(const SCDateTime& left, const SCDateTime& right)
 {
     return left.GetDate() == right.GetDate();
+}
+
+bool EntryScheduleAllowed(
+    SCStudyInterfaceRef sc,
+    int bar_index,
+    bool skip_friday_entries,
+    bool skip_eleven_hour_entries,
+    bool skip_fifteen_hour_entries,
+    std::string& rejection_reason,
+    std::string& notes)
+{
+    const SCDateTime bar_date_time = sc.BaseDateTimeIn[bar_index];
+    const int day_of_week = bar_date_time.GetDayOfWeek();
+    const int hour = bar_date_time.GetTimeInSeconds() / 3600;
+
+    if (skip_friday_entries && day_of_week == FRIDAY)
+    {
+        rejection_reason = "schedule_filter_friday";
+        notes = "Friday entries are disabled for this profile";
+        return false;
+    }
+    if (skip_eleven_hour_entries && hour == 11)
+    {
+        rejection_reason = "schedule_filter_11_hour";
+        notes = "11:00 exchange-time hour entries are disabled for this profile";
+        return false;
+    }
+    if (skip_fifteen_hour_entries && hour == 15)
+    {
+        rejection_reason = "schedule_filter_15_hour";
+        notes = "15:00 exchange-time hour entries are disabled for this profile";
+        return false;
+    }
+    return true;
 }
 
 bool StartsWith(const std::string& value, const std::string& prefix)
@@ -475,7 +519,7 @@ void AppendExecutionLogRow(
            << chart_number << ','
            << bar_index << ','
            << EscapeCsv(trade_mode) << ','
-           << EscapeCsv(kStrategyId) << ','
+           << EscapeCsv(StrategyIdForTradeMode(trade_mode)) << ','
            << EscapeCsv(signal_id) << ','
            << EscapeCsv(direction) << ','
            << EscapeCsv(action) << ','
@@ -504,10 +548,14 @@ void AppendExecutionLogRow(
            << EscapeCsv(notes) << '\n';
 }
 
-std::string SignalId(const std::string& symbol, int bar_index, const std::string& direction)
+std::string SignalId(
+    const std::string& trade_mode,
+    const std::string& symbol,
+    int bar_index,
+    const std::string& direction)
 {
     std::ostringstream output;
-    output << kStrategyId << '_' << symbol << '_' << bar_index << '_' << direction;
+    output << StrategyIdForTradeMode(trade_mode) << '_' << symbol << '_' << bar_index << '_' << direction;
     return output.str();
 }
 
@@ -516,6 +564,9 @@ SignalCandidate EvaluateCandidate(
     int bar_index,
     int setup_start_time,
     int setup_end_time,
+    bool skip_friday_entries,
+    bool skip_eleven_hour_entries,
+    bool skip_fifteen_hour_entries,
     double vwap_extension_points,
     double delta_threshold,
     double close_location_threshold,
@@ -540,6 +591,19 @@ SignalCandidate EvaluateCandidate(
         candidate.notes = "closed bar is outside setup window";
         return candidate;
     }
+
+    if (!EntryScheduleAllowed(
+            sc,
+            bar_index,
+            skip_friday_entries,
+            skip_eleven_hour_entries,
+            skip_fifteen_hour_entries,
+            candidate.rejection_reason,
+            candidate.notes))
+    {
+        return candidate;
+    }
+
     if (stop_points <= 0.0 || first_target_points <= 0.0 || runner_target_points <= first_target_points)
     {
         candidate.rejection_reason = "configuration_error";
@@ -1224,7 +1288,7 @@ bool FlattenIfNeeded(
     return result > 0;
 }
 
-void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
+void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile, bool mnq_eval_profile)
 {
     SCInputRef CsvLogPath = sc.Input[0];
     SCInputRef TradeMode = sc.Input[1];
@@ -1269,14 +1333,25 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
     SCInputRef DrawStatusBannerInput = sc.Input[40];
     SCInputRef StatusBannerVerticalPosition = sc.Input[41];
     SCInputRef StatusBannerFontSize = sc.Input[42];
+    SCInputRef SkipFridayEntries = sc.Input[43];
+    SCInputRef SkipElevenHourEntries = sc.Input[44];
+    SCInputRef SkipFifteenHourEntries = sc.Input[45];
+
+    const char* live_profile_symbol = mnq_eval_profile ? "MNQ" : "MES";
+    const char* live_profile_trade_mode = mnq_eval_profile ? "mnq_eval_live" : "mes_eval_live";
+    const char* live_profile_confirmation = mnq_eval_profile
+        ? kRequiredMnqEvalConfirmationText
+        : kRequiredLiveEvalConfirmationText;
 
     if (sc.SetDefaults)
     {
         sc.GraphName = live_eval_profile
-            ? "AxonTrade MES Eval Live Bot"
+            ? (mnq_eval_profile ? "AxonTrade MNQ Eval Live Bot" : "AxonTrade MES Eval Live Bot")
             : "AxonTrade VWAP Delta Execution Bot";
         sc.StudyDescription = live_eval_profile
-            ? "Guarded live-capable MES prop-eval execution bot for the AxonTrade VWAP/delta setup."
+            ? (mnq_eval_profile
+                ? "Guarded live-capable MNQ prop-eval execution bot for the AxonTrade local VWAP/delta setup."
+                : "Guarded live-capable MES prop-eval execution bot for the AxonTrade VWAP/delta setup.")
             : "Simulation-only execution mechanics harness for the AxonTrade VWAP/delta setup. Live trade-service routing is rejected in this build.";
         sc.AutoLoop = 0;
         sc.GraphRegion = 0;
@@ -1296,11 +1371,13 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
 
         CsvLogPath.Name = "CSV Log Path";
         CsvLogPath.SetString(live_eval_profile
-            ? "C:\\SierraChart\\Data\\AxonTrade_MesEvalLiveBot.csv"
+            ? (mnq_eval_profile
+                ? "C:\\SierraChart\\Data\\AxonTrade_MnqEvalLiveBot.csv"
+                : "C:\\SierraChart\\Data\\AxonTrade_MesEvalLiveBot.csv")
             : "C:\\SierraChart\\Data\\AxonTrade_VwapDeltaExecutionBot.csv");
 
         TradeMode.Name = "Trade Mode";
-        TradeMode.SetString(live_eval_profile ? "mes_eval_live" : "execution_sim");
+        TradeMode.SetString(live_eval_profile ? live_profile_trade_mode : "execution_sim");
 
         ArmExecution.Name = "Arm Execution";
         ArmExecution.SetYesNo(0);
@@ -1317,7 +1394,7 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
         ConfirmationText.SetString("");
 
         RequiredSymbolPrefix.Name = "Required Symbol Prefix";
-        RequiredSymbolPrefix.SetString(live_eval_profile ? "MES" : "ES");
+        RequiredSymbolPrefix.SetString(live_eval_profile ? live_profile_symbol : "ES");
 
         LogRejections.Name = "Log Rejections";
         LogRejections.SetYesNo(0);
@@ -1338,16 +1415,16 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
         FlattenTime.SetTime(HMS_TIME(16, 40, 0));
 
         VwapExtensionPoints.Name = "VWAP Extension Points";
-        VwapExtensionPoints.SetFloat(2.0f);
+        VwapExtensionPoints.SetFloat(mnq_eval_profile ? 80.0f : 2.0f);
 
         DeltaThreshold.Name = "Minimum Bar Delta";
-        DeltaThreshold.SetFloat(10.0f);
+        DeltaThreshold.SetFloat(mnq_eval_profile ? 400.0f : 10.0f);
 
         CloseLocationThreshold.Name = "Close Location Threshold";
-        CloseLocationThreshold.SetFloat(0.5f);
+        CloseLocationThreshold.SetFloat(mnq_eval_profile ? 0.4f : 0.5f);
 
         MinimumSpacingSeconds.Name = "Minimum Raw Candidate Spacing Seconds";
-        MinimumSpacingSeconds.SetInt(300);
+        MinimumSpacingSeconds.SetInt(mnq_eval_profile ? 900 : 300);
         MinimumSpacingSeconds.SetIntLimits(0, 7200);
 
         MaxRawCandidatesPerDay.Name = "Max Raw Candidates Per Day";
@@ -1355,26 +1432,26 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
         MaxRawCandidatesPerDay.SetIntLimits(0, 200);
 
         ContextLookbackBars.Name = "Context Lookback Bars";
-        ContextLookbackBars.SetInt(20);
+        ContextLookbackBars.SetInt(mnq_eval_profile ? 1 : 20);
         ContextLookbackBars.SetIntLimits(1, 200);
 
         MinimumLookbackDirectionalMovePoints.Name = "Maximum Lookback Directional Move Points";
-        MinimumLookbackDirectionalMovePoints.SetFloat(-15.0f);
+        MinimumLookbackDirectionalMovePoints.SetFloat(mnq_eval_profile ? 999999.0f : -15.0f);
 
         MinimumSessionRangePoints.Name = "Minimum Session Range Points";
-        MinimumSessionRangePoints.SetFloat(30.0f);
+        MinimumSessionRangePoints.SetFloat(mnq_eval_profile ? 0.0f : 30.0f);
 
         MaxRiskToAverageBarRange.Name = "Max Risk To Average Bar Range";
-        MaxRiskToAverageBarRange.SetFloat(1.7142857f);
+        MaxRiskToAverageBarRange.SetFloat(mnq_eval_profile ? 999999.0f : 1.7142857f);
 
         InitialStopPoints.Name = "Initial Stop Points";
-        InitialStopPoints.SetFloat(12.0f);
+        InitialStopPoints.SetFloat(mnq_eval_profile ? 140.0f : 12.0f);
 
         FirstTargetPoints.Name = "First Target Points";
-        FirstTargetPoints.SetFloat(7.0f);
+        FirstTargetPoints.SetFloat(mnq_eval_profile ? 25.0f : 7.0f);
 
         RunnerTargetPoints.Name = "Runner Target Points";
-        RunnerTargetPoints.SetFloat(10.0f);
+        RunnerTargetPoints.SetFloat(mnq_eval_profile ? 40.0f : 10.0f);
 
         FirstLegQuantity.Name = "First Leg Quantity";
         FirstLegQuantity.SetInt(1);
@@ -1389,7 +1466,7 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
         MaxPositionQuantity.SetIntLimits(1, 100);
 
         DailyLossLimitUsd.Name = "Daily Loss Lock USD";
-        DailyLossLimitUsd.SetFloat(live_eval_profile ? 240.0f : 2400.0f);
+        DailyLossLimitUsd.SetFloat(mnq_eval_profile ? 650.0f : (live_eval_profile ? 240.0f : 2400.0f));
 
         DailyProfitLockUsd.Name = "Daily Profit Lock USD";
         DailyProfitLockUsd.SetFloat(live_eval_profile ? 650.0f : 0.0f);
@@ -1402,10 +1479,10 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
         BreakEvenOffsetTicks.SetIntLimits(-20, 20);
 
         MinimumDirectionalOpenDistancePoints.Name = "Minimum Directional Open Distance Points";
-        MinimumDirectionalOpenDistancePoints.SetFloat(-80.0f);
+        MinimumDirectionalOpenDistancePoints.SetFloat(mnq_eval_profile ? -999999.0f : -80.0f);
 
         MaximumSessionRangePoints.Name = "Maximum Session Range Points";
-        MaximumSessionRangePoints.SetFloat(100.0f);
+        MaximumSessionRangePoints.SetFloat(mnq_eval_profile ? 0.0f : 100.0f);
 
         AcceptedSetupAlertSound.Name = "Accepted Setup Alert Sound";
         AcceptedSetupAlertSound.SetAlertSoundNumber(1);
@@ -1439,6 +1516,15 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
         StatusBannerFontSize.Name = "Status Banner Font Size";
         StatusBannerFontSize.SetInt(10);
         StatusBannerFontSize.SetIntLimits(6, 24);
+
+        SkipFridayEntries.Name = "Skip Friday Entries";
+        SkipFridayEntries.SetYesNo(mnq_eval_profile ? 1 : 0);
+
+        SkipElevenHourEntries.Name = "Skip 11:00 Hour Entries";
+        SkipElevenHourEntries.SetYesNo(mnq_eval_profile ? 1 : 0);
+
+        SkipFifteenHourEntries.Name = "Skip 15:00 Hour Entries";
+        SkipFifteenHourEntries.SetYesNo(mnq_eval_profile ? 1 : 0);
 
         return;
     }
@@ -1510,7 +1596,7 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
     const std::string trade_mode = ToStdString(TradeMode.GetString());
     const std::string required_symbol_prefix = ToStdString(RequiredSymbolPrefix.GetString());
     const std::string required_confirmation_text = live_eval_profile
-        ? kRequiredLiveEvalConfirmationText
+        ? live_profile_confirmation
         : kRequiredConfirmationText;
     const std::string allowed_trade_account = live_eval_profile
         ? ToStdString(AllowedTradeAccount.GetString())
@@ -1533,7 +1619,11 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
         {
             ResetEvalTrailingState(sc, immediate_position_data);
             ResetEvalDrawdownTracking.SetYesNo(0);
-            sc.AddMessageToLog("AxonTrade MES eval drawdown tracking reset to current account P/L view.", false);
+            SCString reset_message;
+            reset_message.Format(
+                "AxonTrade %s eval drawdown tracking reset to current account P/L view.",
+                live_profile_symbol);
+            sc.AddMessageToLog(reset_message, false);
         }
         else
         {
@@ -1623,69 +1713,70 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
 
         if (live_eval_profile)
         {
+            const std::string live_banner_prefix = std::string("AXON ") + live_profile_symbol + " LIVE";
             if (ArmExecution.GetYesNo() == 0)
             {
-                headline = "AXON MES LIVE: STANDBY - NOT ARMED";
+                headline = live_banner_prefix + ": STANDBY - NOT ARMED";
                 background_color = RGB(96, 72, 0);
             }
             else if (csv_log_path.empty())
             {
-                headline = "AXON MES LIVE: BLOCKED - CSV PATH BLANK";
+                headline = live_banner_prefix + ": BLOCKED - CSV PATH BLANK";
                 background_color = RGB(128, 32, 24);
             }
             else if (!route_ok)
             {
-                headline = "AXON MES LIVE: BLOCKED - ROUTING OFF";
+                headline = live_banner_prefix + ": BLOCKED - ROUTING OFF";
                 background_color = RGB(128, 32, 24);
             }
             else if (!simulation_mode_ok)
             {
-                headline = "AXON MES LIVE: BLOCKED - SIERRA SIM MODE IS ON";
+                headline = live_banner_prefix + ": BLOCKED - SIERRA SIM MODE IS ON";
                 background_color = RGB(128, 32, 24);
             }
             else if (!confirmation_ok)
             {
-                headline = "AXON MES LIVE: BLOCKED - CONFIRMATION TEXT";
+                headline = live_banner_prefix + ": BLOCKED - CONFIRMATION TEXT";
                 background_color = RGB(128, 32, 24);
             }
             else if (allowed_trade_account.empty())
             {
-                headline = "AXON MES LIVE: BLOCKED - ALLOWED ACCOUNT BLANK";
+                headline = live_banner_prefix + ": BLOCKED - ALLOWED ACCOUNT BLANK";
                 background_color = RGB(128, 32, 24);
             }
             else if (!account_ok)
             {
-                headline = "AXON MES LIVE: BLOCKED - ACCOUNT MISMATCH";
+                headline = live_banner_prefix + ": BLOCKED - ACCOUNT MISMATCH";
                 background_color = RGB(128, 32, 24);
             }
             else if (!symbol_ok)
             {
-                headline = "AXON MES LIVE: BLOCKED - SYMBOL PREFIX";
+                headline = live_banner_prefix + ": BLOCKED - SYMBOL PREFIX";
                 background_color = RGB(128, 32, 24);
             }
             else if (current_chart_downloading_historical_data)
             {
-                headline = "AXON MES LIVE: WAIT - HISTORICAL DOWNLOAD";
+                headline = live_banner_prefix + ": WAIT - HISTORICAL DOWNLOAD";
                 background_color = RGB(96, 72, 0);
             }
             else if (daily_lock_active)
             {
-                headline = "AXON MES LIVE: LOCKED - DAILY RISK";
+                headline = live_banner_prefix + ": LOCKED - DAILY RISK";
                 background_color = RGB(128, 32, 24);
             }
             else if (eval_lock_active)
             {
-                headline = "AXON MES LIVE: LOCKED - EVAL DRAWDOWN";
+                headline = live_banner_prefix + ": LOCKED - EVAL DRAWDOWN";
                 background_color = RGB(128, 32, 24);
             }
             else if (immediate_position_data.PositionQuantity != 0.0 || immediate_position_data.WorkingOrdersExist != 0)
             {
-                headline = "AXON MES LIVE: ARMED - MANAGING POSITION/ORDERS";
+                headline = live_banner_prefix + ": ARMED - MANAGING POSITION/ORDERS";
                 background_color = RGB(0, 92, 72);
             }
             else
             {
-                headline = "AXON MES LIVE: ARMED - READY FOR LIVE ORDERS";
+                headline = live_banner_prefix + ": ARMED - READY FOR LIVE ORDERS";
                 background_color = RGB(0, 96, 32);
             }
         }
@@ -1819,6 +1910,9 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
             bar_index,
             SetupStartTime.GetTime(),
             SetupEndTime.GetTime(),
+            SkipFridayEntries.GetYesNo() != 0,
+            SkipElevenHourEntries.GetYesNo() != 0,
+            SkipFifteenHourEntries.GetYesNo() != 0,
             VwapExtensionPoints.GetFloat(),
             DeltaThreshold.GetFloat(),
             CloseLocationThreshold.GetFloat(),
@@ -1832,7 +1926,7 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
             FirstTargetPoints.GetFloat(),
             RunnerTargetPoints.GetFloat());
 
-        const std::string signal_id = SignalId(symbol, bar_index, candidate.direction);
+        const std::string signal_id = SignalId(trade_mode, symbol, bar_index, candidate.direction);
         if (!candidate.has_raw_setup)
         {
             if (LogRejections.GetYesNo() != 0)
@@ -1988,7 +2082,7 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
                 position_data,
                 "confirmation_text_missing",
                 live_eval_profile
-                    ? "Confirmation Text must be MES_EVAL_LIVE"
+                    ? std::string("Confirmation Text must be ") + required_confirmation_text
                     : "Confirmation Text must be SIM_ONLY");
             last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
             continue;
@@ -2055,7 +2149,9 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
                 0,
                 position_data,
                 "live_trade_service_not_enabled",
-                "Send Orders To Trade Service must be Yes for the MES eval live bot");
+                std::string("Send Orders To Trade Service must be Yes for the ")
+                    + live_profile_symbol
+                    + " eval live bot");
             last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
             continue;
         }
@@ -2121,7 +2217,9 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
                 0,
                 position_data,
                 "trade_simulation_mode_must_be_off",
-                "Trade >> Trade Simulation Mode On must be off for the MES eval live bot");
+                std::string("Trade >> Trade Simulation Mode On must be off for the ")
+                    + live_profile_symbol
+                    + " eval live bot");
             last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
             continue;
         }
@@ -2537,10 +2635,15 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile)
 
 SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
 {
-    RunVwapDeltaExecutionStudy(sc, false);
+    RunVwapDeltaExecutionStudy(sc, false, false);
 }
 
 SCSFExport scsf_AxonTradeVwapDeltaMesEvalLiveBot(SCStudyInterfaceRef sc)
 {
-    RunVwapDeltaExecutionStudy(sc, true);
+    RunVwapDeltaExecutionStudy(sc, true, false);
+}
+
+SCSFExport scsf_AxonTradeVwapDeltaMnqEvalLiveBot(SCStudyInterfaceRef sc)
+{
+    RunVwapDeltaExecutionStudy(sc, true, true);
 }
