@@ -16,16 +16,33 @@ path split between controlled MES evaluation trading, controlled MGC
 normal-profitability trading, and MNQ eval-pass research.
 
 Percentages below are engineering readiness estimates, not profit forecasts or
-win probabilities.
+win probabilities. Research stats are backtest/replay evidence after the
+documented cost model and filters.
 
-| Track | Current Use | Research Strength | Forward Evidence | Live Readiness | Decision |
-| --- | --- | ---: | ---: | ---: | --- |
-| `AxonTrade MES Eval Live Bot` | controlled live MES eval path | 70% | 35% | 75% | Approved controlled live-routing path |
-| `AxonTrade VWAP Delta Execution Bot` | ES replay/mechanics harness | 80% | 60% | 0% | Simulation-only by design |
-| `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta research implementation | 75% | 15% | 35% | Not approved for live until replay/mechanics retest |
-| `AxonTrade MNQ Eval Pass Combined Bot` | built A+B eval-pass study | 80% | 55% | 20% | ACSIL built; Sierra compile/replay/mechanics next |
-| `AxonTrade MGC Normal BreakEven Bot` | MGC normal-profitability bot | 75% | 5% | 75% | Live staging passed; controlled `1 MGC` routing approved |
-| Other instruments, e.g. MCL | backlog | 0% | 0% | 0% | Use only if MNQ/MGC eval-pass research stalls |
+Color key: 🟢 controlled live path; 🟡 research or validation path; 🔴 blocked or
+simulation-only.
+
+### MGC
+
+| Status | Bot / Track | Use | Research | Forward | Live | Net | PF | Win Rate | Avg Trades / Week | Current Decision |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 🟢 | `AxonTrade MGC Normal BreakEven Bot` | normal-profitability live bot | 75% | 5% | 75% | `$13298` | `1.76` | `55.4%` | `2.9` | Live staging passed; controlled `1 MGC` routing approved. Next gate is monitored forward sample, not size increase. |
+
+### MES
+
+| Status | Bot / Track | Use | Research | Forward | Live | Net | PF | Win Rate | Avg Trades / Week | Current Decision |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 🟢 | `AxonTrade MES Eval Live Bot` | prop-eval live path | 70% | 35% | 75% | `$66584` | `1.30` | `60.9%` | `5.8` | Approved controlled live-routing path with tight eval locks. Research stats are from the ES-derived accepted candidate after daily loss lock. |
+
+### MNQ
+
+| Status | Bot / Track | Use | Research | Forward | Live | Net | PF | Win Rate | Avg Trades / Week | Current Decision |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 🟡 | `AxonTrade MNQ Eval Pass Combined Bot` | eval-pass A+B wave-rider | 80% | 55% | 20% | `$28988` | `2.29` | `62.3%` | `1.2` | ACSIL built; Sierra compile/replay/mechanics validation is next. Designed for eval geometry, not routine live trading yet. |
+| 🟡 | `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta profitability lead | 75% | 15% | 35% | `$9584.50` | `2.09` | `80.1%` | `1.8` | Not approved for live until replay/mechanics retest. Useful as a profitability lead, but not the current eval-pass priority. |
+
+Backlog: other instruments such as `MCL` stay at `0%` readiness until MNQ/MGC
+work stalls or a new export creates a stronger reason to branch.
 
 ## Current Bot Setup Rules
 
