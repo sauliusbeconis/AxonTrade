@@ -72,6 +72,211 @@ Common live-capable setup gates:
 - Live routing requires Sierra trade simulation mode off unless a replay test
   deliberately disables the `Require Trade Simulation Mode Off` gate.
 
+## Sierra Manual Steps
+
+Use this sequence any time a new ACSIL build or live-capable study is staged.
+
+1. Sync the source:
+   `bash scripts/sync_to_sierra.sh`
+2. In Sierra Chart, open `Analysis >> Build Custom Studies DLL`.
+3. Select `AxonTradeVwapDeltaExecutionBot.cpp`.
+4. Build the DLL.
+5. Add only the intended study from the setup table above.
+6. Confirm the chart symbol prefix, data quality, and that Sierra is not
+   downloading historical data.
+7. Confirm `Trade >> Trade Simulation Mode On` matches the intended mode:
+   off for controlled live routing, on for sim/replay studies.
+8. Set `Allowed Trade Account` to the exact selected Sierra Trade Window
+   account for any live-capable study.
+9. Set the exact bot confirmation text from the setup table.
+10. Set quantity, max position quantity, daily locks, profit locks, and any
+    eval trailing locks from the setup table.
+11. Set `Send Orders To Trade Service = Yes` only for the intended live-capable
+    study and only on the intended account.
+12. Confirm no position and no working orders exist on the account/instrument.
+13. Set `Arm Execution = Yes` only when the chart status banner shows all gates
+    ready.
+
+To stop a live-capable bot: flatten/cancel if needed, set
+`Arm Execution = No`, then set `Send Orders To Trade Service = No`.
+
+MNQ Top Runner live-staging checklist:
+
+1. Add `AxonTrade MNQ Top Runner Live Bot` to a clean MNQ `3 Min` chart.
+2. Set `Confirmation Text = MNQ_TOP_RUNNER_LIVE`.
+3. Set `Allowed Trade Account` to the exact selected account.
+4. Confirm Sierra trade simulation mode is off.
+5. Confirm `Send Orders To Trade Service = Yes`.
+6. Confirm `Quantity = 2`, `Max Position Quantity = 2`, and
+   `Daily Loss Lock USD = 300`.
+7. Confirm no other automated MNQ bot is running on the same account.
+8. Arm only when the banner reaches `ARMED - READY`.
+
+## Scaling Roadmap
+
+This is a planning roadmap, not a profit guarantee. It uses current repo
+research plus a LucidFlex 25K rule snapshot checked on `2026-07-05`.
+Rules, prices, data quality, and bot behavior can change; verify the account
+rules in the dashboard before buying or arming anything.
+
+Current external account assumptions:
+
+- LucidFlex 25K evaluation: `$1,250` target, `$1,000` max loss, `50%`
+  consistency, `20` micros max size, no evaluation daily loss limit, and no
+  evaluation scaling restriction.
+- LucidFlex funded 25K: max size starts at `10` micros at `$0-$999` simulated
+  profit and rises to `20` micros after `$1,000` profit.
+- Lucid allows automated systems and trade copiers when they comply with all
+  rules.
+- Lucid currently allows a maximum of `5` funded accounts per household.
+- LucidFlex payout planning: `90%` trader split, `5` profitable days required
+  per payout cycle, `$500` minimum payout request, and 25K max payout request
+  of `50%` of profit up to `$1,000`.
+- Account pricing is dynamic. Let `E` be the current one-time 25K evaluation
+  checkout cost. A `5` account campaign needs `5E`; keep at least `2E` extra
+  as reset/redo reserve before scaling aggressively.
+
+Rule sources checked for this snapshot:
+[LucidFlex evaluation](https://support.lucidtrading.com/en/articles/12945790-lucidflex-evaluation-account),
+[consistency](https://support.lucidtrading.com/en/articles/12945805-lucidflex-consistency-percentage),
+[drawdown](https://support.lucidtrading.com/en/articles/12945815-lucidflex-drawdown),
+[scaling plan](https://support.lucidtrading.com/en/articles/12945808-lucidflex-scaling-plan),
+[payouts](https://support.lucidtrading.com/en/articles/12945796-lucidflex-payouts),
+[permitted activities](https://support.lucidtrading.com/en/articles/11404728-permitted-activities),
+and [Lucid FAQ](https://lucidtrading.com/).
+
+### Viability Call
+
+The current path is viable as a staged prop-account portfolio if we scale by
+account count and evidence gates, not by increasing contracts on one account.
+It is not viable as an immediate guaranteed income machine.
+
+Why it is viable enough to proceed:
+
+- The MNQ A+B eval bot is specifically shaped for the 25K eval geometry and has
+  controlled live-routing mechanics passed.
+- Random-start eval simulation for the selected A+B policy showed `52.5%`
+  pass, `5.5%` fail within `30` calendar days, with successful attempts taking
+  median `17` calendar days and `3` trade days.
+- Signal-start simulation was stronger: `85.2%` pass, `8.2%` fail, median
+  `4` traded signals.
+- MGC and MNQ normal-profitability bots provide a separate funded-stage path so
+  we are not relying on one eval-only edge for all income.
+
+Why scaling must stay conservative:
+
+- The A+B eval bot has `-$1950` historical trade-sequence drawdown and can use
+  `12 MNQ`; it is an eval-pass tool, not a funded day-zero income bot.
+- The 25K funded scaling plan starts at `10` micros. The A+ side of the A+B bot
+  can exceed that, so do not run the combined eval bot on a fresh funded 25K
+  account.
+- Normal bots still have historical drawdowns near the 25K max-loss envelope.
+  Correlated losses across accounts can happen on the same market day.
+- Backtest net scales cleanly on paper; live slippage, platform faults, broker
+  routing, and payout withdrawals do not.
+
+### Bot Roles
+
+| Role | Primary Bot | Why | Do Not Use For |
+| --- | --- | --- | --- |
+| Eval acquisition | `AxonTrade MNQ Eval Pass Combined Bot` | Best current fit for `$1,250` target, `50%` consistency, and 25K max size | Fresh funded 25K accounts before scaling allowance and buffer |
+| Eval backup | `AxonTrade MES Eval Live Bot` | Already guarded and live-approved with tight locks | Fastest pass plan; MES data quality has been unreliable |
+| Funded survival | `AxonTrade MGC Normal BreakEven Bot` | Small `1 MGC` size, live staging passed, lower dollar risk per trade | Fast eval pass |
+| Funded growth | `AxonTrade MNQ Eval Live Bot` | Positive MNQ-specific research and live mechanics passed | Running without account buffer or aggregate account risk lock |
+| Future growth | `AxonTrade MNQ Top Runner Live Bot` | Strong normal-profitability candidate with lower-DD live build | Any unattended live use until live staging passes |
+
+### Eval Account Campaign
+
+Use `AxonTrade MNQ Eval Pass Combined Bot` as one combined bot per eval account.
+Do not run separate A+ and B bots on the same account.
+
+| Parallel 25K Evals | Fee Model | Chance At Least One Pass Within 30 Days | Expected Passes Within 30 Days | Expected Fails Within 30 Days | Use |
+| ---: | ---: | ---: | ---: | ---: | --- |
+| `1` | `1E` | `52.5%` | `0.53` | `0.06` | Pilot and operational validation |
+| `2` | `2E` | `77.4%` | `1.05` | `0.11` | First scale step after pilot pass/clean operation |
+| `3` | `3E` | `89.3%` | `1.58` | `0.17` | Practical early campaign size |
+| `5` | `5E` | `97.6%` | `2.63` | `0.28` | Maximum household-funded-account target campaign |
+
+Planning interpretation:
+
+- First funded account: plan around `2-3` calendar weeks when the attempt
+  passes; do not plan around a guaranteed two-day pass.
+- Three funded accounts: plan around `30-45` calendar days if running multiple
+  evals and operations are clean.
+- Five funded accounts: plan around `60-90` calendar days, because one 30-day
+  cycle is expected to leave some accounts still open or waiting for signal.
+- If the first live eval shows platform/order/account issues, stop at one
+  account until the issue is fixed. Do not multiply a broken operation.
+
+### Funded Account Allocation
+
+Phase 1: first funded account, zero buffer.
+
+- Run only one approved low-risk normal bot at a time.
+- Preferred first bot: `AxonTrade MGC Normal BreakEven Bot`.
+- Goal: build `$500-$1000` account cushion and confirm payout-cycle operations.
+- Do not run `MNQ Eval Pass Combined Bot` on a fresh funded 25K account.
+
+Phase 2: account has `$500-$1000` cushion.
+
+- Add `AxonTrade MNQ Eval Live Bot` only if account-level daily exposure remains
+  below the current max-loss comfort zone.
+- Keep total simultaneous micros within the funded scaling plan.
+- Do not run more than one MNQ bot on the same account until the Top Runner live
+  staging gate passes and the aggregate risk lock is reviewed.
+
+Phase 3: portfolio mode.
+
+- Target `3-5` funded accounts before increasing complexity.
+- Prefer one main bot per account until there is enough forward evidence.
+- Example conservative allocation at `5` accounts: `3` MGC accounts and `2`
+  MNQ VWAP/delta accounts.
+- Example balanced allocation after buffers: MGC plus MNQ VWAP/delta on each
+  account, with account-level risk reviewed before arming.
+- Add MNQ Top Runner only after controlled live staging passes.
+
+### Income Model
+
+These are planning rates from historical research, not promises.
+
+| Bot / Stack | Current Status | Gross Planning Rate Per Account | Main Risk |
+| --- | --- | ---: | --- |
+| MGC Normal `1 MGC` | controlled live approved | about `$110/week` | slow growth |
+| MNQ VWAP/delta `1+1 MNQ` | controlled live approved | about `$90-$110/week` | wide stop, near-`$1000` historical DD |
+| MNQ Top Runner `2 MNQ` lower-DD | staging only | about `$95-$100/week` | not live-staging approved yet |
+| MGC + MNQ VWAP/delta | buffer-required stack | about `$200-$225/week` | combined account drawdown |
+| MGC + MNQ VWAP/delta + Top Runner | future stack | about `$295-$325/week` | needs Top Runner live approval and aggregate risk lock |
+
+Approximate trader-side profit time after a full `5` funded accounts are active,
+using the `90%` split and ignoring payout-processing delays:
+
+| Trader Profit Goal | Conservative `5` Accounts, One Bot Each | Balanced `5` Accounts, MGC + MNQ | Future `5` Accounts With Top Runner |
+| ---: | ---: | ---: | ---: |
+| `$5,000` | `70-84` calendar days | `35-42` calendar days | about `28` calendar days |
+| `$10,000` | `133-161` calendar days | `70-84` calendar days | about `56` calendar days |
+| `$25,000` | `336-392` calendar days | `175-196` calendar days | about `133` calendar days |
+| `$50,000` | `672-784` calendar days | `350-392` calendar days | about `259` calendar days |
+
+Cash payout timing can be slower than account-profit timing. On 25K LucidFlex,
+each account needs `5` profitable days per payout cycle, and the max request is
+`50%` of profit up to `$1,000` gross per account. A five-account fleet can
+request at most `$5,000` gross per payout cycle, paid as about `$4,500` to the
+trader before any external fees or taxes.
+
+### Operating Rules For Scaling
+
+- Scale accounts before contract size.
+- One broken chart, data feed, DLL setting, or account whitelist mistake stops
+  the whole campaign.
+- Never arm multiple bots on the same account unless the combined worst-case
+  open risk and daily lock are explicitly reviewed.
+- Do not promote a bot from staging to income allocation until it has controlled
+  live staging evidence.
+- Use account-level stop policy outside Sierra if the firm dashboard supports
+  it; bot-level locks do not know every other bot's P/L unless we explicitly
+  build an aggregate risk layer.
+- After every payout or reset, recheck funded scaling tier before arming.
+
 ## Bot Inventory
 
 ### MES Eval Live Bot

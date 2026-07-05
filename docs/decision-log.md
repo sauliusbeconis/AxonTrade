@@ -374,3 +374,19 @@ Update after MNQ top-runner live-capable build:
   continues to reject live trade-service routing.
 - This is a controlled live-staging candidate, not approved unattended
   automation.
+
+Update after scaling-roadmap review:
+
+- Scaling strategy is account-count first, not contract-size first.
+- Eval acquisition lead is `AxonTrade MNQ Eval Pass Combined Bot`; it remains
+  an eval-pass tool and should not be run on a fresh funded 25K account because
+  the A+ side can use `12 MNQ`, above the funded day-zero `10` micro scaling
+  tier.
+- Funded survival lead is `AxonTrade MGC Normal BreakEven Bot`; funded growth
+  can add `AxonTrade MNQ Eval Live Bot` after account buffer and aggregate risk
+  review.
+- `AxonTrade MNQ Top Runner Live Bot` stays future growth/staging until
+  controlled live staging passes.
+- README now includes Sierra manual build/arming steps and a scaling roadmap
+  covering LucidFlex 25K assumptions, parallel eval math, account allocation,
+  payout constraints, and rough time-to-profit planning.
