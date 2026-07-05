@@ -326,3 +326,23 @@ Update after expanded ES 300-second candidate research:
   `reports/sierra-vwap-delta-execution-bot-space300-7-12-10-primary.md`.
   The large CSV search artifacts are generated outputs and are not required as
   durable Git evidence unless intentionally promoted.
+
+Update after MNQ top-runner research:
+
+- On `2026-07-05`, the MNQ breakeven-frequency path was parked and a different
+  normal-profitability family was researched: lookback-breakout continuation
+  runners with fixed target/stop exits.
+- The active lead is `MNQ_TOP_RUNNER`: `20` bar lookback breakout,
+  `10:00-11:00`, no Friday, delta `600`, directional close location `>= 0.9`,
+  `2 MNQ`, `160 / 70` point target/stop.
+- Frozen validation result: `87` trades, `$11772` net, `2.15` PF, `54.0%` win
+  rate, `-$1854` max trade-sequence drawdown, and `$7089` latest-year net.
+- The lower-DD variant keeps the same signal with `120 / 70`, `$10135` net,
+  `2.08` PF, and `-$1146` drawdown.
+- Slippage stress through `6` total ticks per contract stayed positive across
+  the high-PF, lower-DD, and higher-sample frozen variants; rolling holdouts
+  were mostly positive across `120x40`, `180x40`, and `240x60`.
+- A new Sierra study, `AxonTrade MNQ Top Runner Sim Bot`, was added for
+  replay/mechanics only with confirmation text `MNQ_TOP_RUNNER_SIM`.
+- Live trade-service routing is intentionally rejected. The next gate is Sierra
+  replay/mechanics validation, not live promotion.
