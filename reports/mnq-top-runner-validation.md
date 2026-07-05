@@ -14,9 +14,11 @@ This skips the breakeven-frequency path and tests a different family: lookback-b
 - quantity: fixed `2 MNQ`
 - cost model: `$0.50/side` commission plus variable total slippage ticks per contract
 - same-bar handling: stop first
-- holdout configs: `120x40`, `180x40`, `240x60`
+- holdout configs: `60x20`, `90x30`, `120x40`, `180x40`, `240x60`, `320x60`
 
 ## Frozen Candidates
+
+All candidates use the base raw stream `lookback_lb20_buf0_delta600_cl65_end1230_skipfri`: `20` bar lookback breakout, raw close-location `0.65`, raw setup end `12:30`, no Friday, and one-hour raw signal spacing. The filter column is applied after that raw stream.
 
 | Candidate | Label | Filter | Target / Stop |
 | --- | --- | --- | ---: |
@@ -40,14 +42,23 @@ This skips the breakeven-frequency path and tests a different family: lookback-b
 | `mnq_top_runner_lb20_cl80_t160_s70` | 2 | 17176 | 1.84832321 | 9151 | -339 | -1827 |
 | `mnq_top_runner_lb20_cl80_t160_s70` | 4 | 16860 | 1.82643008 | 9059 | -367 | -1859 |
 | `mnq_top_runner_lb20_cl80_t160_s70` | 6 | 16544 | 1.804865 | 8967 | -395 | -1891 |
+| `mnq_top_runner_lb20_cl80_t160_s70` | 8 | 16228 | 1.78362065 | 8875 | -423 | -1923 |
+| `mnq_top_runner_lb20_cl80_t160_s70` | 10 | 15912 | 1.76268993 | 8783 | -451 | -1955 |
+| `mnq_top_runner_lb20_cl80_t160_s70` | 12 | 15596 | 1.74206595 | 8691 | -479 | -1987 |
 | `mnq_top_runner_lb20_cl90_t120_s70` | 1 | 10135 | 2.08002984 | 5548 | -1005 | -1146 |
 | `mnq_top_runner_lb20_cl90_t120_s70` | 2 | 10048 | 2.06655344 | 5521 | -1011 | -1151 |
 | `mnq_top_runner_lb20_cl90_t120_s70` | 4 | 9874 | 2.03991575 | 5467 | -1023 | -1161 |
 | `mnq_top_runner_lb20_cl90_t120_s70` | 6 | 9700 | 2.01369004 | 5413 | -1035 | -1171 |
+| `mnq_top_runner_lb20_cl90_t120_s70` | 8 | 9526 | 1.98786685 | 5359 | -1047 | -1181 |
+| `mnq_top_runner_lb20_cl90_t120_s70` | 10 | 9352 | 1.96243697 | 5305 | -1059 | -1191 |
+| `mnq_top_runner_lb20_cl90_t120_s70` | 12 | 9178 | 1.93739148 | 5251 | -1071 | -1201 |
 | `mnq_top_runner_lb20_cl90_t160_s70` | 1 | 11772 | 2.15039578 | 7089 | -1005 | -1854 |
 | `mnq_top_runner_lb20_cl90_t160_s70` | 2 | 11685 | 2.13744768 | 7062 | -1011 | -1863 |
 | `mnq_top_runner_lb20_cl90_t160_s70` | 4 | 11511 | 2.11185164 | 7008 | -1023 | -1881 |
 | `mnq_top_runner_lb20_cl90_t160_s70` | 6 | 11337 | 2.08664814 | 6954 | -1035 | -1899 |
+| `mnq_top_runner_lb20_cl90_t160_s70` | 8 | 11163 | 2.06182821 | 6900 | -1047 | -1917 |
+| `mnq_top_runner_lb20_cl90_t160_s70` | 10 | 10989 | 2.03738318 | 6846 | -1059 | -1935 |
+| `mnq_top_runner_lb20_cl90_t160_s70` | 12 | 10815 | 2.0133046 | 6792 | -1071 | -1953 |
 
 ## Rolling Holdout
 
@@ -56,12 +67,21 @@ This skips the breakeven-frequency path and tests a different family: lookback-b
 | `mnq_top_runner_lb20_cl80_t160_s70` | 120x40 | 9 | 6 | 3 | 0 | 8193 | -807 | 724 |
 | `mnq_top_runner_lb20_cl80_t160_s70` | 180x40 | 8 | 7 | 1 | 0 | 12322 | -158 | 1287.5 |
 | `mnq_top_runner_lb20_cl80_t160_s70` | 240x60 | 4 | 4 | 0 | 0 | 8055 | 1124 | 1900.5 |
+| `mnq_top_runner_lb20_cl80_t160_s70` | 320x60 | 3 | 3 | 0 | 0 | 9379 | 1173 | 2051 |
+| `mnq_top_runner_lb20_cl80_t160_s70` | 60x20 | 22 | 15 | 7 | 0 | 13716 | -792 | 412.5 |
+| `mnq_top_runner_lb20_cl80_t160_s70` | 90x30 | 13 | 10 | 3 | 0 | 9169 | -877 | 836 |
 | `mnq_top_runner_lb20_cl90_t120_s70` | 120x40 | 9 | 6 | 3 | 0 | 5427 | -779 | 592 |
 | `mnq_top_runner_lb20_cl90_t120_s70` | 180x40 | 8 | 6 | 2 | 0 | 8340 | -217 | 1041.5 |
 | `mnq_top_runner_lb20_cl90_t120_s70` | 240x60 | 4 | 4 | 0 | 0 | 5850 | 444 | 1122.5 |
+| `mnq_top_runner_lb20_cl90_t120_s70` | 320x60 | 3 | 3 | 0 | 0 | 6373 | 956 | 1496 |
+| `mnq_top_runner_lb20_cl90_t120_s70` | 60x20 | 22 | 14 | 7 | 1 | 8017 | -669 | 367.5 |
+| `mnq_top_runner_lb20_cl90_t120_s70` | 90x30 | 13 | 9 | 3 | 1 | 6134 | -849 | 582 |
 | `mnq_top_runner_lb20_cl90_t160_s70` | 120x40 | 9 | 7 | 2 | 0 | 5687 | -779 | 637 |
 | `mnq_top_runner_lb20_cl90_t160_s70` | 180x40 | 8 | 7 | 1 | 0 | 9240 | -217 | 711 |
 | `mnq_top_runner_lb20_cl90_t160_s70` | 240x60 | 4 | 4 | 0 | 0 | 6550 | 626 | 1251 |
+| `mnq_top_runner_lb20_cl90_t160_s70` | 320x60 | 3 | 3 | 0 | 0 | 7474 | 836 | 1376 |
+| `mnq_top_runner_lb20_cl90_t160_s70` | 60x20 | 22 | 14 | 7 | 1 | 8917 | -509 | 341.5 |
+| `mnq_top_runner_lb20_cl90_t160_s70` | 90x30 | 13 | 9 | 3 | 1 | 6394 | -849 | 420 |
 
 ## Period Breakdown: `mnq_top_runner_lb20_cl90_t160_s70`
 

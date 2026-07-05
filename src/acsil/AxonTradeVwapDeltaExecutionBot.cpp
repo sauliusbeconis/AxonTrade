@@ -21,9 +21,9 @@ const char* kMnqEvalPassCombinedStrategyId =
 const char* kMgcNormalBreakEvenStrategyId =
     "mgc_lb_be_sensitivity:lb10:buf0:cl0.45:end1030:mtf:delta125:breakeven:t25:s15:trig20";
 const char* kMnqTopRunnerStrategyId =
-    "mnq_top_runner_lb20_buf0_delta600_cl90_end1100_skipfri_t160_s70";
+    "mnq_top_runner_filtered_lb20_buf0_delta600_rawcl65_rawend1230_cl90_end1100_skipfri_t160_s70";
 const char* kMnqTopRunnerLiveStrategyId =
-    "mnq_top_runner_live_lb20_buf0_delta600_cl90_end1100_skipfri_t120_s70";
+    "mnq_top_runner_live_filtered_lb20_buf0_delta600_rawcl65_rawend1230_cl90_end1100_skipfri_t120_s70";
 const char* kRequiredConfirmationText = "SIM_ONLY";
 const char* kRequiredLiveEvalConfirmationText = "MES_EVAL_LIVE";
 const char* kRequiredMnqEvalConfirmationText = "MNQ_EVAL_LIVE";
@@ -987,17 +987,20 @@ SignalCandidate EvaluateMgcNormalBreakEvenCandidate(
         target_points);
 }
 
-SignalCandidate EvaluateMnqTopRunnerCandidate(
+SignalCandidate EvaluateMnqTopRunnerFilteredCandidate(
     SCStudyInterfaceRef sc,
     int bar_index,
-    int setup_start_time,
-    int setup_end_time,
+    int final_setup_start_time,
+    int final_setup_end_time,
     int lookback_bars,
     double buffer_points,
     double delta_threshold,
-    double close_location_threshold,
+    double final_close_location_threshold,
     double stop_points,
-    double target_points)
+    double target_points,
+    int minimum_raw_spacing_seconds,
+    int& last_raw_signal_date,
+    int& last_raw_signal_time)
 {
     SignalCandidate candidate;
     candidate.entry_price = sc.BaseDataIn[SC_LAST][bar_index];
@@ -1010,21 +1013,98 @@ SignalCandidate EvaluateMnqTopRunnerCandidate(
         return candidate;
     }
 
-    return EvaluateLookbackBreakoutCandidate(
+    const int current_date = sc.BaseDateTimeIn[bar_index].GetDate();
+    const int bar_time = sc.BaseDateTimeIn[bar_index].GetTimeInSeconds();
+    if (
+        minimum_raw_spacing_seconds > 0
+        && last_raw_signal_date == current_date
+        && last_raw_signal_time >= 0)
+    {
+        const int seconds_since_last_raw_signal = bar_time - last_raw_signal_time;
+        if (
+            seconds_since_last_raw_signal >= 0
+            && seconds_since_last_raw_signal < minimum_raw_spacing_seconds)
+        {
+            candidate.rejection_reason = "raw_signal_spacing_gate";
+            std::ostringstream notes;
+            notes << "MNQ_TOP_RUNNER raw setup spacing gate; seconds_since_last_raw_signal="
+                  << seconds_since_last_raw_signal
+                  << "; required=" << minimum_raw_spacing_seconds;
+            candidate.notes = notes.str();
+            return candidate;
+        }
+    }
+
+    const double raw_close_location_threshold = 0.65;
+    const int raw_setup_end_time = HMS_TIME(12, 30, 0);
+    SignalCandidate raw_candidate = EvaluateLookbackBreakoutCandidate(
         sc,
         bar_index,
         "MNQ_TOP_RUNNER",
-        setup_start_time,
-        setup_end_time,
+        final_setup_start_time,
+        raw_setup_end_time,
         lookback_bars,
         buffer_points,
         delta_threshold,
-        close_location_threshold,
+        raw_close_location_threshold,
         false,
         false,
         0.0,
         stop_points,
         target_points);
+
+    if (!raw_candidate.accepted)
+        return raw_candidate;
+
+    last_raw_signal_date = current_date;
+    last_raw_signal_time = bar_time;
+
+    const double directional_close_location =
+        raw_candidate.direction == "long"
+            ? raw_candidate.close_location
+            : 1.0 - raw_candidate.close_location;
+    if (bar_time < final_setup_start_time || bar_time > final_setup_end_time)
+    {
+        raw_candidate.accepted = false;
+        raw_candidate.action = "reject";
+        raw_candidate.rejection_reason = "final_time_filter";
+        std::ostringstream notes;
+        notes << raw_candidate.notes
+              << "; raw setup accepted but final time filter rejected it; final_start="
+              << final_setup_start_time
+              << "; final_end=" << final_setup_end_time
+              << "; bar_time=" << bar_time
+              << "; raw_end=" << raw_setup_end_time;
+        raw_candidate.notes = notes.str();
+        return raw_candidate;
+    }
+
+    if (directional_close_location < final_close_location_threshold)
+    {
+        raw_candidate.accepted = false;
+        raw_candidate.action = "reject";
+        raw_candidate.rejection_reason = "final_close_location_filter";
+        std::ostringstream notes;
+        notes << raw_candidate.notes
+              << "; raw setup accepted but final directional close-location rejected it; directional_close_location="
+              << FormatNumber(directional_close_location)
+              << "; required=" << FormatNumber(final_close_location_threshold)
+              << "; raw_close_location_threshold=" << FormatNumber(raw_close_location_threshold);
+        raw_candidate.notes = notes.str();
+        return raw_candidate;
+    }
+
+    std::ostringstream notes;
+    notes << raw_candidate.notes
+          << "; filtered_top_runner=true"
+          << "; raw_close_location_threshold=" << FormatNumber(raw_close_location_threshold)
+          << "; raw_setup_end_time=12:30:00"
+          << "; final_setup_end_time=" << final_setup_end_time
+          << "; final_directional_close_location=" << FormatNumber(directional_close_location)
+          << "; final_close_location_threshold=" << FormatNumber(final_close_location_threshold)
+          << "; minimum_raw_spacing_seconds=" << minimum_raw_spacing_seconds;
+    raw_candidate.notes = notes.str();
+    return raw_candidate;
 }
 
 void LogCandidateEvent(
@@ -4712,6 +4792,8 @@ void RunMnqTopRunnerSimStudy(SCStudyInterfaceRef sc)
     int& last_submitted_signal_date = sc.GetPersistentInt(84);
     int& last_submitted_signal_time = sc.GetPersistentInt(85);
     int& flatten_date = sc.GetPersistentInt(86);
+    int& last_raw_signal_date = sc.GetPersistentInt(87);
+    int& last_raw_signal_time = sc.GetPersistentInt(88);
 
     if (sc.IsFullRecalculation && ProcessFullRecalculation.GetYesNo() != 0)
     {
@@ -4720,6 +4802,8 @@ void RunMnqTopRunnerSimStudy(SCStudyInterfaceRef sc)
             last_processed_bar_index = -1;
             last_submitted_signal_date = 0;
             last_submitted_signal_time = -1;
+            last_raw_signal_date = 0;
+            last_raw_signal_time = -1;
             flatten_date = 0;
             processing_initialized = 1;
             if (ResetCsvOnFullRecalculation.GetYesNo() != 0 && !csv_log_path.empty())
@@ -4734,6 +4818,8 @@ void RunMnqTopRunnerSimStudy(SCStudyInterfaceRef sc)
         {
             last_processed_bar_index = latest_closed_bar_index - 1;
             last_submitted_signal_time = -1;
+            last_raw_signal_date = 0;
+            last_raw_signal_time = -1;
             processing_initialized = 1;
         }
         if (latest_closed_bar_index < last_processed_bar_index)
@@ -4884,7 +4970,9 @@ void RunMnqTopRunnerSimStudy(SCStudyInterfaceRef sc)
                     << "/" << FormatNumber(StopPoints.GetFloat())
                     << " spacing=" << MinimumSignalSpacingSeconds.GetInt()
                     << " last="
-                    << (last_submitted_signal_date == latest_date ? FormatNumber(last_submitted_signal_time) : "none");
+                    << (last_submitted_signal_date == latest_date ? FormatNumber(last_submitted_signal_time) : "none")
+                    << " rawLast="
+                    << (last_raw_signal_date == latest_date ? FormatNumber(last_raw_signal_time) : "none");
 
         DrawStatusBannerBySlot(
             sc,
@@ -4980,7 +5068,7 @@ void RunMnqTopRunnerSimStudy(SCStudyInterfaceRef sc)
             }
         }
 
-        SignalCandidate candidate = EvaluateMnqTopRunnerCandidate(
+        SignalCandidate candidate = EvaluateMnqTopRunnerFilteredCandidate(
             sc,
             bar_index,
             SetupStartTime.GetTime(),
@@ -4990,7 +5078,10 @@ void RunMnqTopRunnerSimStudy(SCStudyInterfaceRef sc)
             DeltaThreshold.GetFloat(),
             DirectionalCloseLocationThreshold.GetFloat(),
             StopPoints.GetFloat(),
-            TargetPoints.GetFloat());
+            TargetPoints.GetFloat(),
+            MinimumSignalSpacingSeconds.GetInt(),
+            last_raw_signal_date,
+            last_raw_signal_time);
 
         const std::string signal_id = SignalId(trade_mode, symbol, bar_index, candidate.direction);
         if (!candidate.accepted)
@@ -5436,6 +5527,8 @@ void RunMnqTopRunnerLiveStudy(SCStudyInterfaceRef sc)
     int& last_submitted_signal_date = sc.GetPersistentInt(94);
     int& last_submitted_signal_time = sc.GetPersistentInt(95);
     int& flatten_date = sc.GetPersistentInt(96);
+    int& last_raw_signal_date = sc.GetPersistentInt(97);
+    int& last_raw_signal_time = sc.GetPersistentInt(98);
 
     if (sc.IsFullRecalculation && ProcessFullRecalculation.GetYesNo() != 0)
     {
@@ -5444,6 +5537,8 @@ void RunMnqTopRunnerLiveStudy(SCStudyInterfaceRef sc)
             last_processed_bar_index = -1;
             last_submitted_signal_date = 0;
             last_submitted_signal_time = -1;
+            last_raw_signal_date = 0;
+            last_raw_signal_time = -1;
             flatten_date = 0;
             processing_initialized = 1;
             if (ResetCsvOnFullRecalculation.GetYesNo() != 0 && !csv_log_path.empty())
@@ -5458,6 +5553,8 @@ void RunMnqTopRunnerLiveStudy(SCStudyInterfaceRef sc)
         {
             last_processed_bar_index = latest_closed_bar_index - 1;
             last_submitted_signal_time = -1;
+            last_raw_signal_date = 0;
+            last_raw_signal_time = -1;
             processing_initialized = 1;
         }
         if (latest_closed_bar_index < last_processed_bar_index)
@@ -5623,7 +5720,9 @@ void RunMnqTopRunnerLiveStudy(SCStudyInterfaceRef sc)
                     << "/" << FormatNumber(StopPoints.GetFloat())
                     << " spacing=" << MinimumSignalSpacingSeconds.GetInt()
                     << " last="
-                    << (last_submitted_signal_date == latest_date ? FormatNumber(last_submitted_signal_time) : "none");
+                    << (last_submitted_signal_date == latest_date ? FormatNumber(last_submitted_signal_time) : "none")
+                    << " rawLast="
+                    << (last_raw_signal_date == latest_date ? FormatNumber(last_raw_signal_time) : "none");
 
         DrawStatusBannerBySlot(
             sc,
@@ -5722,7 +5821,7 @@ void RunMnqTopRunnerLiveStudy(SCStudyInterfaceRef sc)
             }
         }
 
-        SignalCandidate candidate = EvaluateMnqTopRunnerCandidate(
+        SignalCandidate candidate = EvaluateMnqTopRunnerFilteredCandidate(
             sc,
             bar_index,
             SetupStartTime.GetTime(),
@@ -5732,7 +5831,10 @@ void RunMnqTopRunnerLiveStudy(SCStudyInterfaceRef sc)
             DeltaThreshold.GetFloat(),
             DirectionalCloseLocationThreshold.GetFloat(),
             StopPoints.GetFloat(),
-            TargetPoints.GetFloat());
+            TargetPoints.GetFloat(),
+            MinimumSignalSpacingSeconds.GetInt(),
+            last_raw_signal_date,
+            last_raw_signal_time);
 
         const std::string signal_id = SignalId(trade_mode, symbol, bar_index, candidate.direction);
         if (!candidate.accepted)

@@ -41,7 +41,7 @@ simulation-only.
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 🟢 | `AxonTrade MNQ Eval Pass Combined Bot` | eval-pass A+B wave-rider | 80% | 60% | 75% | `$28988` | `2.29` | `62.3%` | `1.2` | Live test/mechanics passed; controlled live routing approved for the validated A+B eval setup. |
 | 🟢 | `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta profitability lead | 75% | 20% | 75% | `$9584.50` | `2.09` | `80.1%` | `1.8` | Live test/mechanics passed; controlled live routing approved for the validated VWAP/delta setup. |
-| 🟡 | `AxonTrade MNQ Top Runner Live Bot` | normal-profitability runner live candidate | 75% | 0% | 25% | `$10135` | `2.08` | `57.5%` | `0.85` | Live-capable lower-DD variant built. Requires controlled live staging before approval. |
+| 🟡 | `AxonTrade MNQ Top Runner Live Bot` | normal-profitability runner live candidate | 100% | 0% | 25% | `$10135` | `2.08` | `57.5%` | `0.85` | Offline research is saturated on the current export and ACSIL is aligned to the filtered frozen rule. Requires fresh replay/mechanics and controlled live staging before approval. |
 
 Backlog: other instruments such as `MCL` stay at `0%` readiness until MNQ/MGC
 work stalls or a new export creates a stronger reason to branch.
@@ -56,8 +56,8 @@ Use this table as the first check before arming anything in Sierra Chart.
 | `AxonTrade MES Eval Live Bot` | Current approved controlled live eval path | `MES` | `MES_EVAL_LIVE` | `Send Orders To Trade Service = Yes`; Sierra trade simulation mode off | Exact `Allowed Trade Account` required | `1 + 1 MES`, `$240` daily loss lock, `$650` daily profit lock, `$1000` eval trailing lock, no historical download, no position/working orders |
 | `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta research implementation | `MNQ` | `MNQ_EVAL_LIVE` | Controlled live routing approved for validated setup | Exact `Allowed Trade Account` required | `1 + 1 MNQ`, `25 / 140 / 40` exits, no Friday, no `11:00`/`15:00`, `$650` daily loss/profit locks, `$1000` eval trailing lock |
 | `AxonTrade MNQ Eval Pass Combined Bot` | Built MNQ A+B eval-pass study | `MNQ` | `MNQ_EVAL_PASS_AB_LIVE` | Controlled live routing approved for validated A+B setup | Exact `Allowed Trade Account` required | A+ `12 MNQ` with `31 / 30.5` target/stop; B `4 MNQ` with `82 / 55.5` target/stop; one trade/day; `$900` daily loss lock; `$650` daily profit lock; `$1000` eval trailing lock |
-| `AxonTrade MNQ Top Runner Sim Bot` | MNQ top-runner replay/mechanics study | `MNQ` | `MNQ_TOP_RUNNER_SIM` | `Send Orders To Trade Service = No`; Sierra trade simulation mode on | Not required | Simulation-only; `2 MNQ`, `20` bar lookback breakout, no Friday, `10:00-11:00`, delta `600`, close-location `0.9`, `160 / 70`, `3600s` spacing, `15:45` flatten |
-| `AxonTrade MNQ Top Runner Live Bot` | MNQ top-runner controlled live candidate | `MNQ` | `MNQ_TOP_RUNNER_LIVE` | `Send Orders To Trade Service = Yes`; Sierra trade simulation mode off | Exact `Allowed Trade Account` required | Live-capable lower-DD variant; `2 MNQ`, `20` bar lookback breakout, no Friday, `10:00-11:00`, delta `600`, close-location `0.9`, `120 / 70`, `$300` daily loss lock, `3600s` spacing, `15:45` flatten |
+| `AxonTrade MNQ Top Runner Sim Bot` | MNQ top-runner replay/mechanics study | `MNQ` | `MNQ_TOP_RUNNER_SIM` | `Send Orders To Trade Service = No`; Sierra trade simulation mode on | Not required | Simulation-only; `2 MNQ`, filtered lookback breakout: raw `10:00-12:30`/CL `0.65`/delta `600`, final `10:00-11:00` directional CL `0.9`, no Friday, `160 / 70`, `3600s` raw spacing, `15:45` flatten |
+| `AxonTrade MNQ Top Runner Live Bot` | MNQ top-runner controlled live candidate | `MNQ` | `MNQ_TOP_RUNNER_LIVE` | `Send Orders To Trade Service = Yes`; Sierra trade simulation mode off | Exact `Allowed Trade Account` required | Live-capable lower-DD variant; `2 MNQ`, filtered lookback breakout: raw `10:00-12:30`/CL `0.65`/delta `600`, final `10:00-11:00` directional CL `0.9`, no Friday, `120 / 70`, `$300` daily loss lock, `3600s` raw spacing, `15:45` flatten |
 | `AxonTrade MGC Normal BreakEven Bot` | Built MGC normal-profitability study | `MGC` | Sim: `MGC_NORMAL_SIM`; live: `MGC_NORMAL_LIVE` | Controlled live routing approved for validated `1 MGC` setup | Exact `Allowed Trade Account` required only for live routing | `1 MGC`, `10` bar lookback breakout, Mon/Tue/Fri, `08:20-10:30`, abs delta `<=125`, `25 / 15`, stop to breakeven after `+20`, one trade/day, `$500` daily loss lock, `16:30` flatten |
 
 Common live-capable setup gates:
@@ -109,8 +109,12 @@ MNQ Top Runner live-staging checklist:
 5. Confirm `Send Orders To Trade Service = Yes`.
 6. Confirm `Quantity = 2`, `Max Position Quantity = 2`, and
    `Daily Loss Lock USD = 300`.
-7. Confirm no other automated MNQ bot is running on the same account.
-8. Arm only when the banner reaches `ARMED - READY`.
+7. Confirm `Setup Start Time = 10:00:00`, `Setup End Time = 11:00:00`,
+   `Directional Close Location Threshold = 0.9`, and
+   `Minimum Signal Spacing Seconds = 3600`. The broader raw filter is fixed in
+   code at `10:00-12:30` with raw close-location `0.65`.
+8. Confirm no other automated MNQ bot is running on the same account.
+9. Arm only when the banner reaches `ARMED - READY`.
 
 ## Scaling Roadmap
 
@@ -460,14 +464,17 @@ study, but it is not approved for live routing.
 - [first-pass scan](reports/mnq-top-runner-research.md)
 - [refinement](reports/mnq-top-runner-refine.md)
 - [frozen validation](reports/mnq-top-runner-validation.md)
+- [deep validation](reports/mnq-top-runner-deep-validation.md)
 - [mechanics validation](reports/mnq-top-runner-mechanics-validation-2026-07-05.md)
 - [Sierra sim/replay setup](docs/sierra-mnq-top-runner-sim-bot.md)
 - [Sierra live setup](docs/sierra-mnq-top-runner-live-bot.md)
 
 Current lead:
 
-- family: `20` bar lookback breakout, continuation direction, no Friday
-- core filter: entries from `10:00-11:00`, directional close location `>= 0.9`
+- family: filtered `20` bar lookback breakout, continuation direction, no Friday
+- raw setup: `10:00-12:30`, delta `600`, raw close-location `>= 0.65`,
+  one-hour raw setup spacing
+- final tradable filter: `10:00-11:00`, directional close-location `>= 0.9`
 - exits: fixed target/stop with session flatten; no breakeven/eval geometry
 - high-PF reference: `2 MNQ`, `160 / 70` points, `87` trades, `$11772` net,
   `2.15` PF, `54.0%` win rate, `-$1854` max trade-sequence DD, `$7089`
@@ -480,6 +487,9 @@ Current lead:
   three frozen variants
 - rolling holdout stayed mostly positive across `120x40`, `180x40`, and
   `240x60` trade-date windows
+- deep validation added `8/10/12` tick slippage stress, wider holdouts,
+  period attribution, Monte Carlo trade-order risk, parameter-neighborhood
+  checks, and candidate overlap
 
 Sierra implementation:
 
@@ -487,8 +497,11 @@ Sierra implementation:
 - confirmation text: `MNQ_TOP_RUNNER_SIM`
 - CSV log path: `C:\SierraChart\Data\AxonTrade_MnqTopRunnerSimBot.csv`
 - mode: simulation/replay only; live trade-service routing is rejected
-- default build variant: high-PF `2 MNQ`, `160 / 70`, close-location `0.9`
-- replay/mechanics validation passed on `2026-07-05`
+- default build variant: filtered high-PF `2 MNQ`, `160 / 70`, final
+  close-location `0.9`
+- earlier replay/mechanics validation passed on `2026-07-05`; rerun replay
+  after the filtered-rule alignment before treating this exact build as
+  mechanics-validated
 
 Live-capable implementation:
 
@@ -496,15 +509,22 @@ Live-capable implementation:
 - confirmation text: `MNQ_TOP_RUNNER_LIVE`
 - CSV log path: `C:\SierraChart\Data\AxonTrade_MnqTopRunnerLiveBot.csv`
 - default live staging variant: lower-DD `2 MNQ`, `120 / 70`,
-  close-location `0.9`
+  final close-location `0.9`
 - default daily loss lock: `$300`, roughly one full `2 MNQ` stop before costs
 - routing gates: route-on, Sierra sim mode off, exact account whitelist,
   symbol prefix, confirmation text, data-download guard, no position/working
   orders
 
-Decision: live-capable lower-DD build exists, but controlled live staging has
-not passed yet. Do not treat it as approved unattended live automation until
-the live staging gate is recorded.
+Implementation alignment finding: the strongest frozen research used a
+two-stage filtered signal. A direct `close-location 0.9` implementation tested
+worse (`120` trades, `$8635` net, `1.57` PF, `-$1712` DD for `120 / 70`) than
+the filtered frozen lower-DD row (`87` trades, `$10135` net, `2.08` PF,
+`-$1146` DD). The ACSIL Top Runner studies now implement the filtered rule.
+
+Decision: offline research on this family is complete for the current export.
+The lower-DD live build exists, but fresh replay/mechanics and controlled live
+staging have not passed for the aligned implementation. Do not treat it as
+approved unattended live automation until those gates are recorded.
 
 ### MNQ Breakeven-Frequency Candidate (Parked)
 

@@ -390,3 +390,25 @@ Update after scaling-roadmap review:
 - README now includes Sierra manual build/arming steps and a scaling roadmap
   covering LucidFlex 25K assumptions, parallel eval math, account allocation,
   payout constraints, and rough time-to-profit planning.
+
+Update after MNQ top-runner deep validation:
+
+- The Top Runner family is now marked `100%` researched for the current MNQ
+  export, meaning the static-rule offline research budget is exhausted for this
+  dataset. This is not a profit guarantee.
+- Deep validation added `8/10/12` tick slippage stress, wider rolling holdouts,
+  period attribution, Monte Carlo trade-order risk, direct-parameter
+  neighborhood testing, and candidate overlap.
+- Important implementation finding: the strongest frozen research row is a
+  two-stage filtered rule, not a direct strict close-location rule. It uses a
+  broad raw `10:00-12:30` lookback-breakout stream with raw close-location
+  `0.65`, then a final `10:00-11:00` directional close-location filter. Raw
+  one-hour spacing is applied before the final filter.
+- Direct strict `10:00-11:00 / close-location 0.9` tested worse than the frozen
+  filtered lower-DD row: `120` trades, `$8635` net, `1.57` PF, `-$1712` DD
+  versus `87` trades, `$10135` net, `2.08` PF, `-$1146` DD.
+- The ACSIL Top Runner sim/live studies were aligned to the filtered frozen
+  rule and now expose `rawLast` on the chart status banner.
+- Prior Top Runner mechanics validation is superseded for the aligned signal
+  filter. Fresh replay/mechanics and controlled live staging are required
+  before any Top Runner live approval.

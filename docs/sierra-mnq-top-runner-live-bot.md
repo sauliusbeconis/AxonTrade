@@ -3,23 +3,27 @@
 `AxonTrade MNQ Top Runner Live Bot` is the guarded live-capable implementation
 of the MNQ top-runner lookback-breakout family.
 
-Current status: live-capable build exists. It is not approved for unattended
-live use until controlled live staging passes.
+Current status: live-capable build exists and is aligned to the filtered frozen
+research rule. It is not approved for unattended live use until fresh
+replay/mechanics and controlled live staging pass on this aligned build.
 
 ## Frozen Strategy
 
 - symbol prefix: `MNQ`
 - chart: clean `3 Min` MNQ order-flow chart with bid/ask volume available
-- setup window: `10:00:00` through `11:00:00`
+- raw setup window: `10:00:00` through `12:30:00`
+- final tradable filter window: `10:00:00` through `11:00:00`
 - weekdays: Monday through Thursday; Friday entries skipped
 - entry: `20` bar lookback breakout, `0` point buffer
 - direction: long and short continuation
 - VWAP rule: long closes at/above session VWAP; short closes at/below session VWAP
 - delta rule: long delta `>= 600`, short delta `<= -600`
-- close-location rule: directional close-location `>= 0.90`
+- raw close-location rule: directional close-location `>= 0.65`
+- final close-location rule: directional close-location `>= 0.90`
 - position: `2 MNQ` default
 - exits: `120` point target, `70` point stop
-- pacing: minimum `3600` seconds between submitted signals
+- pacing: minimum `3600` seconds between raw setups, even when a raw setup is
+  later rejected by the final filter
 - flatten: `15:45:00`
 
 This uses the lower-DD validated variant by default. The higher-PF `160 / 70`
@@ -47,21 +51,25 @@ After compiling `AxonTradeVwapDeltaExecutionBot.cpp`, add:
 | `Max Position Quantity` | `2` |
 | `Daily Loss Lock USD` | `300` |
 | `Daily Profit Lock USD` | `0`, disabled |
-| `Setup Start Time` | `10:00:00` |
-| `Setup End Time` | `11:00:00` |
+| `Setup Start Time` | `10:00:00`, final filter start and raw setup start |
+| `Setup End Time` | `11:00:00`, final filter end |
 | `Flatten Time` | `15:45:00` |
 | `Lookback Bars` | `20` |
 | `Buffer Points` | `0` |
 | `Delta Threshold` | `600` |
-| `Directional Close Location Threshold` | `0.9` |
+| `Directional Close Location Threshold` | `0.9`, final filter threshold |
 | `Target Points` | `120` |
 | `Stop Points` | `70` |
-| `Minimum Signal Spacing Seconds` | `3600` |
+| `Minimum Signal Spacing Seconds` | `3600`, raw setup spacing |
 | `Draw Status Banner` | `Yes` |
 | `Accepted Setup Alert Sound` | any enabled Sierra alert number |
 | `Draw Trade Markers And Levels` | `Yes` |
 
 Sierra trade simulation mode must be off for this study to submit.
+
+The broader raw setup filter is fixed in code at `10:00-12:30` with raw
+directional close-location `0.65`; the exposed `Setup End Time` and
+`Directional Close Location Threshold` are the final tradable filter.
 
 ## Risk Notes
 
@@ -110,8 +118,10 @@ Before arming:
 6. Set `Confirmation Text = MNQ_TOP_RUNNER_LIVE`.
 7. Set `Allowed Trade Account` to the exact selected Trade Window account.
 8. Confirm `Quantity = 2`, `Max Position Quantity = 2`, and `Daily Loss Lock USD = 300`.
-9. Confirm no other automated MNQ bot is running on the same account.
-10. Set `Arm Execution = Yes` only when the status banner shows all gates ready.
+9. Confirm `Setup End Time = 11:00:00`, `Directional Close Location Threshold = 0.9`,
+   and `Minimum Signal Spacing Seconds = 3600`.
+10. Confirm no other automated MNQ bot is running on the same account.
+11. Set `Arm Execution = Yes` only when the status banner shows all gates ready.
 
 To stop the bot, flatten/cancel if needed, then set `Arm Execution = No`.
 

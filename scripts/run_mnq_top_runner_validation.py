@@ -390,6 +390,12 @@ def _write_report(
         "",
         "## Frozen Candidates",
         "",
+        "All candidates use the base raw stream "
+        "`lookback_lb20_buf0_delta600_cl65_end1230_skipfri`: `20` bar "
+        "lookback breakout, raw close-location `0.65`, raw setup end "
+        "`12:30`, no Friday, and one-hour raw signal spacing. The filter "
+        "column is applied after that raw stream.",
+        "",
         "| Candidate | Label | Filter | Target / Stop |",
         "| --- | --- | --- | ---: |",
     ]

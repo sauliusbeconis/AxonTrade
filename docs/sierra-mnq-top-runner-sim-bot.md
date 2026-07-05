@@ -3,23 +3,29 @@
 `AxonTrade MNQ Top Runner Sim Bot` is the ACSIL simulation/replay implementation
 of the MNQ top-runner lookback-breakout research lead.
 
-Current status: Sierra replay/mechanics validation passed on `2026-07-05`. It
-is simulation-only and rejects live trade-service routing.
+Current status: offline research is complete for the current MNQ export and the
+ACSIL implementation is aligned to the filtered frozen rule. Earlier Sierra
+replay/mechanics validation passed on `2026-07-05`; rerun replay after this
+filtered-rule alignment before treating the current build as mechanics
+validated. It is simulation-only and rejects live trade-service routing.
 
 ## Frozen Strategy
 
 - symbol prefix: `MNQ`
 - chart: clean `3 Min` MNQ order-flow chart with bid/ask volume available
-- setup window: `10:00:00` through `11:00:00`
+- raw setup window: `10:00:00` through `12:30:00`
+- final tradable filter window: `10:00:00` through `11:00:00`
 - weekdays: Monday through Thursday; Friday entries skipped
 - entry: `20` bar lookback breakout, `0` point buffer
 - direction: long and short continuation
 - VWAP rule: long closes at/above session VWAP; short closes at/below session VWAP
 - delta rule: long delta `>= 600`, short delta `<= -600`
-- close-location rule: directional close-location `>= 0.90`
+- raw close-location rule: directional close-location `>= 0.65`
+- final close-location rule: directional close-location `>= 0.90`
 - position: `2 MNQ` default
 - exits: `160` point target, `70` point stop
-- pacing: minimum `3600` seconds between submitted signals
+- pacing: minimum `3600` seconds between raw setups, even when a raw setup is
+  later rejected by the final filter
 - flatten: `15:45:00`
 
 ## Study Name
@@ -42,21 +48,25 @@ After compiling `AxonTradeVwapDeltaExecutionBot.cpp`, add:
 | `Max Position Quantity` | `2` |
 | `Daily Loss Lock USD` | `0`, disabled for research replay |
 | `Daily Profit Lock USD` | `0`, disabled for research replay |
-| `Setup Start Time` | `10:00:00` |
-| `Setup End Time` | `11:00:00` |
+| `Setup Start Time` | `10:00:00`, final filter start and raw setup start |
+| `Setup End Time` | `11:00:00`, final filter end |
 | `Flatten Time` | `15:45:00` |
 | `Lookback Bars` | `20` |
 | `Buffer Points` | `0` |
 | `Delta Threshold` | `600` |
-| `Directional Close Location Threshold` | `0.9` |
+| `Directional Close Location Threshold` | `0.9`, final filter threshold |
 | `Target Points` | `160` |
 | `Stop Points` | `70` |
-| `Minimum Signal Spacing Seconds` | `3600` |
+| `Minimum Signal Spacing Seconds` | `3600`, raw setup spacing |
 | `Draw Status Banner` | `Yes` |
 | `Accepted Setup Alert Sound` | any enabled Sierra alert number |
 | `Draw Trade Markers And Levels` | `Yes` |
 
 Sierra trade simulation mode must be on.
+
+The broader raw setup filter is fixed in code at `10:00-12:30` with raw
+directional close-location `0.65`; the exposed `Setup End Time` and
+`Directional Close Location Threshold` are the final tradable filter.
 
 ## Variant Inputs
 
@@ -75,6 +85,9 @@ For the higher-sample variant, change:
 | `Directional Close Location Threshold` | `0.8` |
 | `Target Points` | `160` |
 | `Stop Points` | `70` |
+
+Changing `Directional Close Location Threshold` changes only the final filter.
+The internal raw setup remains `0.65`.
 
 ## Live Routing
 
