@@ -41,7 +41,7 @@ simulation-only.
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 🟢 | `AxonTrade MNQ Eval Pass Combined Bot` | eval-pass A+B wave-rider | 80% | 60% | 75% | `$28988` | `2.29` | `62.3%` | `1.2` | Live test/mechanics passed; controlled live routing approved for the validated A+B eval setup. |
 | 🟢 | `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta profitability lead | 75% | 20% | 75% | `$9584.50` | `2.09` | `80.1%` | `1.8` | Live test/mechanics passed; controlled live routing approved for the validated VWAP/delta setup. |
-| 🟡 | `AxonTrade MNQ Top Runner Sim Bot` | normal-profitability runner replay | 70% | 0% | 0% | `$11772` | `2.15` | `54.0%` | `0.85` | New active research lead after skipping the breakeven-frequency path. Sim/replay study built; not live-approved. |
+| 🟡 | `AxonTrade MNQ Top Runner Sim Bot` | normal-profitability runner replay | 75% | 0% | 0% | `$11772` | `2.15` | `54.0%` | `0.85` | Replay/mechanics passed. Next gate is live-capable implementation review and risk envelope selection; not live-approved. |
 
 Backlog: other instruments such as `MCL` stay at `0%` readiness until MNQ/MGC
 work stalls or a new export creates a stronger reason to branch.
@@ -254,6 +254,7 @@ study, but it is not approved for live routing.
 - [first-pass scan](reports/mnq-top-runner-research.md)
 - [refinement](reports/mnq-top-runner-refine.md)
 - [frozen validation](reports/mnq-top-runner-validation.md)
+- [mechanics validation](reports/mnq-top-runner-mechanics-validation-2026-07-05.md)
 - [Sierra sim/replay setup](docs/sierra-mnq-top-runner-sim-bot.md)
 
 Current lead:
@@ -280,11 +281,12 @@ Sierra implementation:
 - CSV log path: `C:\SierraChart\Data\AxonTrade_MnqTopRunnerSimBot.csv`
 - mode: simulation/replay only; live trade-service routing is rejected
 - default build variant: high-PF `2 MNQ`, `160 / 70`, close-location `0.9`
+- replay/mechanics validation passed on `2026-07-05`
 
-Decision: replay/mechanics candidate. Do not live-route it until replay
-mechanics confirms the signal/exit behavior and a separate live-capable
-implementation review chooses between the high-PF, lower-DD, and higher-sample
-variants.
+Decision: mechanics passed, but this specific study remains simulation-only. Do
+not live-route it. The next step is a separate live-capable implementation
+review that chooses between the high-PF, lower-DD, and higher-sample variants
+and defines account-level risk locks.
 
 ### MNQ Breakeven-Frequency Candidate (Parked)
 

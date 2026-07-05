@@ -3,8 +3,8 @@
 `AxonTrade MNQ Top Runner Sim Bot` is the ACSIL simulation/replay implementation
 of the MNQ top-runner lookback-breakout research lead.
 
-Current status: built for Sierra replay/mechanics validation. It is
-simulation-only and rejects live trade-service routing.
+Current status: Sierra replay/mechanics validation passed on `2026-07-05`. It
+is simulation-only and rejects live trade-service routing.
 
 ## Frozen Strategy
 
@@ -84,6 +84,8 @@ Do not use this study for live routing.
 - The study forces `sc.SendOrdersToTradeService = false`.
 - There is no live confirmation text.
 - It is not approved for controlled live routing.
+- Passing replay/mechanics does not change this; a separate live-capable study
+  must be reviewed and built before any live promotion.
 
 ## Status Banner
 

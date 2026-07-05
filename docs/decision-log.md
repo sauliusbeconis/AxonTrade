@@ -346,3 +346,15 @@ Update after MNQ top-runner research:
   replay/mechanics only with confirmation text `MNQ_TOP_RUNNER_SIM`.
 - Live trade-service routing is intentionally rejected. The next gate is Sierra
   replay/mechanics validation, not live promotion.
+
+Update after MNQ top-runner mechanics validation:
+
+- On `2026-07-05`, operator replay/mechanics validation passed for
+  `AxonTrade MNQ Top Runner Sim Bot`.
+- This confirms the simulation/replay study is usable as the mechanics
+  reference for the top-runner family.
+- Live routing remains intentionally blocked in this study.
+- The next gate is a live-capable implementation review: choose between the
+  high-PF `160 / 70`, lower-DD `120 / 70`, and higher-sample `cl >= 0.8`
+  variants, then define account-level daily locks and multi-account scaling
+  rules.
