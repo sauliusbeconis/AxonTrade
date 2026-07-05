@@ -358,3 +358,19 @@ Update after MNQ top-runner mechanics validation:
   high-PF `160 / 70`, lower-DD `120 / 70`, and higher-sample `cl >= 0.8`
   variants, then define account-level daily locks and multi-account scaling
   rules.
+
+Update after MNQ top-runner live-capable build:
+
+- The first live-capable top-runner build uses the lower-DD variant rather than
+  the high-PF variant: `2 MNQ`, `120 / 70`, directional close location `>= 0.9`.
+- Rationale: the high-PF `160 / 70` row has stronger net/PF but larger
+  drawdown; first controlled live staging should prioritize the smoother
+  `-$1146` historical drawdown profile from the lower-DD row.
+- Default live risk lock is `$300` daily loss, which is roughly one full
+  `2 MNQ` stop before costs.
+- New Sierra study: `AxonTrade MNQ Top Runner Live Bot`.
+- Confirmation text: `MNQ_TOP_RUNNER_LIVE`.
+- The existing `AxonTrade MNQ Top Runner Sim Bot` remains simulation-only and
+  continues to reject live trade-service routing.
+- This is a controlled live-staging candidate, not approved unattended
+  automation.

@@ -86,6 +86,8 @@ Do not use this study for live routing.
 - It is not approved for controlled live routing.
 - Passing replay/mechanics does not change this; a separate live-capable study
   must be reviewed and built before any live promotion.
+- Use `AxonTrade MNQ Top Runner Live Bot` with `MNQ_TOP_RUNNER_LIVE` for the
+  separate controlled live-staging path.
 
 ## Status Banner
 
