@@ -3,9 +3,10 @@
 `AxonTrade MNQ Eval Live Bot` is the guarded live-capable prop-eval study built
 from `AxonTradeVwapDeltaExecutionBot.cpp`.
 
-Current status: Sierra live test/mechanics passed on `2026-07-05`. Controlled
-live routing is approved for the validated MNQ VWAP/delta setup when armed and
-all live gates pass.
+Current status: Sierra live test/mechanics passed on `2026-07-05`. Final
+offline validation completed on `2026-07-05`; controlled live routing is
+approved for the validated MNQ VWAP/delta setup when armed and all live gates
+pass.
 
 ## Live Gates
 
@@ -39,6 +40,30 @@ Expected ready banner:
 - daily profit lock: `$650`
 - max eval trailing drawdown: `$1000`
 - move stop to breakeven after target 1: `No`
+
+## Research Evidence
+
+Primary report: [MNQ Eval Live final validation](../reports/mnq-eval-live-final-validation.md)
+
+Executable live-sequenced baseline:
+
+- `166` trades
+- `$8897` net
+- `2.12` profit factor
+- `82.5%` win rate
+- `-$924.50` chronological drawdown
+- six-tick stress: `$8067` net, `2.00` PF, `-$944.50` drawdown
+
+Legacy independent audit:
+
+- `186` trades
+- `$9584.50` net
+- `2.09` PF
+- `-$976` drawdown
+
+The independent audit is retained for research comparability, but the
+live-sequenced baseline is the executable baseline because this study rejects
+entries while a prior position or working order is still open.
 
 ## Required Setup
 

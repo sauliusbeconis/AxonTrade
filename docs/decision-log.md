@@ -444,3 +444,27 @@ Update after MGC final validation:
   `1 MGC` sizing and account-level risk buffers remain mandatory.
 - Next gate is operational forward evidence, not more static tuning or size
   increase.
+
+Update after MNQ Eval Live final validation:
+
+- `AxonTrade MNQ Eval Live Bot` is now marked `100%` researched for the current
+  MNQ export. This means the fixed-rule offline research budget is saturated
+  for this dataset, not that future profitability is guaranteed.
+- Final validation separates the legacy independent audit from the executable
+  live-sequenced path. The legacy audit remains `186` trades, `$9584.50` net,
+  `2.09` PF, and `-$976` DD, but it includes overlapping paper trades that the
+  ACSIL position/working-order gate would reject.
+- The executable live-sequenced baseline is now the headline: `166` trades,
+  `$8897` net, `2.12` PF, `82.5%` win rate, `-$924.50` chronological DD, and
+  about `1.62` trades/week.
+- Six-tick live-sequenced stress remains strong at `$8067` net, `2.00` PF, and
+  `-$944.50` chronological DD. Twelve-tick stress remains positive at `$7071`
+  and `1.85` PF.
+- A `15552` row neighborhood search tested local entry thresholds, spacing
+  alternatives, exits, and runner-stop modes. No row replaced the current live
+  defaults under the final live-sequenced lens.
+- Main caution remains path risk: live-sequenced Monte Carlo median drawdown is
+  about `-$1193`, P95 about `-$1931`, so this bot still needs account-level
+  buffer and aggregate risk control before scaling.
+- Next gate is monitored forward evidence, not more static tuning or default
+  changes.

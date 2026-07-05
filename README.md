@@ -40,7 +40,7 @@ simulation-only.
 | Status | Bot / Track | Use | Research | Forward | Live | Net | PF | Win Rate | Avg Trades / Week | Current Decision |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 🟢 | `AxonTrade MNQ Eval Pass Combined Bot` | eval-pass A+B wave-rider | 80% | 60% | 75% | `$28988` | `2.29` | `62.3%` | `1.2` | Live test/mechanics passed; controlled live routing approved for the validated A+B eval setup. |
-| 🟢 | `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta profitability lead | 75% | 20% | 75% | `$9584.50` | `2.09` | `80.1%` | `1.8` | Live test/mechanics passed; controlled live routing approved for the validated VWAP/delta setup. |
+| 🟢 | `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta profitability lead | 100% | 20% | 75% | `$8897` | `2.12` | `82.5%` | `1.6` | Offline research is saturated for the current export using live-sequenced execution. Controlled live routing remains approved for the validated VWAP/delta setup. |
 | 🟡 | `AxonTrade MNQ Top Runner Live Bot` | normal-profitability runner live candidate | 100% | 0% | 35% | `$10135` | `2.08` | `57.5%` | `0.85` | Offline research is saturated, ACSIL is aligned to the filtered frozen rule, and fresh replay/mechanics passed. Requires controlled live staging before approval. |
 
 Backlog: other instruments such as `MCL` stay at `0%` readiness until MNQ/MGC
@@ -246,10 +246,10 @@ These are planning rates from historical research, not promises.
 | Bot / Stack | Current Status | Gross Planning Rate Per Account | Main Risk |
 | --- | --- | ---: | --- |
 | MGC Normal `1 MGC` | controlled live approved | about `$110/week` | slow growth |
-| MNQ VWAP/delta `1+1 MNQ` | controlled live approved | about `$90-$110/week` | wide stop, near-`$1000` historical DD |
+| MNQ VWAP/delta `1+1 MNQ` | controlled live approved | about `$85-$100/week` | wide stop, near-`$1000` historical DD |
 | MNQ Top Runner `2 MNQ` lower-DD | staging only | about `$95-$100/week` | not live-staging approved yet |
-| MGC + MNQ VWAP/delta | buffer-required stack | about `$200-$225/week` | combined account drawdown |
-| MGC + MNQ VWAP/delta + Top Runner | future stack | about `$295-$325/week` | needs Top Runner live approval and aggregate risk lock |
+| MGC + MNQ VWAP/delta | buffer-required stack | about `$195-$210/week` | combined account drawdown |
+| MGC + MNQ VWAP/delta + Top Runner | future stack | about `$290-$310/week` | needs Top Runner live approval and aggregate risk lock |
 
 Approximate trader-side profit time after a full `5` funded accounts are active,
 using the `90%` split and ignoring payout-processing delays:
@@ -343,14 +343,24 @@ Strengths:
 - Separate MNQ-sized VWAP/delta research lead, not a copied ES/MES setup.
 - Best local lead: `80pt_400d_cl0.4`, no Friday and no `11:00`/`15:00`
   entries, exit `25 / 140 / 40 / initial`.
-- Research sample: `186` trades, `$9584.50` net, `2.09` profit factor,
-  `-$976` max realized drawdown, positive `2024`, `2025`, and `2026`.
+- Final live-sequenced research sample: `166` executable trades, `$8897` net,
+  `2.12` profit factor, `82.5%` win rate, `-$924.50` chronological drawdown,
+  positive `2024`, `2025`, and `2026`.
+- Legacy independent paper audit remains useful for comparability:
+  `186` trades, `$9584.50` net, `2.09` PF, `-$976` drawdown. This is no
+  longer the live headline because it includes overlapping trades that the
+  ACSIL position/working-order gate would reject.
+- Final validation tested `15552` nearby rows, extended slippage through
+  `12` ticks, rolling holdouts, period stress, and Monte Carlo trade-order
+  risk. No row replaced the current live defaults under the final lens.
 
 Weaknesses:
 
 - Stop is wide at `140` MNQ points.
 - It is a profitability research lead, not specifically optimized for the
   fastest eval pass.
+- Monte Carlo shuffled paths are worse than chronological drawdown: base
+  live-sequenced median drawdown was about `-$1193`, P95 about `-$1931`.
 - Live test/mechanics passed on `2026-07-05`; keep the validated sizing and
   routing gates until forward sample justifies changes.
 
@@ -358,6 +368,7 @@ Primary docs:
 
 - [MNQ live setup](docs/sierra-vwap-delta-mnq-eval-live-bot.md)
 - [MNQ VWAP/delta research](reports/mnq-vwap-delta-expanded-720d-research.md)
+- [MNQ Eval Live final validation](reports/mnq-eval-live-final-validation.md)
 
 ### MNQ Eval-Pass Combined Bot
 

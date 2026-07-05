@@ -48,7 +48,9 @@ MNQ now has two distinct tracks:
 
 - `AxonTrade MNQ Eval Live Bot`: guarded ACSIL implementation of the MNQ
   VWAP/delta local lead. Live test/mechanics passed on `2026-07-05`, and it is
-  approved for controlled live routing under the `MNQ_EVAL_LIVE` gates.
+  approved for controlled live routing under the `MNQ_EVAL_LIVE` gates. Final
+  offline validation is complete for the current export, using live-sequenced
+  execution as the headline baseline.
 - `AxonTrade MNQ Eval Pass Combined Bot`: guarded ACSIL implementation of the
   MNQ eval-pass wave-rider A+B policy. It directly targets the `$1250` target,
   `-$1000` max loss, and `50%` consistency eval geometry. Live test/mechanics
@@ -276,6 +278,14 @@ NQ/MNQ:
 - do not copy ES/MES thresholds directly;
 - both MNQ candidates passed live test/mechanics on `2026-07-05`; the next gate
   is monitored forward sample, not size increase;
+- MNQ VWAP/delta final validation corrected the headline stats from the legacy
+  independent audit to the executable live-sequenced path: `166` trades,
+  `$8897` net, `2.12` PF, `82.5%` win rate, and `-$924.50` chronological DD.
+  The old independent audit was `186` trades and `$9584.50`, but it included
+  overlapping paper trades that the ACSIL position/working-order gate rejects;
+- `15552` nearby MNQ VWAP/delta rows were tested with spacing alternatives,
+  runner-stop modes, exits, and local entry thresholds. No row replaced the
+  current defaults under the final live-sequenced lens;
 - if MNQ cannot produce an acceptable eval-pass candidate, move fresh research
   to another micro contract such as MGC.
 
