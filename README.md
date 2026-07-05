@@ -13,7 +13,8 @@ Status date: `2026-07-05`.
 
 Overall goal: build a profitable live trading bot, with the near-term practical
 path split between controlled MES evaluation trading, controlled MGC
-normal-profitability trading, and MNQ eval-pass research.
+normal-profitability trading, MNQ eval-pass execution, and MNQ normal-runner
+research.
 
 Percentages below are engineering readiness estimates, not profit forecasts or
 win probabilities. Research stats are backtest/replay evidence after the
@@ -40,7 +41,7 @@ simulation-only.
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 🟢 | `AxonTrade MNQ Eval Pass Combined Bot` | eval-pass A+B wave-rider | 80% | 60% | 75% | `$28988` | `2.29` | `62.3%` | `1.2` | Live test/mechanics passed; controlled live routing approved for the validated A+B eval setup. |
 | 🟢 | `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta profitability lead | 75% | 20% | 75% | `$9584.50` | `2.09` | `80.1%` | `1.8` | Live test/mechanics passed; controlled live routing approved for the validated VWAP/delta setup. |
-| 🟡 | `MNQ Breakeven-Frequency Candidate` | risk-managed short continuation research | 60% | 0% | 0% | `$5235.50` | `1.54` | `75.0%` | `1.25` | First non-rejected research candidate. Use `3 MNQ 2+1` as balanced reference; next gate is replay/mechanics, not bot build. |
+| 🟡 | `MNQ Top-Runner Lookback Candidate` | normal-profitability runner research | 70% | 0% | 0% | `$11772` | `2.15` | `54.0%` | `0.85` | New active research lead after skipping the breakeven-frequency path. Serious replay candidate only; not implemented or live-approved. |
 
 Backlog: other instruments such as `MCL` stay at `0%` readiness until MNQ/MGC
 work stalls or a new export creates a stronger reason to branch.
@@ -243,7 +244,38 @@ Faster-cadence B setup under validation:
 - decision: best faster B research lead after applying the trailing drawdown
   floor; freeze this row if testing it, do not build an adaptive optimizer
 
-### MNQ Breakeven-Frequency Candidate
+### MNQ Top-Runner Lookback Candidate
+
+This is the active MNQ normal-profitability research lead after explicitly
+skipping the breakeven-frequency path. It is not implemented as ACSIL and is not
+approved for live routing.
+
+- [first-pass scan](reports/mnq-top-runner-research.md)
+- [refinement](reports/mnq-top-runner-refine.md)
+- [frozen validation](reports/mnq-top-runner-validation.md)
+
+Current lead:
+
+- family: `20` bar lookback breakout, continuation direction, no Friday
+- core filter: entries from `10:00-11:00`, directional close location `>= 0.9`
+- exits: fixed target/stop with session flatten; no breakeven/eval geometry
+- high-PF reference: `2 MNQ`, `160 / 70` points, `87` trades, `$11772` net,
+  `2.15` PF, `54.0%` win rate, `-$1854` max trade-sequence DD, `$7089`
+  latest-year net
+- lower-DD reference: same signal/filter with `120 / 70`, `$10135` net, `2.08`
+  PF, `-$1146` DD
+- higher-sample reference: close-location `>= 0.8` with `160 / 70`, `158`
+  trades, `$17334` net, `1.86` PF, `-$1811` DD
+- slippage stress through `6` total ticks per contract stayed positive for all
+  three frozen variants
+- rolling holdout stayed mostly positive across `120x40`, `180x40`, and
+  `240x60` trade-date windows
+
+Decision: serious replay candidate. Do not build or live-route it until replay
+mechanics confirms the signal/exit behavior and a separate ACSIL implementation
+review chooses between the high-PF, lower-DD, and higher-sample variants.
+
+### MNQ Breakeven-Frequency Candidate (Parked)
 
 This is a research-only MNQ risk-management candidate. It is not implemented as
 an ACSIL bot and is not approved for live routing.
@@ -254,7 +286,7 @@ an ACSIL bot and is not approved for live routing.
 - [candidate validation](reports/mnq-breakeven-frequency-candidate-validation.md)
 - [fixed holdout](reports/mnq-breakeven-frequency-walk-forward.md)
 
-Current candidate:
+Parked reference:
 
 - signal: short-only MNQ lookback continuation,
   `lb20 / buf2.5 / delta600 / cl0.55 / end12:30 / skip Friday`
@@ -269,8 +301,8 @@ Current candidate:
 - fixed `240x60` holdouts were positive; shorter `40`-day holdouts remained
   noisy with losing windows
 
-Decision: keep as a serious replay candidate. Do not build a live bot until it
-passes replay/mechanics validation and a separate ACSIL implementation review.
+Decision: parked by user decision on `2026-07-05`. Do not spend more time on
+this path unless it is explicitly revived.
 
 ### MGC Normal BreakEven Bot
 
