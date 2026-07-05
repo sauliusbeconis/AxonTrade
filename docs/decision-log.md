@@ -423,3 +423,24 @@ Update after filtered MNQ top-runner replay/mechanics pass:
   gate is controlled live staging of `AxonTrade MNQ Top Runner Live Bot` with
   `MNQ_TOP_RUNNER_LIVE`, exact account whitelist, `2 MNQ`, lower-DD `120 / 70`,
   and `$300` daily loss lock.
+
+Update after MGC final validation:
+
+- `AxonTrade MGC Normal BreakEven Bot` is now marked `100%` researched for the
+  current MGC one-minute order-flow export. This means the fixed-rule offline
+  research budget is saturated for this dataset, not that future profitability
+  is guaranteed.
+- Final validation reproduced the frozen live rule at `343` sequenced trades:
+  `$13298` net, `1.76` PF, `-$677` chronological drawdown, and about `2.86`
+  trades/week at base cost.
+- Six-tick stress remains strong at `$11583` net, `1.64` PF, and `-$722`
+  chronological drawdown. Twelve-tick stress remains net positive at `$9525`
+  and roughly `1.50` PF.
+- Wider holdouts, period attribution, sensitivity digest, and context-exclusion
+  review did not replace the current `10:30 / cl0.45 / delta125 / 25-15 /
+  BE+20` live rule.
+- Monte Carlo trade-order risk is the main caution: base-cost shuffled paths
+  had median drawdown around `-$1131` and P95 around `-$1761`, so controlled
+  `1 MGC` sizing and account-level risk buffers remain mandatory.
+- Next gate is operational forward evidence, not more static tuning or size
+  increase.

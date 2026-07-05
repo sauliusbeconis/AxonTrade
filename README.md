@@ -27,7 +27,7 @@ simulation-only.
 
 | Status | Bot / Track | Use | Research | Forward | Live | Net | PF | Win Rate | Avg Trades / Week | Current Decision |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 🟢 | `AxonTrade MGC Normal BreakEven Bot` | normal-profitability live bot | 75% | 5% | 75% | `$13298` | `1.76` | `55.4%` | `2.9` | Live staging passed; controlled `1 MGC` routing approved. Next gate is monitored forward sample, not size increase. |
+| 🟢 | `AxonTrade MGC Normal BreakEven Bot` | normal-profitability live bot | 100% | 5% | 75% | `$13298` | `1.76` | `55.4%` | `2.9` | Offline research is saturated for the current export; live staging passed and controlled `1 MGC` routing is approved. Next gate is monitored forward sample and account-level risk, not size increase. |
 
 ### MES
 
@@ -622,7 +622,10 @@ Core default inputs:
 
 Research status:
 
-MGC is being researched as a normal profitability bot, not an eval-pass bot.
+MGC is fully researched for the current one-minute order-flow export as a
+normal-profitability bot, not an eval-pass bot. `100%` here means the static
+offline research budget is saturated for this dataset, not guaranteed future
+profit.
 
 Primary docs:
 
@@ -639,6 +642,7 @@ Primary docs:
 - [lookback trade management](reports/mgc-lookback-trade-management.md)
 - [lookback break-even sensitivity](reports/mgc-lookback-breakeven-sensitivity.md)
 - [lookback context stress](reports/mgc-lookback-context-stress.md)
+- [final validation](reports/mgc-final-validation.md)
 
 Current higher-frequency offline lead:
 
@@ -658,6 +662,15 @@ Current higher-frequency offline lead:
   `$11583` full-sample net, `1.64` PF, `+$5666` latest-year net, `+$4858`
   recent 120 trade-day net, `$29283` aggregate holdout net, `1.84` holdout PF,
   `25 / 26` positive holdout windows, and `-$261` worst holdout window
+- final validation added extended slippage through `12` ticks, wider rolling
+  holdouts, period attribution, Monte Carlo trade-order risk, sensitivity
+  digest, and context-exclusion review. The rule stays net positive through
+  `12` ticks (`$9525`, `1.50` PF rounded) and the six-tick stress row remains
+  materially profitable.
+- Monte Carlo path-risk is the main caution: chronological drawdown is `-$677`,
+  but shuffled base-cost paths had median drawdown near `-$1131` and P95 near
+  `-$1761`. This supports small `1 MGC` sizing and account-level risk buffers
+  before scaling.
 - broad search context: `7` families and `2511` compact variants were tested;
   lookback breakout was the only family that improved sample size and stayed
   close enough to refine
@@ -695,13 +708,14 @@ Secondary lower-frequency quality lead:
   `$3300` net, `1.41` PF, `+$1408` latest-year net, `+$1293` recent 120
   trade-day net
 
-Decision: MGC now has a serious fixed-rule offline candidate and a matching
-ACSIL implementation with a simple break-even management rule. Sierra mechanics
-validation and supervised live staging have passed. It is approved for
-controlled `1 MGC` live routing with clean chart data, exact account whitelist,
-`MGC_NORMAL_LIVE`, Sierra simulation mode off, and no other automated bot on the
-same account/instrument. The next evidence gate is monitored forward sample,
-not size increase.
+Decision: MGC is `100%` offline researched for the current export and has a
+matching ACSIL implementation with a simple break-even management rule. Sierra
+mechanics validation and supervised live staging have passed. It is approved
+for controlled `1 MGC` live routing with clean chart data, exact account
+whitelist, `MGC_NORMAL_LIVE`, Sierra simulation mode off, and no other
+automated bot on the same account/instrument. The next evidence gate is
+monitored forward sample and account-level risk, not more static tuning or size
+increase.
 
 ## Operating Rules
 

@@ -303,6 +303,15 @@ MGC:
   but thinner: `$11583` net, `1.64` PF, `+$5666` latest-year net, `+$4858`
   recent 120 trade-day net, `$29283` aggregate holdout net, `1.84` holdout PF,
   `25 / 26` positive holdout windows, and `-$261` worst holdout window;
+- final validation on `2026-07-05` marks MGC `100%` researched for the current
+  export. The pass added extended slippage through `12` ticks, wider rolling
+  holdouts, period attribution, Monte Carlo trade-order risk, sensitivity
+  digest, and context-exclusion review;
+- the final validation keeps the frozen live rule. It remains positive through
+  `12` ticks (`$9525` net, `1.50` PF rounded), but Monte Carlo path-risk is
+  meaningfully higher than chronological drawdown (`-$677` chronological
+  base-cost DD versus about `-$1131` median shuffled DD), so `1 MGC` sizing and
+  account-level buffers stay mandatory;
 - adaptive walk-forward selection is rejected because it produced negative
   aggregate holdout net on the `180x40` and `240x60` views;
 - the weekday rule is fixed, not adaptive: trade Monday/Tuesday/Friday only,
@@ -328,9 +337,10 @@ MGC:
   trade-day net, `-$177` worst quarter;
 - at `6` total slippage ticks/contract, `1 MGC` still shows `$3300` net,
   `1.41` PF, `+$1408` latest-year net, and `+$1293` recent 120 trade-day net;
-- treat MGC as a serious fixed-rule offline candidate with a matching ACSIL
-  implementation now built as `AxonTrade MGC Normal BreakEven Bot`. Sierra
-  mechanics validation and supervised live staging passed on `2026-07-05`.
-  Controlled `1 MGC` live routing is approved with clean chart data and exact
-  routing/account gates. The next evidence gate is monitored forward sample,
-  not size increase.
+- treat MGC as a completed fixed-rule offline research track for this export,
+  with a matching ACSIL implementation now built as
+  `AxonTrade MGC Normal BreakEven Bot`. Sierra mechanics validation and
+  supervised live staging passed on `2026-07-05`. Controlled `1 MGC` live
+  routing is approved with clean chart data and exact routing/account gates.
+  The next evidence gate is monitored forward sample and account-level risk,
+  not more static tuning or size increase.
