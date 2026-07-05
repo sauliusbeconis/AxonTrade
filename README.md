@@ -40,6 +40,7 @@ simulation-only.
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 🟢 | `AxonTrade MNQ Eval Pass Combined Bot` | eval-pass A+B wave-rider | 80% | 60% | 75% | `$28988` | `2.29` | `62.3%` | `1.2` | Live test/mechanics passed; controlled live routing approved for the validated A+B eval setup. |
 | 🟢 | `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta profitability lead | 75% | 20% | 75% | `$9584.50` | `2.09` | `80.1%` | `1.8` | Live test/mechanics passed; controlled live routing approved for the validated VWAP/delta setup. |
+| 🟡 | `MNQ Breakeven-Frequency Candidate` | risk-managed short continuation research | 60% | 0% | 0% | `$5235.50` | `1.54` | `75.0%` | `1.25` | First non-rejected research candidate. Use `3 MNQ 2+1` as balanced reference; next gate is replay/mechanics, not bot build. |
 
 Backlog: other instruments such as `MCL` stay at `0%` readiness until MNQ/MGC
 work stalls or a new export creates a stronger reason to branch.
@@ -241,6 +242,35 @@ Faster-cadence B setup under validation:
   trades to pass
 - decision: best faster B research lead after applying the trailing drawdown
   floor; freeze this row if testing it, do not build an adaptive optimizer
+
+### MNQ Breakeven-Frequency Candidate
+
+This is a research-only MNQ risk-management candidate. It is not implemented as
+an ACSIL bot and is not approved for live routing.
+
+- [baseline scan](reports/mnq-breakeven-frequency-research.md)
+- [filter refinement](reports/mnq-breakeven-frequency-refine.md)
+- [risk refinement](reports/mnq-breakeven-frequency-risk-refine.md)
+- [candidate validation](reports/mnq-breakeven-frequency-candidate-validation.md)
+- [fixed holdout](reports/mnq-breakeven-frequency-walk-forward.md)
+
+Current candidate:
+
+- signal: short-only MNQ lookback continuation,
+  `lb20 / buf2.5 / delta600 / cl0.55 / end12:30 / skip Friday`
+- filter: directional VWAP distance `<= 120`
+- management: first target `30`, initial stop `50`, runner target `120`, move
+  runner stop to breakeven after target one
+- balanced reference: `3 MNQ`, split `2+1`, `128` trades, `$5235.50` net,
+  `1.54` PF, `75.0%` target-one reach, `-$1249.50` max trade-sequence DD
+- growth reference: `4 MNQ`, split `3+1`, `$7603.50` net, `1.59` PF,
+  `-$1624` max trade-sequence DD
+- slippage stress through `6` ticks stayed positive on `2`, `3`, and `4` MNQ
+- fixed `240x60` holdouts were positive; shorter `40`-day holdouts remained
+  noisy with losing windows
+
+Decision: keep as a serious replay candidate. Do not build a live bot until it
+passes replay/mechanics validation and a separate ACSIL implementation review.
 
 ### MGC Normal BreakEven Bot
 
