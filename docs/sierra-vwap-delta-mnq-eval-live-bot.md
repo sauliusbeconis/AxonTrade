@@ -3,8 +3,9 @@
 `AxonTrade MNQ Eval Live Bot` is the guarded live-capable prop-eval study built
 from `AxonTradeVwapDeltaExecutionBot.cpp`.
 
-Manual help needed: **Yes.** This study can route live trade-service orders when
-armed and all live gates pass.
+Current status: Sierra live test/mechanics passed on `2026-07-05`. Controlled
+live routing is approved for the validated MNQ VWAP/delta setup when armed and
+all live gates pass.
 
 ## Live Gates
 
@@ -54,9 +55,9 @@ Expected ready banner:
 6. Reset eval drawdown tracking once after loading the study.
 7. Before arming, confirm the banner shows every gate as passing except arm/route.
 
-## Arming
+## Controlled Live Routing Checklist
 
-Only after setup and replay/mechanics verification:
+Before arming live:
 
 1. Confirm selected chart symbol starts with `MNQ`.
 2. Confirm selected trade account is the eval account.

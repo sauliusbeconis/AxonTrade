@@ -95,7 +95,9 @@ whitelist, and `MNQ_EVAL_LIVE` confirmation text. MNQ A+B implements the
 combined eval-pass wave-rider candidate, with `12 MNQ` A+ and `4 MNQ` B
 modules, exactly one trade per chart date, `$900` daily loss lock, `$650` daily
 profit lock, `$1000` eval trailing drawdown lock, and
-`MNQ_EVAL_PASS_AB_LIVE` confirmation text. MGC implements the frozen
+`MNQ_EVAL_PASS_AB_LIVE` confirmation text. Both MNQ studies passed live
+test/mechanics on `2026-07-05` and are approved for controlled live routing
+under their documented gates. MGC implements the frozen
 lookback-breakout normal-profitability lead with `1 MGC`, `25 / 15` exits,
 stop-to-breakeven after `+20` points, Monday/Tuesday/Friday only, one trade per
 chart date, `MGC_NORMAL_SIM` for replay/sim mode, and `MGC_NORMAL_LIVE` for

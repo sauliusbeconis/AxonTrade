@@ -47,13 +47,13 @@ treated as a permanent post-evaluation profit cap.
 MNQ now has two distinct tracks:
 
 - `AxonTrade MNQ Eval Live Bot`: guarded ACSIL implementation of the MNQ
-  VWAP/delta local lead. It is live-capable in code but not approved for live
-  use until replay/mechanics validation is complete.
+  VWAP/delta local lead. Live test/mechanics passed on `2026-07-05`, and it is
+  approved for controlled live routing under the `MNQ_EVAL_LIVE` gates.
 - `AxonTrade MNQ Eval Pass Combined Bot`: guarded ACSIL implementation of the
   MNQ eval-pass wave-rider A+B policy. It directly targets the `$1250` target,
-  `-$1000` max loss, and `50%` consistency eval geometry. It is built in source
-  but not approved for live use until Sierra compile, replay, and mechanics
-  validation are complete.
+  `-$1000` max loss, and `50%` consistency eval geometry. Live test/mechanics
+  passed on `2026-07-05`, and it is approved for controlled live routing under
+  the `MNQ_EVAL_PASS_AB_LIVE` gates.
 
 The MNQ eval-pass wave-rider research first superseded the older `lb10` /
 `absdelta1172` lead after correcting the sweep acceptance lens to `40` minimum
@@ -209,10 +209,11 @@ the same parameters are optimal for NQ/MNQ.
 
 `AxonTrade MNQ Eval Live Bot`
 
-- live-capable MNQ prop-eval study in code;
+- controlled live-routing MNQ prop-eval study;
 - requires `MNQ_EVAL_LIVE`;
 - based on MNQ-specific VWAP/delta local research;
-- not approved for live use until replay/mechanics and risk validation pass.
+- live test/mechanics passed on `2026-07-05`; keep validated sizing and risk
+  gates until forward sample justifies changes.
 
 MNQ eval-pass wave rider
 
@@ -221,13 +222,14 @@ MNQ eval-pass wave rider
 - ACSIL implementation: `AxonTrade MNQ Eval Pass Combined Bot`;
 - Sierra setup: `docs/sierra-mnq-eval-pass-combined-bot.md`;
 - intended to search for faster eval-pass geometry, not general profitability;
-- not approved for live use until Sierra compile, replay/mechanics, and risk
-  validation pass.
+- live test/mechanics passed on `2026-07-05`; approved for controlled live
+  routing under the documented A+B eval gates.
 
 ## Live Operating Rules
 
-Only the MES eval study may route live orders. The sim-only execution study must
-continue rejecting live trade-service routing.
+The MES eval, MNQ VWAP/delta, MNQ eval-pass combined, and MGC normal BreakEven
+studies may route live orders only under their documented controlled-live gates.
+The sim-only execution study must continue rejecting live trade-service routing.
 
 Before arming:
 
@@ -272,8 +274,8 @@ NQ/MNQ:
 - keep MNQ VWAP/delta profitability research separate from MNQ eval-pass
   wave-rider research;
 - do not copy ES/MES thresholds directly;
-- next gates for the wave rider are Sierra compile, replay/mechanics
-  validation, and explicit risk validation;
+- both MNQ candidates passed live test/mechanics on `2026-07-05`; the next gate
+  is monitored forward sample, not size increase;
 - if MNQ cannot produce an acceptable eval-pass candidate, move fresh research
   to another micro contract such as MGC.
 

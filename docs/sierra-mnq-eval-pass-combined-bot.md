@@ -1,7 +1,8 @@
 # Sierra MNQ Eval-Pass Combined Bot
 
-Manual help needed: **Yes.** Sierra Chart must compile and load the updated
-ACSIL study before replay/mechanics testing.
+Current status: Sierra live test/mechanics passed on `2026-07-05`. Controlled
+live routing is approved for the validated MNQ A+B eval-pass setup under the
+gates below.
 
 `AxonTrade MNQ Eval Pass Combined Bot` is the live-capable ACSIL implementation
 of the combined MNQ eval-pass A+B research candidate.
@@ -11,9 +12,9 @@ of the combined MNQ eval-pass A+B research candidate.
 - source: `src/acsil/AxonTradeVwapDeltaExecutionBot.cpp`
 - Sierra export: `scsf_AxonTradeMnqEvalPassCombinedBot`
 - chart study name: `AxonTrade MNQ Eval Pass Combined Bot`
-- current state: built in source, syntax checked, pending Sierra compile and
-  replay/mechanics validation
-- live approval: **not approved yet**
+- current state: built in source, syntax checked, Sierra live test/mechanics
+  passed
+- live approval: **approved for controlled live routing**
 
 ## Strategy
 
@@ -87,7 +88,7 @@ The bot blocks new entries unless all live gates pass:
 
 It also does not submit orders during full recalculation.
 
-## Next Validation
+## Controlled Live Routing Checklist
 
 1. Source has already been synced by the repo script. If needed, sync again:
 
@@ -96,16 +97,15 @@ export WINEPREFIX="/home/saulius/WinePrefixes/SierraChart"
 bash scripts/sync_to_sierra.sh
 ```
 
-2. In Sierra Chart, compile `AxonTradeVwapDeltaExecutionBot.cpp`.
-3. Add `AxonTrade MNQ Eval Pass Combined Bot` to an MNQ replay chart.
-4. First run with `Send Orders To Trade Service = No` and confirm the status
-   banner blocks routing.
-5. For replay/mechanics order submission, use Sierra simulation mode, set
-   `Require Trade Simulation Mode Off = No`, set
-   `Send Orders To Trade Service = Yes`, set the confirmation text, and arm only
-   on the replay chart.
-6. Replay/mechanics test accepted signals, attached target/stop placement, chart
-   markers, fills, CSV rows, one-trade-per-day behavior, and lock behavior.
-7. For final live eval routing, set `Require Trade Simulation Mode Off = Yes`,
-   turn Sierra trade simulation mode off, confirm the exact account, and recheck
-   the green status banner before arming.
+2. In Sierra Chart, compile `AxonTradeVwapDeltaExecutionBot.cpp` after any
+   source update.
+3. Add `AxonTrade MNQ Eval Pass Combined Bot` to a clean MNQ chart.
+4. Confirm selected chart symbol starts with `MNQ`.
+5. Confirm Sierra trade simulation mode is off.
+6. Set `Send Orders To Trade Service = Yes`.
+7. Set `Confirmation Text = MNQ_EVAL_PASS_AB_LIVE`.
+8. Set `Allowed Trade Account` to the exact selected Trade Window account.
+9. Confirm `A Plus Quantity = 12`, `B Fast Quantity = 4`, and
+   `Max Position Quantity = 12`.
+10. Confirm no other automated bot is running on the same account/instrument.
+11. Set `Arm Execution = Yes` only when the status banner shows all gates ready.

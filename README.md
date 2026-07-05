@@ -38,8 +38,8 @@ simulation-only.
 
 | Status | Bot / Track | Use | Research | Forward | Live | Net | PF | Win Rate | Avg Trades / Week | Current Decision |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 🟡 | `AxonTrade MNQ Eval Pass Combined Bot` | eval-pass A+B wave-rider | 80% | 55% | 20% | `$28988` | `2.29` | `62.3%` | `1.2` | ACSIL built; Sierra compile/replay/mechanics validation is next. Designed for eval geometry, not routine live trading yet. |
-| 🟡 | `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta profitability lead | 75% | 15% | 35% | `$9584.50` | `2.09` | `80.1%` | `1.8` | Not approved for live until replay/mechanics retest. Useful as a profitability lead, but not the current eval-pass priority. |
+| 🟢 | `AxonTrade MNQ Eval Pass Combined Bot` | eval-pass A+B wave-rider | 80% | 60% | 75% | `$28988` | `2.29` | `62.3%` | `1.2` | Live test/mechanics passed; controlled live routing approved for the validated A+B eval setup. |
+| 🟢 | `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta profitability lead | 75% | 20% | 75% | `$9584.50` | `2.09` | `80.1%` | `1.8` | Live test/mechanics passed; controlled live routing approved for the validated VWAP/delta setup. |
 
 Backlog: other instruments such as `MCL` stay at `0%` readiness until MNQ/MGC
 work stalls or a new export creates a stronger reason to branch.
@@ -52,8 +52,8 @@ Use this table as the first check before arming anything in Sierra Chart.
 | --- | --- | --- | --- | --- | --- | --- |
 | `AxonTrade VWAP Delta Execution Bot` | ES simulation/replay mechanics | `ES` | `SIM_ONLY` | `Send Orders To Trade Service = No`; Sierra trade simulation mode on | Not required | Simulation-only by design; arm only on replay/sim chart; rejects live trade-service routing |
 | `AxonTrade MES Eval Live Bot` | Current approved controlled live eval path | `MES` | `MES_EVAL_LIVE` | `Send Orders To Trade Service = Yes`; Sierra trade simulation mode off | Exact `Allowed Trade Account` required | `1 + 1 MES`, `$240` daily loss lock, `$650` daily profit lock, `$1000` eval trailing lock, no historical download, no position/working orders |
-| `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta research implementation | `MNQ` | `MNQ_EVAL_LIVE` | Live-capable but not approved; replay/mechanics first | Exact `Allowed Trade Account` required | `1 + 1 MNQ`, `25 / 140 / 40` exits, no Friday, no `11:00`/`15:00`, `$650` daily loss/profit locks, `$1000` eval trailing lock |
-| `AxonTrade MNQ Eval Pass Combined Bot` | Built MNQ A+B eval-pass study | `MNQ` | `MNQ_EVAL_PASS_AB_LIVE` | Live-capable but not approved; replay/mechanics first | Exact `Allowed Trade Account` required | A+ `12 MNQ` with `31 / 30.5` target/stop; B `4 MNQ` with `82 / 55.5` target/stop; one trade/day; `$900` daily loss lock; `$650` daily profit lock; `$1000` eval trailing lock |
+| `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta research implementation | `MNQ` | `MNQ_EVAL_LIVE` | Controlled live routing approved for validated setup | Exact `Allowed Trade Account` required | `1 + 1 MNQ`, `25 / 140 / 40` exits, no Friday, no `11:00`/`15:00`, `$650` daily loss/profit locks, `$1000` eval trailing lock |
+| `AxonTrade MNQ Eval Pass Combined Bot` | Built MNQ A+B eval-pass study | `MNQ` | `MNQ_EVAL_PASS_AB_LIVE` | Controlled live routing approved for validated A+B setup | Exact `Allowed Trade Account` required | A+ `12 MNQ` with `31 / 30.5` target/stop; B `4 MNQ` with `82 / 55.5` target/stop; one trade/day; `$900` daily loss lock; `$650` daily profit lock; `$1000` eval trailing lock |
 | `AxonTrade MGC Normal BreakEven Bot` | Built MGC normal-profitability study | `MGC` | Sim: `MGC_NORMAL_SIM`; live: `MGC_NORMAL_LIVE` | Controlled live routing approved for validated `1 MGC` setup | Exact `Allowed Trade Account` required only for live routing | `1 MGC`, `10` bar lookback breakout, Mon/Tue/Fri, `08:20-10:30`, abs delta `<=125`, `25 / 15`, stop to breakeven after `+20`, one trade/day, `$500` daily loss lock, `16:30` flatten |
 
 Common live-capable setup gates:
@@ -138,7 +138,8 @@ Weaknesses:
 - Stop is wide at `140` MNQ points.
 - It is a profitability research lead, not specifically optimized for the
   fastest eval pass.
-- Needs Sierra replay/mechanics validation before any live use.
+- Live test/mechanics passed on `2026-07-05`; keep the validated sizing and
+  routing gates until forward sample justifies changes.
 
 Primary docs:
 
@@ -149,8 +150,9 @@ Primary docs:
 
 `AxonTrade MNQ Eval Pass Combined Bot` is the ACSIL implementation of the MNQ
 eval-pass wave-rider research. It is built in
-`src/acsil/AxonTradeVwapDeltaExecutionBot.cpp` but is not live-approved until
-Sierra compile, replay, and mechanics checks pass.
+`src/acsil/AxonTradeVwapDeltaExecutionBot.cpp`, and live test/mechanics passed
+on `2026-07-05`. It is approved for controlled live routing under the documented
+MNQ eval gates.
 
 - [research script](scripts/run_mnq_eval_pass_wave_rider.py)
 - [research report](reports/mnq-eval-pass-wave-rider-research.md)
@@ -189,10 +191,10 @@ Current combined build candidate:
 - rough planning estimate: when it passes, expect about `2-3` calendar weeks
   from a random start; this is not a guaranteed two-day pass
 
-Decision: replay this as one combined MNQ eval-pass bot. Do not run separate
-A+ and B bots on the same account/instrument, and do not take every signal from
-both modules. The rejected take-all policy had higher calendar pass but pushed
-calendar fail to `10.1%`.
+Decision: run this as one combined MNQ eval-pass bot under controlled live
+routing. Do not run separate A+ and B bots on the same account/instrument, and
+do not take every signal from both modules. The rejected take-all policy had
+higher calendar pass but pushed calendar fail to `10.1%`.
 
 Sparse A+ standalone lead:
 
@@ -391,12 +393,13 @@ not size increase.
 ## Operating Rules
 
 - `AxonTrade MES Eval Live Bot` is approved for controlled live routing.
+- `AxonTrade MNQ Eval Live Bot` is approved for controlled live routing under
+  its documented `MNQ_EVAL_LIVE` gates.
+- `AxonTrade MNQ Eval Pass Combined Bot` is approved for controlled live routing
+  under its documented `MNQ_EVAL_PASS_AB_LIVE` gates.
 - `AxonTrade MGC Normal BreakEven Bot` is approved for controlled `1 MGC` live
   routing under its documented gates.
 - `AxonTrade VWAP Delta Execution Bot` remains simulation-only.
-- `AxonTrade MNQ Eval Live Bot` exists but is not approved for live use yet.
-- `AxonTrade MNQ Eval Pass Combined Bot` exists but is not approved for live use
-  until Sierra compile, replay, and mechanics validation pass.
 - No bot is armed on broken or gapped chart data.
 - Development logs, decision logs, and markdown reports are durable evidence.
 - Large CSV exports, sweeps, and audits are generated artifacts unless promoted
@@ -447,5 +450,7 @@ The only approved ACSIL order-routing source is
 `src/acsil/AxonTradeVwapDeltaExecutionBot.cpp`.
 
 Live routing is allowed only through explicitly live-capable exports with all
-gates passing. At this snapshot, that means `AxonTrade MES Eval Live Bot` only;
-the MNQ A+B bot is built but still pending Sierra validation.
+gates passing. At this snapshot, approved controlled live-routing exports are
+`AxonTrade MES Eval Live Bot`, `AxonTrade MNQ Eval Live Bot`,
+`AxonTrade MNQ Eval Pass Combined Bot`, and
+`AxonTrade MGC Normal BreakEven Bot`.
