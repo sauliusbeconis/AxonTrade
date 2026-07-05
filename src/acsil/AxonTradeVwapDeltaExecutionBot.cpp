@@ -16,9 +16,16 @@ const char* kStrategyId =
     "vwap_delta_exhaustion_fade_2pt_10d_cl0.5_space300_exit7_12_10_lb15_risk171_open_m80_range100_daily2400_execution";
 const char* kMnqEvalStrategyId =
     "mnq_vwap_delta_local_fade_80pt_400d_cl0.4_nofri_no11_15_exit25_140_40_initial";
+const char* kMnqEvalPassCombinedStrategyId =
+    "mnq_eval_pass_ab_earliest_one_per_day_fast_aplus12_bfast4";
+const char* kMgcNormalBreakEvenStrategyId =
+    "mgc_lb_be_sensitivity:lb10:buf0:cl0.45:end1030:mtf:delta125:breakeven:t25:s15:trig20";
 const char* kRequiredConfirmationText = "SIM_ONLY";
 const char* kRequiredLiveEvalConfirmationText = "MES_EVAL_LIVE";
 const char* kRequiredMnqEvalConfirmationText = "MNQ_EVAL_LIVE";
+const char* kRequiredMnqEvalPassCombinedConfirmationText = "MNQ_EVAL_PASS_AB_LIVE";
+const char* kRequiredMgcNormalSimConfirmationText = "MGC_NORMAL_SIM";
+const char* kRequiredMgcNormalLiveConfirmationText = "MGC_NORMAL_LIVE";
 const int kTradeDrawingBase = 7600000;
 const int kStatusDrawingLineNumberBase = 9500000;
 const int kTrackedOrdersPointerKey = 101;
@@ -126,8 +133,12 @@ std::string FormatBool(bool value)
 
 const char* StrategyIdForTradeMode(const std::string& trade_mode)
 {
+    if (trade_mode == "mnq_eval_pass_ab_live")
+        return kMnqEvalPassCombinedStrategyId;
     if (trade_mode == "mnq_eval_live")
         return kMnqEvalStrategyId;
+    if (trade_mode == "mgc_normal_sim" || trade_mode == "mgc_normal_live")
+        return kMgcNormalBreakEvenStrategyId;
     return kStrategyId;
 }
 
@@ -746,6 +757,226 @@ SignalCandidate EvaluateCandidate(
     return candidate;
 }
 
+bool PreviousLookbackHighLow(
+    SCStudyInterfaceRef sc,
+    int bar_index,
+    int lookback_bars,
+    double& lookback_high,
+    double& lookback_low)
+{
+    if (lookback_bars <= 0 || bar_index <= 0)
+        return false;
+
+    const SCDateTime current_date_time = sc.BaseDateTimeIn[bar_index];
+    int bars_found = 0;
+    for (int index = bar_index - 1; index >= 0; --index)
+    {
+        if (!SameChartDate(sc.BaseDateTimeIn[index], current_date_time))
+            break;
+
+        if (bars_found == 0)
+        {
+            lookback_high = sc.BaseDataIn[SC_HIGH][index];
+            lookback_low = sc.BaseDataIn[SC_LOW][index];
+        }
+        else
+        {
+            lookback_high = MaxDouble(lookback_high, sc.BaseDataIn[SC_HIGH][index]);
+            lookback_low = MinDouble(lookback_low, sc.BaseDataIn[SC_LOW][index]);
+        }
+
+        ++bars_found;
+        if (bars_found >= lookback_bars)
+            return true;
+    }
+
+    return false;
+}
+
+SignalCandidate EvaluateLookbackBreakoutCandidate(
+    SCStudyInterfaceRef sc,
+    int bar_index,
+    const std::string& module_name,
+    int setup_start_time,
+    int setup_end_time,
+    int lookback_bars,
+    double buffer_points,
+    double delta_threshold,
+    double close_location_threshold,
+    bool short_only,
+    bool tuesday_wednesday_only,
+    double max_abs_delta,
+    double stop_points,
+    double target_points)
+{
+    SignalCandidate candidate;
+    const double close = sc.BaseDataIn[SC_LAST][bar_index];
+    const int bar_time = sc.BaseDateTimeIn[bar_index].GetTimeInSeconds();
+    candidate.entry_price = close;
+
+    if (bar_time < setup_start_time || bar_time > setup_end_time)
+    {
+        candidate.rejection_reason = "outside_setup_window";
+        candidate.notes = module_name + " closed bar is outside setup window";
+        return candidate;
+    }
+
+    const int day_of_week = sc.BaseDateTimeIn[bar_index].GetDayOfWeek();
+    if (tuesday_wednesday_only && day_of_week != TUESDAY && day_of_week != WEDNESDAY)
+    {
+        candidate.rejection_reason = "weekday_filter";
+        candidate.notes = module_name + " is Tuesday/Wednesday only";
+        return candidate;
+    }
+
+    if (stop_points <= 0.0 || target_points <= 0.0)
+    {
+        candidate.rejection_reason = "configuration_error";
+        candidate.notes = module_name + " has invalid fixed exit points";
+        return candidate;
+    }
+
+    double lookback_high = 0.0;
+    double lookback_low = 0.0;
+    if (!PreviousLookbackHighLow(sc, bar_index, lookback_bars, lookback_high, lookback_low))
+    {
+        candidate.rejection_reason = "insufficient_context";
+        candidate.notes = module_name + " does not have enough same-date lookback bars";
+        return candidate;
+    }
+
+    const double previous_close = sc.BaseDataIn[SC_LAST][bar_index - 1];
+    const double high_break = lookback_high + buffer_points;
+    const double low_break = lookback_low - buffer_points;
+    candidate.vwap = SessionVwapAtBar(sc, bar_index);
+    candidate.distance_from_vwap = close - candidate.vwap;
+    candidate.delta = BarDelta(sc, bar_index);
+    candidate.close_location = CloseLocation(sc, bar_index);
+
+    const bool long_breakout =
+        !short_only
+        && previous_close <= high_break
+        && high_break < close
+        && close >= candidate.vwap
+        && candidate.delta >= delta_threshold
+        && candidate.close_location >= close_location_threshold;
+    const bool short_breakout =
+        previous_close >= low_break
+        && low_break > close
+        && close <= candidate.vwap
+        && candidate.delta <= -delta_threshold
+        && candidate.close_location <= 1.0 - close_location_threshold;
+
+    if (long_breakout)
+    {
+        candidate.has_raw_setup = true;
+        candidate.direction = "long";
+    }
+    else if (short_breakout)
+    {
+        candidate.has_raw_setup = true;
+        candidate.direction = "short";
+    }
+    else
+    {
+        std::ostringstream notes;
+        notes << module_name
+              << " thresholds not met; previous_close=" << FormatNumber(previous_close)
+              << "; high_break=" << FormatNumber(high_break)
+              << "; low_break=" << FormatNumber(low_break)
+              << "; close=" << FormatNumber(close)
+              << "; vwap=" << FormatNumber(candidate.vwap)
+              << "; delta=" << FormatNumber(candidate.delta)
+              << "; close_location=" << FormatNumber(candidate.close_location);
+        candidate.notes = notes.str();
+        return candidate;
+    }
+
+    const double abs_delta = std::fabs(candidate.delta);
+    if (max_abs_delta > 0.0 && abs_delta > max_abs_delta)
+    {
+        candidate.rejection_reason = "absolute_delta_filter";
+        std::ostringstream notes;
+        notes << module_name << " raw setup rejected by abs delta cap; abs_delta="
+              << FormatNumber(abs_delta) << "; cap=" << FormatNumber(max_abs_delta);
+        candidate.notes = notes.str();
+        return candidate;
+    }
+
+    const bool is_long = candidate.direction == "long";
+    candidate.stop_price = is_long ? close - stop_points : close + stop_points;
+    candidate.first_target_price = is_long ? close + target_points : close - target_points;
+    candidate.runner_target_price = candidate.first_target_price;
+    candidate.session_range_points = SessionRangeAtBar(sc, bar_index);
+    candidate.session_open_price = SessionOpenPriceAtBar(sc, bar_index);
+    candidate.directional_open_distance_points = DirectionalOpenDistancePoints(
+        close,
+        candidate.session_open_price,
+        candidate.direction);
+
+    candidate.accepted = true;
+    candidate.action = "execution_entry";
+    candidate.rejection_reason = "not_applicable";
+    std::ostringstream notes;
+    notes << module_name << " " << candidate.direction << " lookback breakout; "
+          << "lookback_bars=" << lookback_bars << "; "
+          << "buffer_points=" << FormatNumber(buffer_points) << "; "
+          << "previous_close=" << FormatNumber(previous_close) << "; "
+          << "lookback_high=" << FormatNumber(lookback_high) << "; "
+          << "lookback_low=" << FormatNumber(lookback_low) << "; "
+          << "high_break=" << FormatNumber(high_break) << "; "
+          << "low_break=" << FormatNumber(low_break) << "; "
+          << "delta=" << FormatNumber(candidate.delta) << "; "
+          << "close_location=" << FormatNumber(candidate.close_location) << "; "
+          << "vwap=" << FormatNumber(candidate.vwap) << "; "
+          << "distance_from_vwap=" << FormatNumber(candidate.distance_from_vwap) << "; "
+          << "target_points=" << FormatNumber(target_points) << "; "
+          << "stop_points=" << FormatNumber(stop_points);
+    candidate.notes = notes.str();
+    return candidate;
+}
+
+SignalCandidate EvaluateMgcNormalBreakEvenCandidate(
+    SCStudyInterfaceRef sc,
+    int bar_index,
+    int setup_start_time,
+    int setup_end_time,
+    int lookback_bars,
+    double buffer_points,
+    double delta_threshold,
+    double close_location_threshold,
+    double max_abs_delta,
+    double stop_points,
+    double target_points)
+{
+    SignalCandidate candidate;
+    candidate.entry_price = sc.BaseDataIn[SC_LAST][bar_index];
+
+    const int day_of_week = sc.BaseDateTimeIn[bar_index].GetDayOfWeek();
+    if (day_of_week != MONDAY && day_of_week != TUESDAY && day_of_week != FRIDAY)
+    {
+        candidate.rejection_reason = "weekday_filter";
+        candidate.notes = "MGC_NORMAL only trades Monday/Tuesday/Friday";
+        return candidate;
+    }
+
+    return EvaluateLookbackBreakoutCandidate(
+        sc,
+        bar_index,
+        "MGC_NORMAL",
+        setup_start_time,
+        setup_end_time,
+        lookback_bars,
+        buffer_points,
+        delta_threshold,
+        close_location_threshold,
+        false,
+        false,
+        max_abs_delta,
+        stop_points,
+        target_points);
+}
+
 void LogCandidateEvent(
     SCStudyInterfaceRef sc,
     const std::string& csv_log_path,
@@ -1022,15 +1253,28 @@ void DrawSubmittedTradeOverlay(
     sc.UseTool(marker);
 
     SCString label_text;
-    label_text.Format(
-        "AT submitted %s %d+%d\nE %s\nT1 %s  T2 %s\nS %s",
-        candidate.direction.c_str(),
-        first_leg_quantity,
-        runner_quantity,
-        FormatNumber(candidate.entry_price).c_str(),
-        FormatNumber(candidate.first_target_price).c_str(),
-        FormatNumber(candidate.runner_target_price).c_str(),
-        FormatNumber(candidate.stop_price).c_str());
+    if (runner_quantity > 0)
+    {
+        label_text.Format(
+            "AT submitted %s %d+%d\nE %s\nT1 %s  T2 %s\nS %s",
+            candidate.direction.c_str(),
+            first_leg_quantity,
+            runner_quantity,
+            FormatNumber(candidate.entry_price).c_str(),
+            FormatNumber(candidate.first_target_price).c_str(),
+            FormatNumber(candidate.runner_target_price).c_str(),
+            FormatNumber(candidate.stop_price).c_str());
+    }
+    else
+    {
+        label_text.Format(
+            "AT submitted %s %d\nE %s\nT %s\nS %s",
+            candidate.direction.c_str(),
+            first_leg_quantity,
+            FormatNumber(candidate.entry_price).c_str(),
+            FormatNumber(candidate.first_target_price).c_str(),
+            FormatNumber(candidate.stop_price).c_str());
+    }
 
     s_UseTool label;
     label.Clear();
@@ -1051,7 +1295,8 @@ void DrawSubmittedTradeOverlay(
     DrawTradeLevelLine(sc, drawing_base + 3, bar_index, forward_bars, candidate.entry_price, RGB(235, 235, 235), 1);
     DrawTradeLevelLine(sc, drawing_base + 4, bar_index, forward_bars, candidate.stop_price, RGB(220, 64, 64), 2);
     DrawTradeLevelLine(sc, drawing_base + 5, bar_index, forward_bars, candidate.first_target_price, RGB(64, 180, 255), 1);
-    DrawTradeLevelLine(sc, drawing_base + 6, bar_index, forward_bars, candidate.runner_target_price, RGB(64, 220, 120), 2);
+    if (runner_quantity > 0)
+        DrawTradeLevelLine(sc, drawing_base + 6, bar_index, forward_bars, candidate.runner_target_price, RGB(64, 220, 120), 2);
 }
 
 void DrawOrderFillMarker(
@@ -1160,15 +1405,20 @@ std::string YesNoStatus(bool value)
     return value ? "Y" : "N";
 }
 
-void DeleteStatusBanner(SCStudyInterfaceRef sc, bool live_eval_profile)
+void DeleteStatusBannerBySlot(SCStudyInterfaceRef sc, int status_slot)
 {
-    const int drawing_number = kStatusDrawingLineNumberBase + (live_eval_profile ? 1 : 2);
+    const int drawing_number = kStatusDrawingLineNumberBase + status_slot;
     sc.DeleteACSChartDrawing(sc.ChartNumber, TOOL_DELETE_CHARTDRAWING, drawing_number);
 }
 
-void DrawStatusBanner(
+void DeleteStatusBanner(SCStudyInterfaceRef sc, bool live_eval_profile)
+{
+    DeleteStatusBannerBySlot(sc, live_eval_profile ? 1 : 2);
+}
+
+void DrawStatusBannerBySlot(
     SCStudyInterfaceRef sc,
-    bool live_eval_profile,
+    int status_slot,
     int latest_closed_bar_index,
     const std::string& headline,
     const std::string& gate_line,
@@ -1192,7 +1442,7 @@ void DrawStatusBanner(
     tool.Clear();
     tool.ChartNumber = sc.ChartNumber;
     tool.DrawingType = DRAWING_TEXT;
-    tool.LineNumber = kStatusDrawingLineNumberBase + (live_eval_profile ? 1 : 2);
+    tool.LineNumber = kStatusDrawingLineNumberBase + status_slot;
     tool.Region = 0;
     tool.BeginIndex = MinInt(sc.ArraySize - 1, MaxInt(0, latest_closed_bar_index));
     tool.BeginValue = static_cast<float>(MaxInt(5, MinInt(98, vertical_position)));
@@ -1207,6 +1457,31 @@ void DrawStatusBanner(
     tool.AddMethod = UTAM_ADD_OR_ADJUST;
     tool.Text = status_text;
     sc.UseTool(tool);
+}
+
+void DrawStatusBanner(
+    SCStudyInterfaceRef sc,
+    bool live_eval_profile,
+    int latest_closed_bar_index,
+    const std::string& headline,
+    const std::string& gate_line,
+    const std::string& detail_line,
+    COLORREF text_color,
+    COLORREF background_color,
+    int vertical_position,
+    int font_size)
+{
+    DrawStatusBannerBySlot(
+        sc,
+        live_eval_profile ? 1 : 2,
+        latest_closed_bar_index,
+        headline,
+        gate_line,
+        detail_line,
+        text_color,
+        background_color,
+        vertical_position,
+        font_size);
 }
 
 bool DailyLockBlocksNewEntry(
@@ -2631,6 +2906,1581 @@ void RunVwapDeltaExecutionStudy(SCStudyInterfaceRef sc, bool live_eval_profile, 
     }
 }
 
+void RunMnqEvalPassCombinedStudy(SCStudyInterfaceRef sc)
+{
+    SCInputRef CsvLogPath = sc.Input[0];
+    SCInputRef ArmExecution = sc.Input[1];
+    SCInputRef SendOrdersToTradeService = sc.Input[2];
+    SCInputRef RequireTradeSimulationModeOff = sc.Input[3];
+    SCInputRef ConfirmationText = sc.Input[4];
+    SCInputRef RequiredSymbolPrefix = sc.Input[5];
+    SCInputRef AllowedTradeAccount = sc.Input[6];
+    SCInputRef LogRejections = sc.Input[7];
+    SCInputRef ProcessFullRecalculation = sc.Input[8];
+    SCInputRef ResetCsvOnFullRecalculation = sc.Input[9];
+    SCInputRef SetupStartTime = sc.Input[10];
+    SCInputRef SetupEndTime = sc.Input[11];
+    SCInputRef FlattenTime = sc.Input[12];
+    SCInputRef EnableAPlusModule = sc.Input[13];
+    SCInputRef EnableBFastModule = sc.Input[14];
+    SCInputRef APlusQuantity = sc.Input[15];
+    SCInputRef BFastQuantity = sc.Input[16];
+    SCInputRef MaxPositionQuantity = sc.Input[17];
+    SCInputRef DailyLossLimitUsd = sc.Input[18];
+    SCInputRef DailyProfitLockUsd = sc.Input[19];
+    SCInputRef MaxEvalTrailingDrawdownUsd = sc.Input[20];
+    SCInputRef ResetEvalDrawdownTracking = sc.Input[21];
+    SCInputRef DrawStatusBannerInput = sc.Input[22];
+    SCInputRef StatusBannerVerticalPosition = sc.Input[23];
+    SCInputRef StatusBannerFontSize = sc.Input[24];
+    SCInputRef AcceptedSetupAlertSound = sc.Input[25];
+    SCInputRef DrawTradeMarkersAndLevels = sc.Input[26];
+    SCInputRef TradeLevelForwardBars = sc.Input[27];
+
+    const int status_slot = 3;
+    const std::string trade_mode = "mnq_eval_pass_ab_live";
+
+    if (sc.SetDefaults)
+    {
+        sc.GraphName = "AxonTrade MNQ Eval Pass Combined Bot";
+        sc.StudyDescription =
+            "Guarded live-capable MNQ eval-pass bot for the combined A+ and faster-B wave-rider candidate.";
+        sc.AutoLoop = 0;
+        sc.GraphRegion = 0;
+        sc.UpdateAlways = 1;
+
+        sc.AllowMultipleEntriesInSameDirection = false;
+        sc.MaximumPositionAllowed = 12;
+        sc.SupportReversals = false;
+        sc.SendOrdersToTradeService = false;
+        sc.AllowOppositeEntryWithOpposingPositionOrOrders = false;
+        sc.SupportAttachedOrdersForTrading = false;
+        sc.CancelAllOrdersOnEntriesAndReversals = true;
+        sc.AllowEntryWithWorkingOrders = false;
+        sc.CancelAllWorkingOrdersOnExit = true;
+        sc.AllowOnlyOneTradePerBar = true;
+        sc.MaintainTradeStatisticsAndTradesData = true;
+
+        CsvLogPath.Name = "CSV Log Path";
+        CsvLogPath.SetString("C:\\SierraChart\\Data\\AxonTrade_MnqEvalPassCombinedBot.csv");
+
+        ArmExecution.Name = "Arm Execution";
+        ArmExecution.SetYesNo(0);
+
+        SendOrdersToTradeService.Name = "Send Orders To Trade Service";
+        SendOrdersToTradeService.SetYesNo(0);
+
+        RequireTradeSimulationModeOff.Name = "Require Trade Simulation Mode Off";
+        RequireTradeSimulationModeOff.SetYesNo(1);
+
+        ConfirmationText.Name = "Confirmation Text";
+        ConfirmationText.SetString("");
+
+        RequiredSymbolPrefix.Name = "Required Symbol Prefix";
+        RequiredSymbolPrefix.SetString("MNQ");
+
+        AllowedTradeAccount.Name = "Allowed Trade Account";
+        AllowedTradeAccount.SetString("");
+
+        LogRejections.Name = "Log Rejections";
+        LogRejections.SetYesNo(0);
+
+        ProcessFullRecalculation.Name = "Process Full Recalculation";
+        ProcessFullRecalculation.SetYesNo(0);
+
+        ResetCsvOnFullRecalculation.Name = "Reset CSV On Full Recalculation";
+        ResetCsvOnFullRecalculation.SetYesNo(1);
+
+        SetupStartTime.Name = "Setup Start Time";
+        SetupStartTime.SetTime(HMS_TIME(10, 0, 0));
+
+        SetupEndTime.Name = "Setup End Time";
+        SetupEndTime.SetTime(HMS_TIME(12, 30, 0));
+
+        FlattenTime.Name = "Flatten Time";
+        FlattenTime.SetTime(HMS_TIME(16, 40, 0));
+
+        EnableAPlusModule.Name = "Enable A Plus Module";
+        EnableAPlusModule.SetYesNo(1);
+
+        EnableBFastModule.Name = "Enable B Fast Module";
+        EnableBFastModule.SetYesNo(1);
+
+        APlusQuantity.Name = "A Plus Quantity";
+        APlusQuantity.SetInt(12);
+        APlusQuantity.SetIntLimits(1, 100);
+
+        BFastQuantity.Name = "B Fast Quantity";
+        BFastQuantity.SetInt(4);
+        BFastQuantity.SetIntLimits(1, 100);
+
+        MaxPositionQuantity.Name = "Max Position Quantity";
+        MaxPositionQuantity.SetInt(12);
+        MaxPositionQuantity.SetIntLimits(1, 100);
+
+        DailyLossLimitUsd.Name = "Daily Loss Lock USD";
+        DailyLossLimitUsd.SetFloat(900.0f);
+
+        DailyProfitLockUsd.Name = "Daily Profit Lock USD";
+        DailyProfitLockUsd.SetFloat(650.0f);
+
+        MaxEvalTrailingDrawdownUsd.Name = "Max Eval Trailing Drawdown USD";
+        MaxEvalTrailingDrawdownUsd.SetFloat(1000.0f);
+
+        ResetEvalDrawdownTracking.Name = "Reset Eval Drawdown Tracking";
+        ResetEvalDrawdownTracking.SetYesNo(0);
+
+        DrawStatusBannerInput.Name = "Draw Status Banner";
+        DrawStatusBannerInput.SetYesNo(1);
+
+        StatusBannerVerticalPosition.Name = "Status Banner Vertical Position";
+        StatusBannerVerticalPosition.SetInt(92);
+        StatusBannerVerticalPosition.SetIntLimits(5, 98);
+
+        StatusBannerFontSize.Name = "Status Banner Font Size";
+        StatusBannerFontSize.SetInt(10);
+        StatusBannerFontSize.SetIntLimits(6, 24);
+
+        AcceptedSetupAlertSound.Name = "Accepted Setup Alert Sound";
+        AcceptedSetupAlertSound.SetAlertSoundNumber(1);
+
+        DrawTradeMarkersAndLevels.Name = "Draw Trade Markers And Levels";
+        DrawTradeMarkersAndLevels.SetYesNo(1);
+
+        TradeLevelForwardBars.Name = "Trade Level Forward Bars";
+        TradeLevelForwardBars.SetInt(36);
+        TradeLevelForwardBars.SetIntLimits(1, 500);
+
+        return;
+    }
+
+    if (sc.LastCallToFunction)
+    {
+        DeleteStatusBannerBySlot(sc, status_slot);
+        DeleteTrackedBotOrders(sc);
+        return;
+    }
+
+    sc.SendOrdersToTradeService = SendOrdersToTradeService.GetYesNo() != 0;
+    sc.MaximumPositionAllowed = MaxPositionQuantity.GetInt();
+    sc.SupportTradingScaleIn = 0;
+    sc.SupportTradingScaleOut = 0;
+
+    if (sc.ArraySize <= 1)
+        return;
+
+    const std::string csv_log_path = ToStdString(CsvLogPath.GetString());
+    const int latest_closed_bar_index = LatestClosedBarIndex(sc);
+    if (latest_closed_bar_index < 0)
+        return;
+
+    int& last_processed_bar_index = sc.GetPersistentInt(51);
+    int& full_recalculation_reset_done = sc.GetPersistentInt(52);
+    int& processing_initialized = sc.GetPersistentInt(53);
+    int& last_submitted_trade_date = sc.GetPersistentInt(54);
+    int& flatten_date = sc.GetPersistentInt(55);
+
+    if (sc.IsFullRecalculation && ProcessFullRecalculation.GetYesNo() != 0)
+    {
+        if (full_recalculation_reset_done == 0)
+        {
+            last_processed_bar_index = -1;
+            last_submitted_trade_date = 0;
+            flatten_date = 0;
+            processing_initialized = 1;
+            if (ResetCsvOnFullRecalculation.GetYesNo() != 0)
+                std::remove(csv_log_path.c_str());
+            full_recalculation_reset_done = 1;
+        }
+    }
+    else
+    {
+        full_recalculation_reset_done = 0;
+        if (processing_initialized == 0)
+        {
+            last_processed_bar_index = latest_closed_bar_index - 1;
+            processing_initialized = 1;
+        }
+        if (latest_closed_bar_index < last_processed_bar_index)
+            last_processed_bar_index = latest_closed_bar_index - 1;
+    }
+
+    int start_bar_index = latest_closed_bar_index;
+    bool has_new_closed_bar = true;
+    if (ProcessFullRecalculation.GetYesNo() != 0 && sc.IsFullRecalculation)
+        start_bar_index = 0;
+    else if (latest_closed_bar_index <= last_processed_bar_index)
+        has_new_closed_bar = false;
+    else
+        start_bar_index = MaxInt(0, last_processed_bar_index + 1);
+
+    const std::string symbol = ToStdString(sc.Symbol);
+    const std::string trade_account = ToStdString(sc.SelectedTradeAccount);
+    const std::string required_symbol_prefix = ToStdString(RequiredSymbolPrefix.GetString());
+    const std::string allowed_trade_account = ToStdString(AllowedTradeAccount.GetString());
+    const bool current_chart_downloading_historical_data =
+        sc.DownloadingHistoricalData != 0
+        || sc.ChartIsDownloadingHistoricalData(sc.ChartNumber) != 0;
+
+    DrawTrackedOrderFills(
+        sc,
+        symbol,
+        trade_account,
+        DrawTradeMarkersAndLevels.GetYesNo() != 0);
+
+    s_SCPositionData immediate_position_data;
+    sc.GetTradePosition(immediate_position_data);
+
+    if (ResetEvalDrawdownTracking.GetYesNo() != 0)
+    {
+        ResetEvalTrailingState(sc, immediate_position_data);
+        ResetEvalDrawdownTracking.SetYesNo(0);
+        sc.AddMessageToLog("AxonTrade MNQ A+B eval drawdown tracking reset to current account P/L view.", false);
+    }
+    else
+    {
+        EnsureEvalTrailingState(sc, immediate_position_data);
+    }
+
+    const bool route_ok = SendOrdersToTradeService.GetYesNo() != 0;
+    const bool confirmation_ok =
+        ToStdString(ConfirmationText.GetString()) == kRequiredMnqEvalPassCombinedConfirmationText;
+    const bool symbol_ok = StartsWith(symbol, required_symbol_prefix);
+    const bool simulation_mode_ok =
+        RequireTradeSimulationModeOff.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn == 0;
+    const bool account_ok = !allowed_trade_account.empty() && trade_account == allowed_trade_account;
+    const bool live_operational_controls_allowed =
+        ArmExecution.GetYesNo() != 0
+        && !csv_log_path.empty()
+        && route_ok
+        && confirmation_ok
+        && simulation_mode_ok
+        && account_ok
+        && symbol_ok
+        && !current_chart_downloading_historical_data;
+
+    bool daily_lock_active = false;
+    bool eval_lock_active = false;
+    if (live_operational_controls_allowed)
+    {
+        std::string risk_rejection_reason;
+        std::string risk_rejection_notes;
+        daily_lock_active = DailyLockBlocksNewEntry(
+            sc,
+            latest_closed_bar_index,
+            immediate_position_data,
+            DailyLossLimitUsd.GetFloat(),
+            DailyProfitLockUsd.GetFloat(),
+            risk_rejection_reason,
+            risk_rejection_notes);
+        if (daily_lock_active)
+        {
+            FlattenIfNeeded(
+                sc,
+                csv_log_path,
+                symbol,
+                trade_account,
+                trade_mode,
+                latest_closed_bar_index,
+                "daily_lock_flatten",
+                risk_rejection_notes);
+            sc.GetTradePosition(immediate_position_data);
+        }
+
+        eval_lock_active = EvalTrailingDrawdownBlocks(
+            sc,
+            immediate_position_data,
+            MaxEvalTrailingDrawdownUsd.GetFloat(),
+            risk_rejection_reason,
+            risk_rejection_notes);
+        if (eval_lock_active)
+        {
+            FlattenIfNeeded(
+                sc,
+                csv_log_path,
+                symbol,
+                trade_account,
+                trade_mode,
+                latest_closed_bar_index,
+                "eval_trailing_drawdown_flatten",
+                risk_rejection_notes);
+        }
+    }
+
+    sc.GetTradePosition(immediate_position_data);
+
+    if (DrawStatusBannerInput.GetYesNo() != 0)
+    {
+        std::string headline;
+        COLORREF text_color = RGB(255, 255, 255);
+        COLORREF background_color = RGB(96, 72, 0);
+
+        if (ArmExecution.GetYesNo() == 0)
+            headline = "AXON MNQ A+B LIVE: STANDBY - NOT ARMED";
+        else if (csv_log_path.empty())
+        {
+            headline = "AXON MNQ A+B LIVE: BLOCKED - CSV PATH BLANK";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (!route_ok)
+        {
+            headline = "AXON MNQ A+B LIVE: BLOCKED - ROUTING OFF";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (!simulation_mode_ok)
+        {
+            headline = "AXON MNQ A+B LIVE: BLOCKED - SIERRA SIM MODE IS ON";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (!confirmation_ok)
+        {
+            headline = "AXON MNQ A+B LIVE: BLOCKED - CONFIRMATION TEXT";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (allowed_trade_account.empty())
+        {
+            headline = "AXON MNQ A+B LIVE: BLOCKED - ALLOWED ACCOUNT BLANK";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (!account_ok)
+        {
+            headline = "AXON MNQ A+B LIVE: BLOCKED - ACCOUNT MISMATCH";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (!symbol_ok)
+        {
+            headline = "AXON MNQ A+B LIVE: BLOCKED - SYMBOL PREFIX";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (current_chart_downloading_historical_data)
+        {
+            headline = "AXON MNQ A+B LIVE: WAIT - HISTORICAL DOWNLOAD";
+            background_color = RGB(96, 72, 0);
+        }
+        else if (daily_lock_active)
+        {
+            headline = "AXON MNQ A+B LIVE: LOCKED - DAILY RISK";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (eval_lock_active)
+        {
+            headline = "AXON MNQ A+B LIVE: LOCKED - EVAL DRAWDOWN";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (immediate_position_data.PositionQuantity != 0.0 || immediate_position_data.WorkingOrdersExist != 0)
+        {
+            headline = "AXON MNQ A+B LIVE: ARMED - MANAGING POSITION/ORDERS";
+            background_color = RGB(0, 92, 72);
+        }
+        else
+        {
+            headline = "AXON MNQ A+B LIVE: ARMED - READY FOR LIVE ORDERS";
+            background_color = RGB(0, 96, 32);
+        }
+
+        std::ostringstream gate_line;
+        gate_line << "Gates: arm=" << YesNoStatus(ArmExecution.GetYesNo() != 0)
+                  << " route=" << YesNoStatus(route_ok)
+                  << " sim=" << (sc.GlobalTradeSimulationIsOn != 0 ? "ON" : "OFF")
+                  << " simGate=" << YesNoStatus(simulation_mode_ok)
+                  << " confirm=" << YesNoStatus(confirmation_ok)
+                  << " acct=" << YesNoStatus(account_ok)
+                  << " symbol=" << YesNoStatus(symbol_ok)
+                  << " data=" << (current_chart_downloading_historical_data ? "DL" : "OK")
+                  << " A+=" << YesNoStatus(EnableAPlusModule.GetYesNo() != 0)
+                  << " B=" << YesNoStatus(EnableBFastModule.GetYesNo() != 0)
+                  << " locks=" << (daily_lock_active || eval_lock_active ? "ON" : "OK");
+
+        std::ostringstream detail_line;
+        detail_line << "Acct=" << (trade_account.empty() ? "<none>" : trade_account)
+                    << " Sym=" << symbol
+                    << " Pos=" << FormatNumber(immediate_position_data.PositionQuantity)
+                    << " Wkg=" << immediate_position_data.WorkingOrdersExist
+                    << " DPL=" << FormatNumber(DailyProfitView(immediate_position_data))
+                    << " one/day=" << (last_submitted_trade_date == sc.BaseDateTimeIn[latest_closed_bar_index].GetDate() ? "USED" : "OPEN");
+
+        DrawStatusBannerBySlot(
+            sc,
+            status_slot,
+            latest_closed_bar_index,
+            headline,
+            gate_line.str(),
+            detail_line.str(),
+            text_color,
+            background_color,
+            StatusBannerVerticalPosition.GetInt(),
+            StatusBannerFontSize.GetInt());
+    }
+    else
+    {
+        DeleteStatusBannerBySlot(sc, status_slot);
+    }
+
+    if (csv_log_path.empty())
+        return;
+    if (!has_new_closed_bar)
+        return;
+
+    for (int bar_index = start_bar_index; bar_index <= latest_closed_bar_index; ++bar_index)
+    {
+        if (bar_index <= last_processed_bar_index)
+            continue;
+        if (sc.GetBarHasClosedStatus(bar_index) != BHCS_BAR_HAS_CLOSED)
+            continue;
+
+        EnsureDailyLockDate(sc, bar_index);
+
+        s_SCPositionData position_data;
+        sc.GetTradePosition(position_data);
+
+        const int bar_time = sc.BaseDateTimeIn[bar_index].GetTimeInSeconds();
+        const int current_date = sc.BaseDateTimeIn[bar_index].GetDate();
+        const bool chart_downloading_historical_data =
+            sc.DownloadingHistoricalData != 0
+            || sc.ChartIsDownloadingHistoricalData(sc.ChartNumber) != 0;
+        const bool order_functions_allowed =
+            ArmExecution.GetYesNo() != 0
+            && SendOrdersToTradeService.GetYesNo() != 0
+            && ToStdString(ConfirmationText.GetString()) == kRequiredMnqEvalPassCombinedConfirmationText
+            && (RequireTradeSimulationModeOff.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn == 0)
+            && !allowed_trade_account.empty()
+            && trade_account == allowed_trade_account
+            && StartsWith(symbol, required_symbol_prefix)
+            && !chart_downloading_historical_data
+            && sc.IsFullRecalculation == 0;
+
+        if (order_functions_allowed && bar_time >= FlattenTime.GetTime() && flatten_date != current_date)
+        {
+            FlattenIfNeeded(
+                sc,
+                csv_log_path,
+                symbol,
+                trade_account,
+                trade_mode,
+                bar_index,
+                "session_flatten",
+                "flatten time reached");
+            flatten_date = current_date;
+            sc.GetTradePosition(position_data);
+        }
+
+        std::string rejection_reason;
+        std::string rejection_notes;
+        if (DailyLockBlocksNewEntry(
+                sc,
+                bar_index,
+                position_data,
+                DailyLossLimitUsd.GetFloat(),
+                DailyProfitLockUsd.GetFloat(),
+                rejection_reason,
+                rejection_notes))
+        {
+            if (order_functions_allowed)
+            {
+                FlattenIfNeeded(
+                    sc,
+                    csv_log_path,
+                    symbol,
+                    trade_account,
+                    trade_mode,
+                    bar_index,
+                    "daily_lock_flatten",
+                    rejection_notes);
+                sc.GetTradePosition(position_data);
+            }
+        }
+
+        SignalCandidate a_plus_candidate;
+        SignalCandidate b_fast_candidate;
+        if (EnableAPlusModule.GetYesNo() != 0)
+        {
+            a_plus_candidate = EvaluateLookbackBreakoutCandidate(
+                sc,
+                bar_index,
+                "A_PLUS",
+                SetupStartTime.GetTime(),
+                SetupEndTime.GetTime(),
+                40,
+                2.5,
+                600.0,
+                0.5,
+                false,
+                false,
+                1000.0,
+                30.5,
+                31.0);
+        }
+        if (EnableBFastModule.GetYesNo() != 0)
+        {
+            b_fast_candidate = EvaluateLookbackBreakoutCandidate(
+                sc,
+                bar_index,
+                "B_FAST",
+                SetupStartTime.GetTime(),
+                SetupEndTime.GetTime(),
+                10,
+                0.0,
+                300.0,
+                0.55,
+                true,
+                true,
+                0.0,
+                55.5,
+                82.0);
+        }
+
+        SignalCandidate candidate;
+        std::string selected_module;
+        int selected_quantity = 0;
+        double selected_stop_points = 0.0;
+        double selected_target_points = 0.0;
+        if (b_fast_candidate.accepted)
+        {
+            candidate = b_fast_candidate;
+            selected_module = "B_FAST";
+            selected_quantity = BFastQuantity.GetInt();
+            selected_stop_points = 55.5;
+            selected_target_points = 82.0;
+        }
+        else if (a_plus_candidate.accepted)
+        {
+            candidate = a_plus_candidate;
+            selected_module = "A_PLUS";
+            selected_quantity = APlusQuantity.GetInt();
+            selected_stop_points = 30.5;
+            selected_target_points = 31.0;
+        }
+
+        if (selected_module.empty())
+        {
+            if (LogRejections.GetYesNo() != 0)
+            {
+                candidate.rejection_reason = "no_combined_setup";
+                std::ostringstream notes;
+                notes << "A_PLUS=" << a_plus_candidate.notes
+                      << "; B_FAST=" << b_fast_candidate.notes;
+                candidate.notes = notes.str();
+                const std::string signal_id = SignalId(trade_mode, symbol, bar_index, candidate.direction);
+                LogCandidateEvent(
+                    sc,
+                    csv_log_path,
+                    "execution_signal_rejected",
+                    symbol,
+                    trade_account,
+                    trade_mode,
+                    bar_index,
+                    candidate,
+                    signal_id,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    position_data,
+                    candidate.rejection_reason,
+                    candidate.notes);
+            }
+            last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
+            continue;
+        }
+
+        const std::string signal_id = SignalId(trade_mode, symbol, bar_index, candidate.direction)
+            + "_" + selected_module;
+        const int first_leg_quantity = selected_quantity;
+        const int runner_quantity = 0;
+
+        bool can_submit = true;
+        rejection_reason = "not_applicable";
+        rejection_notes = "ready";
+        if (ArmExecution.GetYesNo() == 0)
+        {
+            can_submit = false;
+            rejection_reason = "execution_not_armed";
+            rejection_notes = "Arm Execution is No";
+        }
+        else if (ToStdString(ConfirmationText.GetString()) != kRequiredMnqEvalPassCombinedConfirmationText)
+        {
+            can_submit = false;
+            rejection_reason = "confirmation_text_missing";
+            rejection_notes = std::string("Confirmation Text must be ")
+                + kRequiredMnqEvalPassCombinedConfirmationText;
+        }
+        else if (SendOrdersToTradeService.GetYesNo() == 0)
+        {
+            can_submit = false;
+            rejection_reason = "live_trade_service_not_enabled";
+            rejection_notes = "Send Orders To Trade Service must be Yes for the MNQ A+B eval-pass bot";
+        }
+        else if (RequireTradeSimulationModeOff.GetYesNo() != 0 && sc.GlobalTradeSimulationIsOn != 0)
+        {
+            can_submit = false;
+            rejection_reason = "trade_simulation_mode_must_be_off";
+            rejection_notes = "Trade >> Trade Simulation Mode On must be off for the MNQ A+B eval-pass bot";
+        }
+        else if (allowed_trade_account.empty())
+        {
+            can_submit = false;
+            rejection_reason = "allowed_trade_account_missing";
+            rejection_notes = "Allowed Trade Account must exactly match the selected trade account";
+        }
+        else if (trade_account != allowed_trade_account)
+        {
+            can_submit = false;
+            rejection_reason = "trade_account_gate";
+            std::ostringstream notes;
+            notes << "selected trade account " << trade_account
+                  << " does not match allowed account " << allowed_trade_account;
+            rejection_notes = notes.str();
+        }
+        else if (!StartsWith(symbol, required_symbol_prefix))
+        {
+            can_submit = false;
+            rejection_reason = "symbol_prefix_gate";
+            std::ostringstream notes;
+            notes << "chart symbol " << symbol << " does not start with required prefix "
+                  << required_symbol_prefix;
+            rejection_notes = notes.str();
+        }
+        else if (chart_downloading_historical_data)
+        {
+            can_submit = false;
+            rejection_reason = "historical_download_in_progress";
+            rejection_notes = "chart is downloading historical data; entry submission skipped";
+        }
+        else if (sc.IsFullRecalculation != 0)
+        {
+            can_submit = false;
+            rejection_reason = "full_recalculation_order_block";
+            rejection_notes = "live-capable bot does not submit orders during full recalculation";
+        }
+        else if (selected_quantity <= 0)
+        {
+            can_submit = false;
+            rejection_reason = "configuration_error";
+            rejection_notes = "selected module quantity must be positive";
+        }
+        else if (selected_quantity > MaxPositionQuantity.GetInt())
+        {
+            can_submit = false;
+            rejection_reason = "max_position_quantity_gate";
+            rejection_notes = "selected module quantity exceeds Max Position Quantity";
+        }
+        else if (last_submitted_trade_date == current_date)
+        {
+            can_submit = false;
+            rejection_reason = "one_trade_per_day_gate";
+            rejection_notes = "combined A+B policy allows exactly one submitted trade per chart date";
+        }
+        else if (DailyLockBlocksNewEntry(
+                sc,
+                bar_index,
+                position_data,
+                DailyLossLimitUsd.GetFloat(),
+                DailyProfitLockUsd.GetFloat(),
+                rejection_reason,
+                rejection_notes))
+        {
+            can_submit = false;
+        }
+        else if (EvalTrailingDrawdownBlocks(
+                sc,
+                position_data,
+                MaxEvalTrailingDrawdownUsd.GetFloat(),
+                rejection_reason,
+                rejection_notes))
+        {
+            can_submit = false;
+        }
+        else if (position_data.PositionQuantity != 0.0 || position_data.WorkingOrdersExist != 0)
+        {
+            can_submit = false;
+            rejection_reason = "position_or_working_orders_gate";
+            rejection_notes = "existing position or working orders are present";
+        }
+
+        if (!can_submit)
+        {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
+            LogCandidateEvent(
+                sc,
+                csv_log_path,
+                "execution_entry_rejected",
+                symbol,
+                trade_account,
+                trade_mode,
+                bar_index,
+                candidate,
+                signal_id,
+                selected_quantity,
+                first_leg_quantity,
+                runner_quantity,
+                0,
+                0,
+                0,
+                0,
+                0,
+                position_data,
+                rejection_reason,
+                rejection_notes);
+            last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
+            continue;
+        }
+
+        AlertAcceptedSetup(
+            sc,
+            bar_index,
+            symbol,
+            candidate,
+            AcceptedSetupAlertSound.GetAlertSoundNumber());
+
+        s_SCNewOrder new_order;
+        new_order.OrderQuantity = selected_quantity;
+        new_order.OrderType = SCT_ORDERTYPE_MARKET;
+        new_order.TimeInForce = SCT_TIF_GOOD_TILL_CANCELED;
+        new_order.TextTag = signal_id.c_str();
+
+        new_order.AttachedOrderTarget1Type = SCT_ORDERTYPE_LIMIT;
+        new_order.Target1Offset = static_cast<float>(selected_target_points);
+        new_order.OCOGroup1Quantity = selected_quantity;
+
+        new_order.AttachedOrderStopAllType = SCT_ORDERTYPE_STOP;
+        new_order.StopAllOffset = static_cast<float>(selected_stop_points);
+
+        int order_result = 0;
+        if (candidate.direction == "long")
+            order_result = static_cast<int>(sc.BuyEntry(new_order, bar_index));
+        else
+            order_result = static_cast<int>(sc.SellEntry(new_order, bar_index));
+
+        s_SCPositionData after_position_data;
+        sc.GetTradePosition(after_position_data);
+
+        if (order_result <= 0)
+            sc.AddMessageToLog(sc.GetTradingErrorTextMessage(order_result), true);
+        else
+        {
+            last_submitted_trade_date = current_date;
+            TrackSubmittedBotOrders(sc, new_order, bar_index, candidate, signal_id);
+            if (DrawTradeMarkersAndLevels.GetYesNo() != 0)
+            {
+                DrawSubmittedTradeOverlay(
+                    sc,
+                    bar_index,
+                    candidate,
+                    first_leg_quantity,
+                    runner_quantity,
+                    MaxInt(1, TradeLevelForwardBars.GetInt()));
+            }
+            DrawTrackedOrderFills(
+                sc,
+                symbol,
+                trade_account,
+                DrawTradeMarkersAndLevels.GetYesNo() != 0);
+        }
+
+        std::ostringstream entry_notes;
+        entry_notes << candidate.notes
+                    << "; selected_module=" << selected_module
+                    << "; quantity=" << selected_quantity
+                    << "; stop_all_offset_points=" << FormatNumber(selected_stop_points)
+                    << "; target1_offset_points=" << FormatNumber(selected_target_points)
+                    << "; one_trade_per_day_policy=true";
+
+        LogCandidateEvent(
+            sc,
+            csv_log_path,
+            order_result > 0 ? "execution_entry_submitted" : "execution_entry_error",
+            symbol,
+            trade_account,
+            trade_mode,
+            bar_index,
+            candidate,
+            signal_id,
+            selected_quantity,
+            first_leg_quantity,
+            runner_quantity,
+            order_result,
+            new_order.InternalOrderID,
+            new_order.Target1InternalOrderID,
+            0,
+            new_order.StopAllInternalOrderID,
+            after_position_data,
+            order_result > 0 ? "not_applicable" : "order_submission_error",
+            order_result > 0 ? entry_notes.str() : std::string(sc.GetTradingErrorTextMessage(order_result)));
+
+        last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
+    }
+}
+
+void RunMgcNormalBreakEvenStudy(SCStudyInterfaceRef sc)
+{
+    SCInputRef CsvLogPath = sc.Input[0];
+    SCInputRef ArmExecution = sc.Input[1];
+    SCInputRef SendOrdersToTradeService = sc.Input[2];
+    SCInputRef RequireTradeSimulationModeOffForLive = sc.Input[3];
+    SCInputRef RequireTradeSimulationModeOnForSim = sc.Input[4];
+    SCInputRef ConfirmationText = sc.Input[5];
+    SCInputRef RequiredSymbolPrefix = sc.Input[6];
+    SCInputRef AllowedTradeAccount = sc.Input[7];
+    SCInputRef LogRejections = sc.Input[8];
+    SCInputRef ProcessFullRecalculation = sc.Input[9];
+    SCInputRef ResetCsvOnFullRecalculation = sc.Input[10];
+    SCInputRef SetupStartTime = sc.Input[11];
+    SCInputRef SetupEndTime = sc.Input[12];
+    SCInputRef FlattenTime = sc.Input[13];
+    SCInputRef Quantity = sc.Input[14];
+    SCInputRef MaxPositionQuantity = sc.Input[15];
+    SCInputRef DailyLossLimitUsd = sc.Input[16];
+    SCInputRef DailyProfitLockUsd = sc.Input[17];
+    SCInputRef LookbackBars = sc.Input[18];
+    SCInputRef BufferPoints = sc.Input[19];
+    SCInputRef DeltaThreshold = sc.Input[20];
+    SCInputRef DirectionalCloseLocationThreshold = sc.Input[21];
+    SCInputRef MaxAbsDelta = sc.Input[22];
+    SCInputRef TargetPoints = sc.Input[23];
+    SCInputRef StopPoints = sc.Input[24];
+    SCInputRef BreakEvenTriggerPoints = sc.Input[25];
+    SCInputRef BreakEvenOffsetTicks = sc.Input[26];
+    SCInputRef DrawStatusBannerInput = sc.Input[27];
+    SCInputRef StatusBannerVerticalPosition = sc.Input[28];
+    SCInputRef StatusBannerFontSize = sc.Input[29];
+    SCInputRef AcceptedSetupAlertSound = sc.Input[30];
+    SCInputRef DrawTradeMarkersAndLevels = sc.Input[31];
+    SCInputRef TradeLevelForwardBars = sc.Input[32];
+
+    const int status_slot = 4;
+
+    if (sc.SetDefaults)
+    {
+        sc.GraphName = "AxonTrade MGC Normal BreakEven Bot";
+        sc.StudyDescription =
+            "Guarded MGC normal-profitability lookback-breakout bot with 25/15 exits and +20 point break-even.";
+        sc.AutoLoop = 0;
+        sc.GraphRegion = 0;
+        sc.UpdateAlways = 1;
+
+        sc.AllowMultipleEntriesInSameDirection = false;
+        sc.MaximumPositionAllowed = 1;
+        sc.SupportReversals = false;
+        sc.SendOrdersToTradeService = false;
+        sc.AllowOppositeEntryWithOpposingPositionOrOrders = false;
+        sc.SupportAttachedOrdersForTrading = false;
+        sc.CancelAllOrdersOnEntriesAndReversals = true;
+        sc.AllowEntryWithWorkingOrders = false;
+        sc.CancelAllWorkingOrdersOnExit = true;
+        sc.AllowOnlyOneTradePerBar = true;
+        sc.MaintainTradeStatisticsAndTradesData = true;
+
+        CsvLogPath.Name = "CSV Log Path";
+        CsvLogPath.SetString("C:\\SierraChart\\Data\\AxonTrade_MgcNormalBreakEvenBot.csv");
+
+        ArmExecution.Name = "Arm Execution";
+        ArmExecution.SetYesNo(0);
+
+        SendOrdersToTradeService.Name = "Send Orders To Trade Service";
+        SendOrdersToTradeService.SetYesNo(0);
+
+        RequireTradeSimulationModeOffForLive.Name = "Require Trade Simulation Mode Off For Live";
+        RequireTradeSimulationModeOffForLive.SetYesNo(1);
+
+        RequireTradeSimulationModeOnForSim.Name = "Require Trade Simulation Mode On For Sim";
+        RequireTradeSimulationModeOnForSim.SetYesNo(1);
+
+        ConfirmationText.Name = "Confirmation Text";
+        ConfirmationText.SetString("");
+
+        RequiredSymbolPrefix.Name = "Required Symbol Prefix";
+        RequiredSymbolPrefix.SetString("MGC");
+
+        AllowedTradeAccount.Name = "Allowed Trade Account";
+        AllowedTradeAccount.SetString("");
+
+        LogRejections.Name = "Log Rejections";
+        LogRejections.SetYesNo(0);
+
+        ProcessFullRecalculation.Name = "Process Full Recalculation";
+        ProcessFullRecalculation.SetYesNo(0);
+
+        ResetCsvOnFullRecalculation.Name = "Reset CSV On Full Recalculation";
+        ResetCsvOnFullRecalculation.SetYesNo(1);
+
+        SetupStartTime.Name = "Setup Start Time";
+        SetupStartTime.SetTime(HMS_TIME(8, 20, 0));
+
+        SetupEndTime.Name = "Setup End Time";
+        SetupEndTime.SetTime(HMS_TIME(10, 30, 0));
+
+        FlattenTime.Name = "Flatten Time";
+        FlattenTime.SetTime(HMS_TIME(16, 30, 0));
+
+        Quantity.Name = "Quantity";
+        Quantity.SetInt(1);
+        Quantity.SetIntLimits(1, 100);
+
+        MaxPositionQuantity.Name = "Max Position Quantity";
+        MaxPositionQuantity.SetInt(1);
+        MaxPositionQuantity.SetIntLimits(1, 100);
+
+        DailyLossLimitUsd.Name = "Daily Loss Lock USD";
+        DailyLossLimitUsd.SetFloat(500.0f);
+
+        DailyProfitLockUsd.Name = "Daily Profit Lock USD";
+        DailyProfitLockUsd.SetFloat(0.0f);
+
+        LookbackBars.Name = "Lookback Bars";
+        LookbackBars.SetInt(10);
+        LookbackBars.SetIntLimits(1, 500);
+
+        BufferPoints.Name = "Buffer Points";
+        BufferPoints.SetFloat(0.0f);
+
+        DeltaThreshold.Name = "Delta Threshold";
+        DeltaThreshold.SetFloat(0.0f);
+
+        DirectionalCloseLocationThreshold.Name = "Directional Close Location Threshold";
+        DirectionalCloseLocationThreshold.SetFloat(0.45f);
+
+        MaxAbsDelta.Name = "Max Absolute Delta";
+        MaxAbsDelta.SetFloat(125.0f);
+
+        TargetPoints.Name = "Target Points";
+        TargetPoints.SetFloat(25.0f);
+
+        StopPoints.Name = "Stop Points";
+        StopPoints.SetFloat(15.0f);
+
+        BreakEvenTriggerPoints.Name = "Break Even Trigger Points";
+        BreakEvenTriggerPoints.SetFloat(20.0f);
+
+        BreakEvenOffsetTicks.Name = "Break Even Offset Ticks";
+        BreakEvenOffsetTicks.SetInt(0);
+        BreakEvenOffsetTicks.SetIntLimits(-20, 20);
+
+        DrawStatusBannerInput.Name = "Draw Status Banner";
+        DrawStatusBannerInput.SetYesNo(1);
+
+        StatusBannerVerticalPosition.Name = "Status Banner Vertical Position";
+        StatusBannerVerticalPosition.SetInt(88);
+        StatusBannerVerticalPosition.SetIntLimits(5, 98);
+
+        StatusBannerFontSize.Name = "Status Banner Font Size";
+        StatusBannerFontSize.SetInt(10);
+        StatusBannerFontSize.SetIntLimits(6, 24);
+
+        AcceptedSetupAlertSound.Name = "Accepted Setup Alert Sound";
+        AcceptedSetupAlertSound.SetAlertSoundNumber(1);
+
+        DrawTradeMarkersAndLevels.Name = "Draw Trade Markers And Levels";
+        DrawTradeMarkersAndLevels.SetYesNo(1);
+
+        TradeLevelForwardBars.Name = "Trade Level Forward Bars";
+        TradeLevelForwardBars.SetInt(120);
+        TradeLevelForwardBars.SetIntLimits(1, 1000);
+
+        return;
+    }
+
+    if (sc.LastCallToFunction)
+    {
+        DeleteStatusBannerBySlot(sc, status_slot);
+        DeleteTrackedBotOrders(sc);
+        return;
+    }
+
+    const bool route_to_trade_service = SendOrdersToTradeService.GetYesNo() != 0;
+    const std::string trade_mode = route_to_trade_service ? "mgc_normal_live" : "mgc_normal_sim";
+    const char* required_confirmation_text = route_to_trade_service
+        ? kRequiredMgcNormalLiveConfirmationText
+        : kRequiredMgcNormalSimConfirmationText;
+
+    sc.SendOrdersToTradeService = route_to_trade_service;
+    sc.MaximumPositionAllowed = MaxPositionQuantity.GetInt();
+    sc.SupportTradingScaleIn = 0;
+    sc.SupportTradingScaleOut = 0;
+
+    if (sc.ArraySize <= 1)
+        return;
+
+    const std::string csv_log_path = ToStdString(CsvLogPath.GetString());
+    const int latest_closed_bar_index = LatestClosedBarIndex(sc);
+    if (latest_closed_bar_index < 0)
+        return;
+
+    int& last_processed_bar_index = sc.GetPersistentInt(61);
+    int& full_recalculation_reset_done = sc.GetPersistentInt(62);
+    int& processing_initialized = sc.GetPersistentInt(63);
+    int& last_submitted_trade_date = sc.GetPersistentInt(64);
+    int& flatten_date = sc.GetPersistentInt(65);
+
+    if (sc.IsFullRecalculation && ProcessFullRecalculation.GetYesNo() != 0)
+    {
+        if (full_recalculation_reset_done == 0)
+        {
+            last_processed_bar_index = -1;
+            last_submitted_trade_date = 0;
+            flatten_date = 0;
+            processing_initialized = 1;
+            if (ResetCsvOnFullRecalculation.GetYesNo() != 0 && !csv_log_path.empty())
+                std::remove(csv_log_path.c_str());
+            full_recalculation_reset_done = 1;
+        }
+    }
+    else
+    {
+        full_recalculation_reset_done = 0;
+        if (processing_initialized == 0)
+        {
+            last_processed_bar_index = latest_closed_bar_index - 1;
+            processing_initialized = 1;
+        }
+        if (latest_closed_bar_index < last_processed_bar_index)
+            last_processed_bar_index = latest_closed_bar_index - 1;
+    }
+
+    int start_bar_index = latest_closed_bar_index;
+    bool has_new_closed_bar = true;
+    if (ProcessFullRecalculation.GetYesNo() != 0 && sc.IsFullRecalculation)
+        start_bar_index = 0;
+    else if (latest_closed_bar_index <= last_processed_bar_index)
+        has_new_closed_bar = false;
+    else
+        start_bar_index = MaxInt(0, last_processed_bar_index + 1);
+
+    const std::string symbol = ToStdString(sc.Symbol);
+    const std::string trade_account = ToStdString(sc.SelectedTradeAccount);
+    const std::string required_symbol_prefix = ToStdString(RequiredSymbolPrefix.GetString());
+    const std::string allowed_trade_account = ToStdString(AllowedTradeAccount.GetString());
+    const bool current_chart_downloading_historical_data =
+        sc.DownloadingHistoricalData != 0
+        || sc.ChartIsDownloadingHistoricalData(sc.ChartNumber) != 0;
+
+    DrawTrackedOrderFills(
+        sc,
+        symbol,
+        trade_account,
+        DrawTradeMarkersAndLevels.GetYesNo() != 0);
+
+    s_SCPositionData immediate_position_data;
+    sc.GetTradePosition(immediate_position_data);
+
+    const bool confirmation_ok = ToStdString(ConfirmationText.GetString()) == required_confirmation_text;
+    const bool symbol_ok = StartsWith(symbol, required_symbol_prefix);
+    const bool simulation_mode_ok = route_to_trade_service
+        ? (RequireTradeSimulationModeOffForLive.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn == 0)
+        : (RequireTradeSimulationModeOnForSim.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn != 0);
+    const bool account_ok = !route_to_trade_service
+        || (!allowed_trade_account.empty() && trade_account == allowed_trade_account);
+    const bool operational_controls_allowed =
+        ArmExecution.GetYesNo() != 0
+        && !csv_log_path.empty()
+        && confirmation_ok
+        && simulation_mode_ok
+        && account_ok
+        && symbol_ok
+        && !current_chart_downloading_historical_data;
+
+    bool daily_lock_active = false;
+    if (operational_controls_allowed)
+    {
+        std::string risk_rejection_reason;
+        std::string risk_rejection_notes;
+        daily_lock_active = DailyLockBlocksNewEntry(
+            sc,
+            latest_closed_bar_index,
+            immediate_position_data,
+            DailyLossLimitUsd.GetFloat(),
+            DailyProfitLockUsd.GetFloat(),
+            risk_rejection_reason,
+            risk_rejection_notes);
+        if (daily_lock_active)
+        {
+            FlattenIfNeeded(
+                sc,
+                csv_log_path,
+                symbol,
+                trade_account,
+                trade_mode,
+                latest_closed_bar_index,
+                "daily_lock_flatten",
+                risk_rejection_notes);
+            sc.GetTradePosition(immediate_position_data);
+        }
+    }
+
+    sc.GetTradePosition(immediate_position_data);
+
+    if (DrawStatusBannerInput.GetYesNo() != 0)
+    {
+        std::string headline;
+        COLORREF text_color = RGB(255, 255, 255);
+        COLORREF background_color = RGB(96, 72, 0);
+        const std::string mode_label = route_to_trade_service ? "LIVE" : "SIM";
+
+        if (ArmExecution.GetYesNo() == 0)
+            headline = "AXON MGC " + mode_label + ": STANDBY - NOT ARMED";
+        else if (csv_log_path.empty())
+        {
+            headline = "AXON MGC " + mode_label + ": BLOCKED - CSV PATH BLANK";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (!confirmation_ok)
+        {
+            headline = "AXON MGC " + mode_label + ": BLOCKED - CONFIRMATION TEXT";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (!simulation_mode_ok)
+        {
+            headline = route_to_trade_service
+                ? "AXON MGC LIVE: BLOCKED - SIERRA SIM MODE IS ON"
+                : "AXON MGC SIM: BLOCKED - SIERRA SIM MODE IS OFF";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (route_to_trade_service && allowed_trade_account.empty())
+        {
+            headline = "AXON MGC LIVE: BLOCKED - ALLOWED ACCOUNT BLANK";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (!account_ok)
+        {
+            headline = "AXON MGC LIVE: BLOCKED - ACCOUNT MISMATCH";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (!symbol_ok)
+        {
+            headline = "AXON MGC " + mode_label + ": BLOCKED - SYMBOL PREFIX";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (current_chart_downloading_historical_data)
+        {
+            headline = "AXON MGC " + mode_label + ": WAIT - HISTORICAL DOWNLOAD";
+            background_color = RGB(96, 72, 0);
+        }
+        else if (daily_lock_active)
+        {
+            headline = "AXON MGC " + mode_label + ": LOCKED - DAILY RISK";
+            background_color = RGB(128, 32, 24);
+        }
+        else if (immediate_position_data.PositionQuantity != 0.0 || immediate_position_data.WorkingOrdersExist != 0)
+        {
+            headline = "AXON MGC " + mode_label + ": ARMED - MANAGING POSITION/ORDERS";
+            background_color = RGB(0, 92, 72);
+        }
+        else
+        {
+            headline = "AXON MGC " + mode_label + ": ARMED - READY";
+            background_color = RGB(0, 96, 32);
+        }
+
+        std::ostringstream gate_line;
+        gate_line << "Gates: arm=" << YesNoStatus(ArmExecution.GetYesNo() != 0)
+                  << " route=" << (route_to_trade_service ? "LIVE" : "SIM")
+                  << " sim=" << (sc.GlobalTradeSimulationIsOn != 0 ? "ON" : "OFF")
+                  << " simGate=" << YesNoStatus(simulation_mode_ok)
+                  << " confirm=" << YesNoStatus(confirmation_ok)
+                  << " acct=" << YesNoStatus(account_ok)
+                  << " symbol=" << YesNoStatus(symbol_ok)
+                  << " data=" << (current_chart_downloading_historical_data ? "DL" : "OK")
+                  << " locks=" << (daily_lock_active ? "ON" : "OK");
+
+        std::ostringstream detail_line;
+        detail_line << "Acct=" << (trade_account.empty() ? "<none>" : trade_account)
+                    << " Sym=" << symbol
+                    << " Pos=" << FormatNumber(immediate_position_data.PositionQuantity)
+                    << " Wkg=" << immediate_position_data.WorkingOrdersExist
+                    << " DPL=" << FormatNumber(DailyProfitView(immediate_position_data))
+                    << " one/day=" << (last_submitted_trade_date == sc.BaseDateTimeIn[latest_closed_bar_index].GetDate() ? "USED" : "OPEN")
+                    << " q=" << Quantity.GetInt();
+
+        DrawStatusBannerBySlot(
+            sc,
+            status_slot,
+            latest_closed_bar_index,
+            headline,
+            gate_line.str(),
+            detail_line.str(),
+            text_color,
+            background_color,
+            StatusBannerVerticalPosition.GetInt(),
+            StatusBannerFontSize.GetInt());
+    }
+    else
+    {
+        DeleteStatusBannerBySlot(sc, status_slot);
+    }
+
+    if (csv_log_path.empty())
+        return;
+    if (!has_new_closed_bar)
+        return;
+
+    for (int bar_index = start_bar_index; bar_index <= latest_closed_bar_index; ++bar_index)
+    {
+        if (bar_index <= last_processed_bar_index)
+            continue;
+        if (sc.GetBarHasClosedStatus(bar_index) != BHCS_BAR_HAS_CLOSED)
+            continue;
+
+        EnsureDailyLockDate(sc, bar_index);
+
+        s_SCPositionData position_data;
+        sc.GetTradePosition(position_data);
+
+        const int bar_time = sc.BaseDateTimeIn[bar_index].GetTimeInSeconds();
+        const int current_date = sc.BaseDateTimeIn[bar_index].GetDate();
+        const bool chart_downloading_historical_data =
+            sc.DownloadingHistoricalData != 0
+            || sc.ChartIsDownloadingHistoricalData(sc.ChartNumber) != 0;
+        const bool current_route_to_trade_service = SendOrdersToTradeService.GetYesNo() != 0;
+        const std::string current_trade_mode = current_route_to_trade_service ? "mgc_normal_live" : "mgc_normal_sim";
+        const char* current_required_confirmation_text = current_route_to_trade_service
+            ? kRequiredMgcNormalLiveConfirmationText
+            : kRequiredMgcNormalSimConfirmationText;
+        const bool current_simulation_mode_ok = current_route_to_trade_service
+            ? (RequireTradeSimulationModeOffForLive.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn == 0)
+            : (RequireTradeSimulationModeOnForSim.GetYesNo() == 0 || sc.GlobalTradeSimulationIsOn != 0);
+        const bool current_account_ok = !current_route_to_trade_service
+            || (!allowed_trade_account.empty() && trade_account == allowed_trade_account);
+        const bool order_functions_allowed =
+            ArmExecution.GetYesNo() != 0
+            && ToStdString(ConfirmationText.GetString()) == current_required_confirmation_text
+            && current_simulation_mode_ok
+            && current_account_ok
+            && StartsWith(symbol, required_symbol_prefix)
+            && !chart_downloading_historical_data
+            && sc.IsFullRecalculation == 0;
+
+        if (order_functions_allowed && bar_time >= FlattenTime.GetTime() && flatten_date != current_date)
+        {
+            FlattenIfNeeded(
+                sc,
+                csv_log_path,
+                symbol,
+                trade_account,
+                current_trade_mode,
+                bar_index,
+                "session_flatten",
+                "flatten time reached");
+            flatten_date = current_date;
+            sc.GetTradePosition(position_data);
+        }
+
+        std::string rejection_reason;
+        std::string rejection_notes;
+        if (DailyLockBlocksNewEntry(
+                sc,
+                bar_index,
+                position_data,
+                DailyLossLimitUsd.GetFloat(),
+                DailyProfitLockUsd.GetFloat(),
+                rejection_reason,
+                rejection_notes))
+        {
+            if (order_functions_allowed)
+            {
+                FlattenIfNeeded(
+                    sc,
+                    csv_log_path,
+                    symbol,
+                    trade_account,
+                    current_trade_mode,
+                    bar_index,
+                    "daily_lock_flatten",
+                    rejection_notes);
+                sc.GetTradePosition(position_data);
+            }
+        }
+
+        SignalCandidate candidate = EvaluateMgcNormalBreakEvenCandidate(
+            sc,
+            bar_index,
+            SetupStartTime.GetTime(),
+            SetupEndTime.GetTime(),
+            LookbackBars.GetInt(),
+            BufferPoints.GetFloat(),
+            DeltaThreshold.GetFloat(),
+            DirectionalCloseLocationThreshold.GetFloat(),
+            MaxAbsDelta.GetFloat(),
+            StopPoints.GetFloat(),
+            TargetPoints.GetFloat());
+
+        const std::string signal_id = SignalId(current_trade_mode, symbol, bar_index, candidate.direction);
+        if (!candidate.accepted)
+        {
+            if (LogRejections.GetYesNo() != 0)
+            {
+                LogCandidateEvent(
+                    sc,
+                    csv_log_path,
+                    "execution_signal_rejected",
+                    symbol,
+                    trade_account,
+                    current_trade_mode,
+                    bar_index,
+                    candidate,
+                    signal_id,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    position_data,
+                    candidate.rejection_reason,
+                    candidate.notes);
+            }
+            last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
+            continue;
+        }
+
+        const int selected_quantity = Quantity.GetInt();
+        const int first_leg_quantity = selected_quantity;
+        const int runner_quantity = 0;
+
+        bool can_submit = true;
+        rejection_reason = "not_applicable";
+        rejection_notes = "ready";
+        if (ArmExecution.GetYesNo() == 0)
+        {
+            can_submit = false;
+            rejection_reason = "execution_not_armed";
+            rejection_notes = "Arm Execution is No";
+        }
+        else if (ToStdString(ConfirmationText.GetString()) != current_required_confirmation_text)
+        {
+            can_submit = false;
+            rejection_reason = "confirmation_text_missing";
+            rejection_notes = std::string("Confirmation Text must be ") + current_required_confirmation_text;
+        }
+        else if (!current_simulation_mode_ok)
+        {
+            can_submit = false;
+            rejection_reason = current_route_to_trade_service
+                ? "trade_simulation_mode_must_be_off"
+                : "trade_simulation_mode_must_be_on";
+            rejection_notes = current_route_to_trade_service
+                ? "Trade >> Trade Simulation Mode On must be off for live MGC routing"
+                : "Trade >> Trade Simulation Mode On must be on for MGC sim/replay mode";
+        }
+        else if (current_route_to_trade_service && allowed_trade_account.empty())
+        {
+            can_submit = false;
+            rejection_reason = "allowed_trade_account_missing";
+            rejection_notes = "Allowed Trade Account must exactly match the selected trade account for live routing";
+        }
+        else if (!current_account_ok)
+        {
+            can_submit = false;
+            rejection_reason = "trade_account_gate";
+            std::ostringstream notes;
+            notes << "selected trade account " << trade_account
+                  << " does not match allowed account " << allowed_trade_account;
+            rejection_notes = notes.str();
+        }
+        else if (!StartsWith(symbol, required_symbol_prefix))
+        {
+            can_submit = false;
+            rejection_reason = "symbol_prefix_gate";
+            std::ostringstream notes;
+            notes << "chart symbol " << symbol << " does not start with required prefix "
+                  << required_symbol_prefix;
+            rejection_notes = notes.str();
+        }
+        else if (chart_downloading_historical_data)
+        {
+            can_submit = false;
+            rejection_reason = "historical_download_in_progress";
+            rejection_notes = "chart is downloading historical data; entry submission skipped";
+        }
+        else if (sc.IsFullRecalculation != 0)
+        {
+            can_submit = false;
+            rejection_reason = "full_recalculation_order_block";
+            rejection_notes = "MGC bot does not submit orders during full recalculation";
+        }
+        else if (selected_quantity <= 0)
+        {
+            can_submit = false;
+            rejection_reason = "configuration_error";
+            rejection_notes = "Quantity must be positive";
+        }
+        else if (selected_quantity > MaxPositionQuantity.GetInt())
+        {
+            can_submit = false;
+            rejection_reason = "max_position_quantity_gate";
+            rejection_notes = "Quantity exceeds Max Position Quantity";
+        }
+        else if (TargetPoints.GetFloat() <= 0.0 || StopPoints.GetFloat() <= 0.0)
+        {
+            can_submit = false;
+            rejection_reason = "configuration_error";
+            rejection_notes = "Target Points and Stop Points must be positive";
+        }
+        else if (BreakEvenTriggerPoints.GetFloat() <= 0.0 || sc.TickSize <= 0.0)
+        {
+            can_submit = false;
+            rejection_reason = "configuration_error";
+            rejection_notes = "Break Even Trigger Points and chart Tick Size must be positive";
+        }
+        else if (last_submitted_trade_date == current_date)
+        {
+            can_submit = false;
+            rejection_reason = "one_trade_per_day_gate";
+            rejection_notes = "MGC normal lead allows exactly one submitted trade per chart date";
+        }
+        else if (DailyLockBlocksNewEntry(
+                sc,
+                bar_index,
+                position_data,
+                DailyLossLimitUsd.GetFloat(),
+                DailyProfitLockUsd.GetFloat(),
+                rejection_reason,
+                rejection_notes))
+        {
+            can_submit = false;
+        }
+        else if (position_data.PositionQuantity != 0.0 || position_data.WorkingOrdersExist != 0)
+        {
+            can_submit = false;
+            rejection_reason = "position_or_working_orders_gate";
+            rejection_notes = "existing position or working orders are present";
+        }
+
+        if (!can_submit)
+        {
+            AlertAcceptedSetup(
+                sc,
+                bar_index,
+                symbol,
+                candidate,
+                AcceptedSetupAlertSound.GetAlertSoundNumber());
+            LogCandidateEvent(
+                sc,
+                csv_log_path,
+                "execution_entry_rejected",
+                symbol,
+                trade_account,
+                current_trade_mode,
+                bar_index,
+                candidate,
+                signal_id,
+                selected_quantity,
+                first_leg_quantity,
+                runner_quantity,
+                0,
+                0,
+                0,
+                0,
+                0,
+                position_data,
+                rejection_reason,
+                rejection_notes);
+            last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
+            continue;
+        }
+
+        AlertAcceptedSetup(
+            sc,
+            bar_index,
+            symbol,
+            candidate,
+            AcceptedSetupAlertSound.GetAlertSoundNumber());
+
+        s_SCNewOrder new_order;
+        new_order.OrderQuantity = selected_quantity;
+        new_order.OrderType = SCT_ORDERTYPE_MARKET;
+        new_order.TimeInForce = SCT_TIF_GOOD_TILL_CANCELED;
+        new_order.TextTag = signal_id.c_str();
+
+        new_order.AttachedOrderTarget1Type = SCT_ORDERTYPE_LIMIT;
+        new_order.Target1Offset = TargetPoints.GetFloat();
+        new_order.OCOGroup1Quantity = selected_quantity;
+
+        new_order.AttachedOrderStopAllType = SCT_ORDERTYPE_STOP;
+        new_order.StopAllOffset = StopPoints.GetFloat();
+        new_order.MoveToBreakEven.Type = MOVETO_BE_ACTION_TYPE_OFFSET_TRIGGERED;
+        new_order.MoveToBreakEven.TriggerOffsetInTicks = static_cast<int>(
+            std::ceil((BreakEvenTriggerPoints.GetFloat() / sc.TickSize) - 1e-12));
+        new_order.MoveToBreakEven.BreakEvenLevelOffsetInTicks = BreakEvenOffsetTicks.GetInt();
+
+        int order_result = 0;
+        if (candidate.direction == "long")
+            order_result = static_cast<int>(sc.BuyEntry(new_order, bar_index));
+        else
+            order_result = static_cast<int>(sc.SellEntry(new_order, bar_index));
+
+        s_SCPositionData after_position_data;
+        sc.GetTradePosition(after_position_data);
+
+        if (order_result <= 0)
+            sc.AddMessageToLog(sc.GetTradingErrorTextMessage(order_result), true);
+        else
+        {
+            last_submitted_trade_date = current_date;
+            TrackSubmittedBotOrders(sc, new_order, bar_index, candidate, signal_id);
+            if (DrawTradeMarkersAndLevels.GetYesNo() != 0)
+            {
+                DrawSubmittedTradeOverlay(
+                    sc,
+                    bar_index,
+                    candidate,
+                    first_leg_quantity,
+                    runner_quantity,
+                    MaxInt(1, TradeLevelForwardBars.GetInt()));
+            }
+            DrawTrackedOrderFills(
+                sc,
+                symbol,
+                trade_account,
+                DrawTradeMarkersAndLevels.GetYesNo() != 0);
+        }
+
+        std::ostringstream entry_notes;
+        entry_notes << candidate.notes
+                    << "; quantity=" << selected_quantity
+                    << "; stop_all_offset_points=" << FormatNumber(StopPoints.GetFloat())
+                    << "; target1_offset_points=" << FormatNumber(TargetPoints.GetFloat())
+                    << "; break_even_trigger_points=" << FormatNumber(BreakEvenTriggerPoints.GetFloat())
+                    << "; break_even_trigger_ticks=" << new_order.MoveToBreakEven.TriggerOffsetInTicks
+                    << "; break_even_offset_ticks=" << BreakEvenOffsetTicks.GetInt()
+                    << "; one_trade_per_day_policy=true"
+                    << "; route_to_trade_service=" << FormatBool(current_route_to_trade_service);
+
+        LogCandidateEvent(
+            sc,
+            csv_log_path,
+            order_result > 0 ? "execution_entry_submitted" : "execution_entry_error",
+            symbol,
+            trade_account,
+            current_trade_mode,
+            bar_index,
+            candidate,
+            signal_id,
+            selected_quantity,
+            first_leg_quantity,
+            runner_quantity,
+            order_result,
+            new_order.InternalOrderID,
+            new_order.Target1InternalOrderID,
+            0,
+            new_order.StopAllInternalOrderID,
+            after_position_data,
+            order_result > 0 ? "not_applicable" : "order_submission_error",
+            order_result > 0 ? entry_notes.str() : std::string(sc.GetTradingErrorTextMessage(order_result)));
+
+        last_processed_bar_index = MaxInt(last_processed_bar_index, bar_index);
+    }
+}
+
 } // namespace
 
 SCSFExport scsf_AxonTradeVwapDeltaExecutionBot(SCStudyInterfaceRef sc)
@@ -2646,4 +4496,14 @@ SCSFExport scsf_AxonTradeVwapDeltaMesEvalLiveBot(SCStudyInterfaceRef sc)
 SCSFExport scsf_AxonTradeVwapDeltaMnqEvalLiveBot(SCStudyInterfaceRef sc)
 {
     RunVwapDeltaExecutionStudy(sc, true, true);
+}
+
+SCSFExport scsf_AxonTradeMnqEvalPassCombinedBot(SCStudyInterfaceRef sc)
+{
+    RunMnqEvalPassCombinedStudy(sc);
+}
+
+SCSFExport scsf_AxonTradeMgcNormalBreakEvenBot(SCStudyInterfaceRef sc)
+{
+    RunMgcNormalBreakEvenStudy(sc);
 }

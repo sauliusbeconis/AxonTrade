@@ -29,7 +29,7 @@ def test_loads_lucidflex_profile() -> None:
 
 
 def test_loads_instrument_profiles() -> None:
-    for symbol in ("ES", "MES", "NQ", "MNQ"):
+    for symbol in ("ES", "MES", "NQ", "MNQ", "MGC"):
         config = load_yaml(f"config/instruments/{symbol}.yaml")
         validate_instrument_config(config)
         assert config["symbol"] == symbol

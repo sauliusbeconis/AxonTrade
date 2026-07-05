@@ -6,9 +6,9 @@ Most Phase 0 studies are indicator-only. They may draw chart objects and write
 simulation-safe research logs, but they must not submit, modify, cancel,
 flatten, or route orders.
 
-The only approved exception is `AxonTradeVwapDeltaExecutionBot.cpp`, which is a
-simulation-only mechanics harness. It rejects live trade-service routing in code
-and is isolated by `scripts/check_repo.sh`.
+The only approved exception is `AxonTradeVwapDeltaExecutionBot.cpp`, which
+contains the guarded execution studies. Order-routing calls must stay isolated
+to that file and are checked by `scripts/check_repo.sh`.
 
 ## Smoke Test
 
@@ -82,20 +82,32 @@ routing is rejected in this build. Current defaults target the accepted
 Build, load, and first mechanics-test instructions are documented in
 `docs/sierra-vwap-delta-execution-bot.md`.
 
-The same source also exports `AxonTrade MES Eval Live Bot` and `AxonTrade MNQ
-Eval Live Bot`, separate live-capable prop-eval studies. MES defaults to
+The same source also exports `AxonTrade MES Eval Live Bot`, `AxonTrade MNQ Eval
+Live Bot`, `AxonTrade MNQ Eval Pass Combined Bot`, and `AxonTrade MGC Normal
+BreakEven Bot`, separate guarded execution studies. MES defaults to
 `1 + 1 MES`, `$240` daily loss lock, `$650` daily profit lock, `$1000` eval
-trailing drawdown lock, an exact account whitelist, and `MES_EVAL_LIVE`
-confirmation text. MNQ defaults to the local `80pt_400d_cl0.4` research lead
-with `25 / 140 / 40 / initial` exits, no Friday entries, no `11:00` or `15:00`
-exchange-time entries, `$650` daily loss/profit locks, `$1000` eval trailing
-drawdown lock, an exact account whitelist, and `MNQ_EVAL_LIVE` confirmation
-text. Both live profiles require Sierra trade simulation mode to be off before
-they can route to the trade service.
+trailing drawdown lock, an exact account
+whitelist, and `MES_EVAL_LIVE` confirmation text. MNQ VWAP/delta defaults to
+the local `80pt_400d_cl0.4` research lead with `25 / 140 / 40 / initial` exits,
+no Friday entries, no `11:00` or `15:00` exchange-time entries, `$650` daily
+loss/profit locks, `$1000` eval trailing drawdown lock, an exact account
+whitelist, and `MNQ_EVAL_LIVE` confirmation text. MNQ A+B implements the
+combined eval-pass wave-rider candidate, with `12 MNQ` A+ and `4 MNQ` B
+modules, exactly one trade per chart date, `$900` daily loss lock, `$650` daily
+profit lock, `$1000` eval trailing drawdown lock, and
+`MNQ_EVAL_PASS_AB_LIVE` confirmation text. MGC implements the frozen
+lookback-breakout normal-profitability lead with `1 MGC`, `25 / 15` exits,
+stop-to-breakeven after `+20` points, Monday/Tuesday/Friday only, one trade per
+chart date, `MGC_NORMAL_SIM` for replay/sim mode, and `MGC_NORMAL_LIVE` for
+controlled live routing. Its Sierra mechanics validation and supervised live
+staging passed on `2026-07-05`. Live profiles require Sierra trade simulation
+mode to be off before they can route to the trade service.
 
 Live/eval setup instructions are documented in
 `docs/sierra-vwap-delta-mes-eval-live-bot.md` and
-`docs/sierra-vwap-delta-mnq-eval-live-bot.md`.
+`docs/sierra-vwap-delta-mnq-eval-live-bot.md`. MNQ A+B setup is documented in
+`docs/sierra-mnq-eval-pass-combined-bot.md`. MGC setup is documented in
+`docs/sierra-mgc-normal-break-even-bot.md`.
 
 ## Build Workflow
 

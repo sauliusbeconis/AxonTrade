@@ -1,0 +1,20 @@
+schema_version: 1
+symbol: MGC
+name: Micro Gold Futures
+exchange: CME COMEX
+asset_class: precious_metals_futures
+contract_size: micro
+paired_mini: GC
+tick_size: 0.10
+tick_value_usd: 1.00
+point_value_usd: 10.00
+default_commission_per_side_usd: 0.50
+research_session_timezone: America/New_York
+notes:
+  - Contract unit is 10 troy ounces.
+  - Evaluate separately from equity-index futures because session behavior and
+    volatility regimes differ.
+sources:
+  - name: CME Micro Gold Futures Contract Specs
+    url: https://www.cmegroup.com/markets/metals/precious/e-micro-gold.contractSpecs.html
+    retrieved_on: "2026-07-03"
