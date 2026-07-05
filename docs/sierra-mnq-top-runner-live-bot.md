@@ -4,8 +4,8 @@
 of the MNQ top-runner lookback-breakout family.
 
 Current status: live-capable build exists and is aligned to the filtered frozen
-research rule. It is not approved for unattended live use until fresh
-replay/mechanics and controlled live staging pass on this aligned build.
+research rule. Fresh replay/mechanics passed on the aligned build. It is not
+approved for unattended live use until controlled live staging passes.
 
 ## Frozen Strategy
 

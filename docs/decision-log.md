@@ -412,3 +412,14 @@ Update after MNQ top-runner deep validation:
 - Prior Top Runner mechanics validation is superseded for the aligned signal
   filter. Fresh replay/mechanics and controlled live staging are required
   before any Top Runner live approval.
+
+Update after filtered MNQ top-runner replay/mechanics pass:
+
+- Operator built the Sierra DLL and confirmed fresh replay/mechanics passed for
+  the aligned filtered-rule `AxonTrade MNQ Top Runner Sim Bot`.
+- This clears the replay/mechanics gate that was reopened by the two-stage
+  filter alignment.
+- Top Runner is still not approved for unattended live automation. The next
+  gate is controlled live staging of `AxonTrade MNQ Top Runner Live Bot` with
+  `MNQ_TOP_RUNNER_LIVE`, exact account whitelist, `2 MNQ`, lower-DD `120 / 70`,
+  and `$300` daily loss lock.

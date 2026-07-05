@@ -41,7 +41,7 @@ simulation-only.
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | 🟢 | `AxonTrade MNQ Eval Pass Combined Bot` | eval-pass A+B wave-rider | 80% | 60% | 75% | `$28988` | `2.29` | `62.3%` | `1.2` | Live test/mechanics passed; controlled live routing approved for the validated A+B eval setup. |
 | 🟢 | `AxonTrade MNQ Eval Live Bot` | MNQ VWAP/delta profitability lead | 75% | 20% | 75% | `$9584.50` | `2.09` | `80.1%` | `1.8` | Live test/mechanics passed; controlled live routing approved for the validated VWAP/delta setup. |
-| 🟡 | `AxonTrade MNQ Top Runner Live Bot` | normal-profitability runner live candidate | 100% | 0% | 25% | `$10135` | `2.08` | `57.5%` | `0.85` | Offline research is saturated on the current export and ACSIL is aligned to the filtered frozen rule. Requires fresh replay/mechanics and controlled live staging before approval. |
+| 🟡 | `AxonTrade MNQ Top Runner Live Bot` | normal-profitability runner live candidate | 100% | 0% | 35% | `$10135` | `2.08` | `57.5%` | `0.85` | Offline research is saturated, ACSIL is aligned to the filtered frozen rule, and fresh replay/mechanics passed. Requires controlled live staging before approval. |
 
 Backlog: other instruments such as `MCL` stay at `0%` readiness until MNQ/MGC
 work stalls or a new export creates a stronger reason to branch.
@@ -499,9 +499,8 @@ Sierra implementation:
 - mode: simulation/replay only; live trade-service routing is rejected
 - default build variant: filtered high-PF `2 MNQ`, `160 / 70`, final
   close-location `0.9`
-- earlier replay/mechanics validation passed on `2026-07-05`; rerun replay
-  after the filtered-rule alignment before treating this exact build as
-  mechanics-validated
+- fresh replay/mechanics validation passed on `2026-07-05` after the
+  filtered-rule alignment
 
 Live-capable implementation:
 
@@ -521,10 +520,11 @@ worse (`120` trades, `$8635` net, `1.57` PF, `-$1712` DD for `120 / 70`) than
 the filtered frozen lower-DD row (`87` trades, `$10135` net, `2.08` PF,
 `-$1146` DD). The ACSIL Top Runner studies now implement the filtered rule.
 
-Decision: offline research on this family is complete for the current export.
-The lower-DD live build exists, but fresh replay/mechanics and controlled live
-staging have not passed for the aligned implementation. Do not treat it as
-approved unattended live automation until those gates are recorded.
+Decision: offline research on this family is complete for the current export,
+and the aligned sim/replay mechanics gate has passed. The lower-DD live build
+exists, but controlled live staging has not passed for the aligned
+implementation. Do not treat it as approved unattended live automation until
+that gate is recorded.
 
 ### MNQ Breakeven-Frequency Candidate (Parked)
 

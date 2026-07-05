@@ -3,11 +3,10 @@
 `AxonTrade MNQ Top Runner Sim Bot` is the ACSIL simulation/replay implementation
 of the MNQ top-runner lookback-breakout research lead.
 
-Current status: offline research is complete for the current MNQ export and the
-ACSIL implementation is aligned to the filtered frozen rule. Earlier Sierra
-replay/mechanics validation passed on `2026-07-05`; rerun replay after this
-filtered-rule alignment before treating the current build as mechanics
-validated. It is simulation-only and rejects live trade-service routing.
+Current status: offline research is complete for the current MNQ export, the
+ACSIL implementation is aligned to the filtered frozen rule, and fresh
+replay/mechanics validation passed on `2026-07-05`. It is simulation-only and
+rejects live trade-service routing.
 
 ## Frozen Strategy
 
