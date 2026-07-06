@@ -16,6 +16,11 @@ path split between controlled MES evaluation trading, controlled MGC
 normal-profitability trading, MNQ eval-pass execution, and MNQ normal-runner
 research.
 
+Online-focused research branch: the current branch has a separate instrument
+selection report at [docs/online-instrument-focus.md](docs/online-instrument-focus.md).
+Current conclusion: make `MNQ` the No. 1 research and execution instrument,
+with `MGC` kept as the stabilizer track.
+
 Percentages below are engineering readiness estimates, not profit forecasts or
 win probabilities. Research stats are backtest/replay evidence after the
 documented cost model and filters.
