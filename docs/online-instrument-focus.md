@@ -237,6 +237,30 @@ Do not use online data for:
    - live implementation simplicity.
 4. Keep MGC running as the stabilizer track while MNQ research continues.
 
+## Fresh MNQ Research Pass
+
+Report: [MNQ fresh strategy research](../reports/mnq-fresh-strategy-research.md)
+
+First-pass result:
+
+- tested `576` fresh MNQ signal sets and `6912` evaluated summary rows;
+- families tested: opening-range continuation, compression breakout,
+  failed-opening-range reversal, noise-area momentum, VWAP reclaim reversal,
+  and delta-exhaustion reversal;
+- no row passed the strict first-pass lens requiring at least `200` trades,
+  at least `2` trades/week, PF `>= 1.6`, drawdown better than `-$1000`,
+  positive latest-year net, and worst quarter better than `-$750`;
+- best high-net lead was a VWAP reclaim reversal with `142` trades, `$7966`
+  net, `1.50` PF, and `-$2535` drawdown, which is not acceptable for the
+  current objective;
+- best lower-DD near-miss rows gave up too much PF/net/frequency.
+
+Decision: the first fresh pass confirms there is MNQ edge in the 3-minute
+export, but not the target combination of high frequency, high PF, and low DD.
+The next defensible step is a different data representation: MNQ tick/range
+bars and, if available, market-depth/order-book imbalance. Continuing to tune
+3-minute ORB/noise/VWAP rows is lower priority unless the objective is relaxed.
+
 ## Current Operating Recommendation
 
 Make `MNQ` the main research and execution instrument for the next phase.
