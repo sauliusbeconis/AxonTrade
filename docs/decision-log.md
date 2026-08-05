@@ -468,3 +468,59 @@ Update after MNQ Eval Live final validation:
   buffer and aggregate risk control before scaling.
 - Next gate is monitored forward evidence, not more static tuning or default
   changes.
+
+Update after the NinjaTrader/Tradeify 50K Select strategy pivot (`2026-08-05`):
+
+- The active branch is strategy-only. No NinjaScript or NinjaTrader live route
+  was created on Linux.
+- Official Tradeify 50K Select assumptions were versioned in
+  `config/firms/tradeify_50k_select.yaml`: `$3000` target, `$2000` end-of-day
+  trailing drawdown enforced in real time, `40%` evaluation consistency, and
+  no firm evaluation daily loss limit.
+- Fresh MNQ opening-drive, session-sweep, gap-fade, and VWAP-pullback families
+  failed the final chronological holdout. The frozen MNQ VWAP/delta adaptation
+  reached `76.8%` wins and `1.69` PF but was rejected after shuffled P95
+  drawdown reached about `-$2845`.
+- MGC replaced MNQ as the primary instrument for this account geometry. The
+  frozen `10`-bar breakout, `cl0.45`, `delta<=125`, `25/15`, `BE+20` strategy
+  remains the strongest path-stable local signal.
+- Using Tradeify's `$2.12` MGC round-trip fee plus two total slippage ticks,
+  fixed `1 MGC` produced `343` trades, `$12570.84` net, `1.71` PF, `55.1%`
+  wins, and `-$696.08` chronological drawdown. Six-tick stress remained at
+  `$11198.84`, `1.61` PF, and `-$732.08` drawdown.
+- Fixed `1 MGC` is the only non-rejected account policy. Historical rolling
+  365-day starts passed `91.9%` with median successful duration `236` calendar
+  days. This is a survival-first strategy, not a quick-pass claim.
+- A high-win `8/15` MGC plus logistic entry filter reached `76.5%` holdout
+  wins, `1.60` PF, and `-$621` drawdown, but the development-selected faster
+  sizing policy risk-locked `15.0%` of final bootstrap paths. It remains
+  rejected.
+- The next gate is Windows/NinjaTrader data parity, high-resolution historical
+  testing, Playback, and simulation. Static tuning on the same exports is
+  frozen.
+
+Follow-up after quality-model collinearity and account-policy audit:
+
+- The first high-win quality model contained two duplicate predictors:
+  aligned delta duplicated absolute delta, and aligned VWAP distance duplicated
+  absolute VWAP distance for this breakout stream. They were removed.
+- Account sizing selection now requires both chronological development and
+  development block-bootstrap gates before the final-period bootstrap is read.
+- The cleaned fixed `8 / 15` quality model froze at logistic threshold `0.70`
+  and produced `198` one-MGC trades: `$4787.24` net, `1.74` PF, `76.3%` wins,
+  and `-$542.96` drawdown. Six-tick stress remained `$3995.24`, `1.60` PF,
+  `75.8%` wins, and `-$574.96` drawdown.
+- The development-selected account policy uses `3 MGC` within `$500` of the
+  EOD high-water mark, `2 MGC` from `-$500` to `-$1000`, and `1 MGC` below
+  `-$1000`, always subject to a full-stop plus `$100` reserve check.
+- Account paths: development bootstrap `66.9%` pass / `4.2%` risk lock; final
+  bootstrap `80.5%` pass / `8.2%` risk lock; full historical 365-day starts
+  `99.4%` pass with median `215` calendar days. The historical funded
+  `+$2100` drawdown-lock objective passed `100%` with median `126` calendar
+  days.
+- Numerical gates pass, but the final period had already been inspected during
+  the earlier failed model iteration. Status is therefore
+  `PROVISIONAL_GATES_PASS_REQUIRES_INDEPENDENT_REPLAY`, not independently
+  validated production approval.
+- `AxonTrade Tradeify MGC Select v1` becomes the provisional NinjaTrader
+  research lead. Fixed `1 MGC` Core v1 remains the non-rejected fallback.

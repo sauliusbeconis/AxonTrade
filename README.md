@@ -1,25 +1,39 @@
 # AxonTrade
 
-AxonTrade is a futures trading research and execution laboratory focused on
-intraday ES/MES, NQ/MNQ, and MGC bots for Sierra Chart.
+AxonTrade is a futures trading research and execution laboratory. The current
+target is one MGC strategy for NinjaTrader and a Tradeify 50K Select account;
+the existing Sierra Chart bots remain reference implementations and research
+assets.
 
 It is not a signal service, martingale/grid system, HFT project, or black-box
 automation project. Every live-capable path must have explicit research
-evidence, Sierra mechanics validation, and hard routing/risk gates.
+evidence, platform mechanics validation, and hard routing/risk gates.
 
-## Current Situation
+## Current Direction
 
-Status date: `2026-07-05`.
+Status date: `2026-08-05`.
 
-Overall goal: build a profitable live trading bot, with the near-term practical
-path split between controlled MES evaluation trading, controlled MGC
-normal-profitability trading, MNQ eval-pass execution, and MNQ normal-runner
-research.
+The active research branch is strategy-only. It does not contain NinjaScript,
+and nothing in this branch is approved for NinjaTrader live routing.
 
-Online-focused research branch: the current branch has a separate instrument
-selection report at [docs/online-instrument-focus.md](docs/online-instrument-focus.md).
-Current conclusion: make `MNQ` the No. 1 research and execution instrument,
-with `MGC` kept as the stabilizer track.
+Full decision and future implementation contract:
+[docs/tradeify-ninjatrader-strategy.md](docs/tradeify-ninjatrader-strategy.md).
+
+| Track | Instrument | Status | Current-Cost Result | Role |
+| --- | --- | --- | --- | --- |
+| `AxonTrade Tradeify MGC Select v1` | `MGC` | Provisional gates pass; independent replay required | `198` trades, `$4787.24` net, `1.74` PF, `76.3%` wins, `-$542.96` DD, `1.65` trades/week; six-tick PF `1.60` | Primary NinjaTrader strategy specification; frozen logistic gate, `8 / 15`, account-aware `3 -> 2 -> 1 MGC`; no code yet |
+| `AxonTrade Tradeify MGC Core v1` | `MGC` | Non-rejected offline fallback | `343` trades, `$12570.84` net, `1.71` PF, `55.1%` wins, `-$696.08` DD, `2.87` trades/week | Simpler safety fallback; fixed `1 MGC`, `25 / 15 / BE+20` |
+| Fresh Tradeify strategy families | `MNQ` | Rejected | Opening-drive, sweep, gap-fade, VWAP-pullback, and VWAP/delta adaptation did not clear final stress | Backup instrument; no production candidate |
+| Existing ACSIL portfolio | `MES/MNQ/MGC` | Preserved legacy work | See tables below | Sierra reference, replay, and prior controlled-live work |
+
+Tradeify 50K Select assumptions are versioned in
+[`config/firms/tradeify_50k_select.yaml`](config/firms/tradeify_50k_select.yaml).
+The provisional Select v1 sizing policy took a median `215` calendar days in
+successful historical 365-day evaluation starts and `126` days to the funded
+drawdown-lock objective; Core v1 evaluation starts took `236`. Neither is
+represented as a quick-pass or guaranteed-income system.
+
+## Sierra Legacy Portfolio
 
 Percentages below are engineering readiness estimates, not profit forecasts or
 win probabilities. Research stats are backtest/replay evidence after the
@@ -121,7 +135,10 @@ MNQ Top Runner live-staging checklist:
 8. Confirm no other automated MNQ bot is running on the same account.
 9. Arm only when the banner reaches `ARMED - READY`.
 
-## Scaling Roadmap
+## Legacy Sierra/Lucid Scaling Roadmap
+
+This section predates the NinjaTrader/Tradeify pivot and is retained as project
+history. It does not define the current account plan.
 
 This is a planning roadmap, not a profit guarantee. It uses current repo
 research plus a LucidFlex 25K rule snapshot checked on `2026-07-05`.

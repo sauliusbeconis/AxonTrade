@@ -1,0 +1,156 @@
+schema_version: 1
+strategy_id: tradeify_mgc_select_v1
+display_name: AxonTrade Tradeify MGC Select v1
+status: provisional_gates_pass_requires_independent_replay
+platform_target: NinjaTrader 8
+implementation_present: false
+simulation_only: true
+live_routing_approved: false
+
+account_profile: tradeify_50k_select
+instrument: MGC
+bar_period:
+  type: minute
+  value: 1
+  delta_type: bid_ask
+  historical_bid_ask_stamped_ticks_required: true
+timezone: America/New_York
+
+session:
+  setup_start: "08:20:00"
+  setup_end: "10:30:00"
+  forced_flatten: "16:30:00"
+  weekdays: [monday, tuesday, friday]
+  maximum_submitted_trades_per_session_date: 1
+
+entry:
+  evaluate_on_completed_bar: true
+  order_type: market
+  lookback_bars: 10
+  breakout_buffer_points: 0
+  require_vwap_direction_alignment: true
+  directional_close_location_minimum: 0.45
+  maximum_absolute_bar_delta: 125
+  require_delta_direction_alignment: true
+
+quality_model:
+  type: standardized_logistic
+  threshold: 0.70
+  intercept: 0.81363911
+  retraining_during_evaluation_allowed: false
+  features:
+    - name: direction_long
+      coefficient: 0.05837870
+      mean: 0.58988764
+      scale: 0.49185385
+    - name: weekday_monday
+      coefficient: 0.12634850
+      mean: 0.33707865
+      scale: 0.47271200
+    - name: weekday_tuesday
+      coefficient: -0.14564598
+      mean: 0.33707865
+      scale: 0.47271200
+    - name: time_minutes
+      coefficient: -0.25028284
+      mean: 526.91011236
+      scale: 18.98588503
+    - name: directional_close_location
+      coefficient: 0.30729904
+      mean: 0.82950953
+      scale: 0.13580856
+    - name: abs_delta
+      coefficient: 0.28633956
+      mean: 58.08426966
+      scale: 31.17923322
+    - name: bar_range
+      coefficient: 0.66241121
+      mean: 1.96797753
+      scale: 1.42447994
+    - name: aligned_body
+      coefficient: -0.81888235
+      mean: 1.32977528
+      scale: 0.89408855
+    - name: abs_vwap_distance
+      coefficient: 0.37597185
+      mean: 7.72078652
+      scale: 7.39858516
+    - name: day_range_so_far
+      coefficient: 0.33366238
+      mean: 8.92696629
+      scale: 6.42255093
+    - name: aligned_prior_5_move
+      coefficient: 0.17288455
+      mean: 2.99775281
+      scale: 1.86167603
+    - name: aligned_prior_5_delta
+      coefficient: -0.39413980
+      mean: 118.51685393
+      scale: 107.09096337
+    - name: aligned_vwap_slope_5
+      coefficient: -0.42505455
+      mean: 0.09269663
+      scale: 0.13575642
+    - name: volume_ratio_20
+      coefficient: 0.04497441
+      mean: 1.69972387
+      scale: 1.19482169
+
+management:
+  target_points: 8
+  initial_stop_points: 15
+  move_to_breakeven: false
+  trailing_stop: false
+  same_bar_ambiguity: stop_first
+
+account_sizing:
+  maximum_quantity: 3
+  adaptive_policy_stages: [evaluation, funded_pre_drawdown_lock]
+  funded_post_drawdown_lock_quantity: 1
+  tiers:
+    - minimum_drawdown_from_eod_high_water_usd: -500
+      quantity: 3
+    - minimum_drawdown_from_eod_high_water_usd: -1000
+      quantity: 2
+    - minimum_drawdown_from_eod_high_water_usd: null
+      quantity: 1
+  minimum_drawdown_floor_reserve_usd: 100
+  reduce_quantity_until_full_stop_fits: true
+  reject_if_one_contract_stop_does_not_fit: true
+  averaging_down_allowed: false
+  martingale_allowed: false
+
+cost_model:
+  round_turn_fee_per_contract_usd: 2.12
+  base_total_slippage_ticks: 2
+  stress_total_slippage_ticks: 6
+
+research_result:
+  source_rows: 813388
+  source_start_date: "2024-03-18"
+  source_end_date: "2026-07-03"
+  accepted_trades: 198
+  base_net_1_mgc_usd: 4787.24
+  base_profit_factor: 1.74409510
+  base_win_rate: 0.763
+  base_max_drawdown_1_mgc_usd: -542.96
+  stress_net_1_mgc_usd: 3995.24
+  stress_profit_factor: 1.60325906
+  stress_win_rate: 0.758
+  stress_max_drawdown_1_mgc_usd: -574.96
+  full_historical_365_day_pass_rate: 0.994
+  full_historical_median_calendar_days_to_pass: 215
+  development_bootstrap_pass_rate: 0.669
+  development_bootstrap_risk_lock_rate: 0.042
+  final_period_bootstrap_pass_rate: 0.805
+  final_period_bootstrap_risk_lock_rate: 0.082
+  funded_drawdown_lock_historical_pass_rate: 1.0
+  funded_drawdown_lock_median_calendar_days: 126
+  final_period_process_status: previously_inspected
+
+next_gate:
+  - verify_ninjatrader_order_flow_entitlement_or_custom_bid_ask_delta
+  - verify_historical_bid_ask_tick_data
+  - reproduce_sierra_bars_vwap_delta_and_signal_timestamps
+  - independent_ninjatrader_playback
+  - ninjatrader_simulation_only_implementation

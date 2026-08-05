@@ -1,0 +1,55 @@
+schema_version: 1
+profile_id: tradeify_50k_select
+firm_name: Tradeify
+account_type: Select
+account_size_usd: 50000
+account_stage: evaluation
+profit_target_usd: 3000
+max_loss_limit_usd: 2000
+drawdown_type: end_of_day_trailing_realtime_enforced
+firm_daily_loss_limit_usd: null
+consistency_max_percentage: 40
+minimum_trading_days: 3
+max_position_minis: 4
+max_position_micros: 40
+funded_starting_position_minis: 2
+funded_starting_position_micros: 20
+funded_drawdown_lock_balance_usd: 52100
+funded_drawdown_floor_usd: 50100
+mandatory_flat_time: "16:45 America/New_York"
+internal_forced_flatten_time: "16:40 America/New_York"
+disable_new_entries_after: "16:35 America/New_York"
+automated_strategies_allowed: true
+high_frequency_trading_allowed: false
+microscalping_allowed: false
+funded_microscalping_minimum_trade_duration_seconds: 10
+live_automated_entries_enabled: false
+simulation_only: true
+source_status: official_sources_reviewed_recheck_before_live
+source_reviewed_on: "2026-08-05"
+notes:
+  - Select evaluation has no daily loss limit; AxonTrade must impose a stricter internal limit.
+  - The end-of-day drawdown updates only after the session but is enforced in real time.
+  - The 40 percent consistency rule applies to the evaluation only.
+  - Select Flex and Select Daily are chosen only after passing; this profile does not choose one.
+  - Funded activity must satisfy Tradeify's trade-duration distribution rule; sub-10-second microscalping is not an allowed bot objective.
+  - Internal entry and flatten times are AxonTrade safety buffers, not Tradeify published cutoffs.
+sources:
+  - name: Tradeify Select Evaluation Accounts
+    url: https://help.tradeify.co/en/articles/12853921-select-evaluation-accounts
+    retrieved_on: "2026-08-05"
+  - name: Tradeify Trailing Max Drawdowns
+    url: https://help.tradeify.co/en/articles/10495897-rules-trailing-max-drawdowns
+    retrieved_on: "2026-08-05"
+  - name: Tradeify Guidelines for Traders
+    url: https://help.tradeify.co/en/articles/10468318-guidelines-for-traders
+    retrieved_on: "2026-08-05"
+  - name: Tradeify Permitted Times to Trade
+    url: https://help.tradeify.co/en/articles/10495876-rules-permitted-times-to-trade
+    retrieved_on: "2026-08-05"
+  - name: Tradeify Trading Commission Fees
+    url: https://help.tradeify.co/en/articles/10468315-trading-commission-fees
+    retrieved_on: "2026-08-05"
+  - name: Tradeify NinjaTrader 8 Setup Guide
+    url: https://help.tradeify.co/en/articles/12268716-ninjatrader-8-setup-guide
+    retrieved_on: "2026-08-05"
