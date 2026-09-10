@@ -24,3 +24,28 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+# Pinned explicitly. ruff is floored at >=0.15.18 with no ceiling, so relying on
+# its defaults means a new release can introduce rules mid-stream and turn CI red
+# without a line of project code changing. That already happened once.
+select = ["E4", "E7", "E9", "F", "I", "UP035", "PYI041", "RUF022", "RUF100"]
+
+# Deliberately not selected: a backlog of ~230 findings that require behavioural
+# decisions rather than formatting, and so are not lint work.
+#   DTZ*    naive datetime construction and parsing. Session times and exchange
+#           timezones are load-bearing here; making these aware changes what the
+#           research code computes. Needs a decision, not a fix.
+#   ISC004  implicit string concatenation inside collection literals.
+#   SIM115  file handles opened without a context manager.
+#   RUF007, RUF015, RUF046, FLY002, FURB192, SIM103, SIM113, PERF102
+#           rewrites that change control flow or allocation behaviour.
+
+[tool.ruff.lint.per-file-ignores]
+# Research entry points insert the repo's src/ and their own directory onto
+# sys.path before importing sibling modules. The imports cannot move above that
+# bootstrap without breaking the scripts.
+"scripts/*" = ["E402"]
