@@ -1,11 +1,72 @@
 # AxonTrade
 
-AxonTrade is a futures trading research and execution laboratory focused on
-intraday ES/MES, NQ/MNQ, and MGC bots for Sierra Chart.
+AxonTrade is a futures research laboratory built around a single engineering
+question: **how do you stop a strategy that looks good in a backtest from
+reaching a live order router before it has earned it?**
+
+The trading is the domain. The work is validation methodology and the interlock
+system between research and execution — chronological walk-forward testing,
+frozen holdouts, Monte Carlo path risk, executable acceptance gates, and a
+layered set of runtime locks that make live routing something a strategy must be
+promoted into rather than something it can fall into.
 
 It is not a signal service, martingale/grid system, HFT project, or black-box
-automation project. Every live-capable path must have explicit research
-evidence, Sierra mechanics validation, and hard routing/risk gates.
+automation project. Intraday ES/MES, NQ/MNQ, and MGC on Sierra Chart, with ACSIL
+C++ on the chart side and Python for offline research.
+
+## How a strategy earns the right to route orders
+
+Every strategy starts as a written hypothesis — thesis, exact entry and exit
+rules, invalidation rules, excluded market conditions, cost and slippage
+assumptions, and known failure modes — recorded before any test runs. From there
+it has to survive, in order:
+
+1. **A price-only baseline.** Price, time, and predeclared levels only. Order-flow
+   features are not permitted until the baseline exists to beat.
+2. **Ablation.** Features are added one layer at a time — volume-profile context,
+   stacked imbalance, absorption proxy — plus simpler variants that remove each
+   group, so any gain is attributable to a specific feature rather than to the
+   stack as a whole.
+3. **Chronological walk-forward.** No shuffled trading data, ever.
+4. **Frozen holdouts.** Reserved periods stay untouched until the research design
+   is locked.
+5. **Monte Carlo path risk.** Trade-order shuffling to separate a real edge from
+   a favourable sequence. Median drawdown across resampled paths is treated as a
+   blocking result, not a footnote.
+
+**The acceptance gates are executable, not prose.** They live as YAML profiles in
+`config/research/` and are enforced by scripts, so "this passed" is reproducible
+rather than asserted:
+
+```bash
+.venv/bin/python scripts/check_price_only_acceptance.py
+```
+
+The current price-only profile requires at least 100 evaluated outcome trades
+across 20+ distinct dates, at least 30 selected walk-forward holdout trades,
+positive holdout net after configured costs, and a worst losing day no greater
+than 40% of total losing-day loss — that last gate exists specifically to reject
+edges that are really one good day wearing a disguise. By default the checker
+exits `0` even on rejection, because a rejection is a valid research result.
+
+## The interlock system
+
+Passing research does not grant order-routing rights. Live capability is gated at
+several independent layers, each of which must be satisfied deliberately:
+
+| Layer | Control |
+| --- | --- |
+| Source | Order-routing calls are permitted in exactly one approved ACSIL file. A static scan in `scripts/check_repo.sh` fails the repository if `sc.BuyEntry`/`sc.SellEntry`/`sc.FlattenAndCancelAllOrders` and friends appear anywhere else. |
+| Instrument | The chart symbol must match a required prefix (`MES`, `MNQ`, `MGC`) or the bot refuses to arm. |
+| Intent | A per-bot confirmation string (`MES_EVAL_LIVE`, `MNQ_TOP_RUNNER_SIM`, …) must be typed to match the study's expected value. |
+| Account | `Allowed Trade Account` must exactly equal the selected Sierra trade account. |
+| Routing mode | Simulation-only studies reject live trade-service routing outright rather than warning. |
+| Capital | Hard daily loss locks, daily profit locks, eval trailing locks, one-trade-per-day caps, and forced flatten times. |
+| State | The bot will not arm while Sierra is downloading historical data. |
+
+Risk limits during development are deliberately stricter than the prop-firm
+limits they map to, and account rules are external YAML configuration
+(`config/firms/`) rather than constants compiled into strategy code.
 
 ## Current Situation
 
