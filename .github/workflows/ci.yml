@@ -35,9 +35,9 @@ jobs:
       - name: Run tests
         run: python -m pytest
 
-      # Advisory until the existing lint backlog is cleared. The pinned floor
-      # is ruff>=0.15.18 with no ceiling, so newer default rule sets surface
-      # violations that predate this workflow.
-      - name: Lint (advisory)
-        continue-on-error: true
-        run: ruff check src tests
+      # Blocking. The rule set is pinned in pyproject.toml rather than inherited
+      # from ruff's defaults, so a new ruff release cannot turn this red without
+      # a project change. Rules requiring behavioural decisions are documented
+      # there as an excluded backlog rather than silently ignored.
+      - name: Lint
+        run: ruff check src tests scripts
