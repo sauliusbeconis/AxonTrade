@@ -43,11 +43,12 @@ rather than asserted:
 ```
 
 The current price-only profile requires at least 100 evaluated outcome trades
-across 20+ distinct dates, at least 30 selected walk-forward holdout trades,
-positive holdout net after configured costs, and a worst losing day no greater
-than 40% of total losing-day loss — that last gate exists specifically to reject
-edges that are really one good day wearing a disguise. By default the checker
-exits `0` even on rejection, because a rejection is a valid research result.
+across 20 or more distinct dates, at least 30 walk-forward holdout trades with at
+least 10 in the train-selected holdout row, positive holdout net after configured
+costs, and a worst losing day no greater than 40% of total losing-day loss — that
+last gate exists specifically to reject edges that are really one good day wearing
+a disguise. By default the checker exits `0` even on rejection, because a
+rejection is a valid research result.
 
 ## The interlock system
 
