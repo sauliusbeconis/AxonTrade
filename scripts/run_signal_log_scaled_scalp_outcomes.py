@@ -22,7 +22,6 @@ from axontrade.research import (
     validate_signal_entries_against_bars,
 )
 
-
 DEFAULT_EXPORT_CONFIG = "config/research/sierra_outcome_bar_export.yaml"
 SCALED_SCALP_OUTCOME_HEADER = [
     "schema_version",

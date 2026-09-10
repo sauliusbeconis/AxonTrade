@@ -9,11 +9,10 @@ import importlib.util
 import math
 import statistics
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, time
 from pathlib import Path
-from typing import Callable, Iterable
-
 
 DEFAULT_OUTPUT = "reports/mnq-eval-pass-wave-rider-deep-search.csv"
 DEFAULT_REPORT = "reports/mnq-eval-pass-wave-rider-deep-search.md"

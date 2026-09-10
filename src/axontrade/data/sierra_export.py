@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import csv
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, time
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from axontrade.config import ConfigError, load_yaml, require_fields
-
 
 DEFAULT_SIERRA_EXPORT_CONFIG = "config/research/sierra_bar_export.yaml"
 DEFAULT_OPENING_RANGE_START_TIME = "09:30:00"

@@ -19,7 +19,6 @@ from axontrade.research import (
     run_scaled_outcome_context_diagnostics,
 )
 
-
 DEFAULT_EXPORT_CONFIG = "config/research/sierra_delta_impulse_bar_export.yaml"
 
 

@@ -5,18 +5,16 @@ from __future__ import annotations
 
 import argparse
 import csv
-import statistics
 import sys
 from collections import defaultdict
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import date, time
 from pathlib import Path
-from typing import Callable, Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import run_mnq_breakeven_frequency_research as be  # noqa: E402
-import run_mnq_eval_pass_wave_rider as wave  # noqa: E402
-
+import run_mnq_breakeven_frequency_research as be
+import run_mnq_eval_pass_wave_rider as wave
 
 DEFAULT_OUTPUT = "reports/mnq-breakeven-frequency-refine.csv"
 DEFAULT_REPORT_OUTPUT = "reports/mnq-breakeven-frequency-refine.md"
@@ -365,8 +363,8 @@ def _and_spec(left: FilterSpec, right: FilterSpec) -> FilterSpec:
     return FilterSpec(
         f"{left.filter_id}__{right.filter_id}",
         f"{left.label}; {right.label}",
-        lambda outcome, features, l=left, r=right: (
-            l.keep(outcome, features) and r.keep(outcome, features)
+        lambda outcome, features, lhs=left, rhs=right: (
+            lhs.keep(outcome, features) and rhs.keep(outcome, features)
         ),
     )
 

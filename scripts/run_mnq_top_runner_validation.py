@@ -8,16 +8,15 @@ import csv
 import statistics
 import sys
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import run_mnq_eval_pass_wave_rider as wave  # noqa: E402
-import run_mnq_top_runner_refine as refine  # noqa: E402
-import run_mnq_top_runner_research as runner  # noqa: E402
-
+import run_mnq_eval_pass_wave_rider as wave
+import run_mnq_top_runner_refine as refine
+import run_mnq_top_runner_research as runner
 
 DEFAULT_SUMMARY_OUTPUT = "reports/mnq-top-runner-validation.csv"
 DEFAULT_HOLDOUT_OUTPUT = "reports/mnq-top-runner-validation-holdout.csv"

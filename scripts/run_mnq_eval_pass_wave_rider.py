@@ -8,13 +8,12 @@ import csv
 import math
 import statistics
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from pathlib import Path
-from typing import Iterable
 
 from axontrade.data import load_sierra_bar_study_rows
-
 
 DEFAULT_INPUT = (
     "/home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/"

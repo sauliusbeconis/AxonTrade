@@ -8,7 +8,6 @@ from pathlib import Path
 
 from axontrade.data import inspect_sierra_bar_study_file, load_sierra_export_config
 
-
 DEFAULT_INPUT = (
     "/home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/"
     "AxonTrade_ES_OrderflowExport.txt"

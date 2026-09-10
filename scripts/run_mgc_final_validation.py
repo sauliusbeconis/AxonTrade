@@ -9,20 +9,20 @@ import random
 import statistics
 import sys
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import date, time
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import run_mgc_comprehensive_normal_search as comp  # noqa: E402
-import run_mgc_eval_pass_initial_scan as mgc_eval  # noqa: E402
-import run_mgc_lookback_breakout_candidate_review as review  # noqa: E402
-import run_mgc_lookback_breakout_refine as refine  # noqa: E402
-import run_mgc_lookback_trade_management as management  # noqa: E402
-import run_mgc_normal_bot_research as normal  # noqa: E402
-
+import run_mgc_comprehensive_normal_search as comp
+import run_mgc_eval_pass_initial_scan as mgc_eval
+import run_mgc_lookback_breakout_candidate_review as review
+import run_mgc_lookback_breakout_refine as refine
+import run_mgc_lookback_trade_management as management
+import run_mgc_normal_bot_research as normal
 
 STRATEGY_ID = (
     "mgc_lb_be_sensitivity:"
@@ -907,7 +907,7 @@ def _write_csv(path: str, header: list[str], rows: list[dict[str, object]]) -> N
         writer.writerows(rows)
 
 
-def _fmt(value: float | int) -> str:
+def _fmt(value: float) -> str:
     if isinstance(value, int):
         return str(value)
     if abs(value - round(value)) < 1e-9:

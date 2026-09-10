@@ -15,7 +15,6 @@ from axontrade.research import (
     write_price_only_acceptance_report,
 )
 
-
 DEFAULT_OUTCOMES = "data/processed/AxonTrade_ES_price_only_outcomes.csv"
 DEFAULT_DAILY = "reports/price-only-daily-outcome-sample.csv"
 DEFAULT_TRAIN_HOLDOUT = "reports/price-only-train-holdout-sweep-sample.csv"

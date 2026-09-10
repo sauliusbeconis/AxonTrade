@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, time
-from typing import Any, Iterable
+from typing import Any
 from zoneinfo import ZoneInfo
-
 
 SESSION_CLOCK_ALIGNMENT_HEADER = [
     "schema_version",

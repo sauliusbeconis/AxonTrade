@@ -8,11 +8,10 @@ files.
 
 from __future__ import annotations
 
+import struct
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-import struct
-
 
 SC_EPOCH = datetime(1899, 12, 30)
 HEADER_STRUCT = struct.Struct("<IIIHHI36s")

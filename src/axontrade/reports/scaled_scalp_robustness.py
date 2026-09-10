@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import csv
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable
-
+from typing import Any
 
 _TIMESTAMP_FORMATS = (
     "%Y-%m-%d %H:%M:%S.%f",

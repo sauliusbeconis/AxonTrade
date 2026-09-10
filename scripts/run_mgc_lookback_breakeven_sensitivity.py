@@ -14,7 +14,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-
 DEFAULT_OUTPUT = "reports/mgc-lookback-breakeven-sensitivity.csv"
 DEFAULT_REPORT_OUTPUT = "reports/mgc-lookback-breakeven-sensitivity.md"
 DEFAULT_TRAIN_DATE_COUNTS = "120,180,240"

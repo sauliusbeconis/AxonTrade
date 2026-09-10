@@ -16,7 +16,6 @@ from axontrade.research import (
     summarize_trade_outcomes,
 )
 
-
 DEFAULT_EXPORT_CONFIG = "config/research/sierra_orderflow_bar_export.yaml"
 
 

@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import csv
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from axontrade.config import ConfigError, load_yaml, require_fields
 from axontrade.research.rejection_reasons import (
     load_rejection_reason_catalog,
     rejection_reason_codes,
 )
-
 
 DEFAULT_SIGNAL_LOG_SCHEMA = "config/research/signal_log_schema.yaml"
 

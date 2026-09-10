@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from itertools import product
-from typing import Any, Iterable
-
+from typing import Any
 
 VAP_ABSORPTION_DIAGNOSTIC_HEADER = [
     "schema_version",

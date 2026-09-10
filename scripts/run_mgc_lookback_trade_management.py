@@ -11,11 +11,10 @@ import statistics
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time
 from pathlib import Path
 from types import ModuleType
 from typing import Any
-
 
 DEFAULT_OUTPUT = "reports/mgc-lookback-trade-management.csv"
 DEFAULT_REPORT_OUTPUT = "reports/mgc-lookback-trade-management.md"

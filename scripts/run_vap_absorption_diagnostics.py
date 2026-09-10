@@ -7,9 +7,15 @@ import argparse
 import csv
 from pathlib import Path
 
-from axontrade.data import load_sierra_bar_study_rows, load_sierra_export_config, normalize_sierra_bar_study_rows
-from axontrade.research import VAP_ABSORPTION_DIAGNOSTIC_HEADER, run_vap_absorption_diagnostics
-
+from axontrade.data import (
+    load_sierra_bar_study_rows,
+    load_sierra_export_config,
+    normalize_sierra_bar_study_rows,
+)
+from axontrade.research import (
+    VAP_ABSORPTION_DIAGNOSTIC_HEADER,
+    run_vap_absorption_diagnostics,
+)
 
 DEFAULT_VAP_INPUT = (
     "/home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/"

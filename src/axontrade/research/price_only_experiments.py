@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable
 from copy import deepcopy
 from datetime import datetime
 from itertools import product
-from typing import Any, Iterable
+from typing import Any
 
 from axontrade.research.price_only_baseline import (
     evaluate_price_only_vwap_reclaim,
@@ -16,7 +17,6 @@ from axontrade.research.trade_outcomes import (
     evaluate_trade_outcomes,
     summarize_trade_outcomes,
 )
-
 
 PRICE_ONLY_PARAMETER_SWEEP_HEADER = [
     "schema_version",

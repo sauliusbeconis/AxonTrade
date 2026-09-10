@@ -8,11 +8,11 @@ import csv
 import importlib.util
 import sys
 from collections import namedtuple
+from collections.abc import Callable
 from datetime import time
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Callable
-
+from typing import Any
 
 DEFAULT_OUTPUT = "reports/mgc-normal-bot-refine.csv"
 DEFAULT_REPORT_OUTPUT = "reports/mgc-normal-bot-refine.md"

@@ -8,11 +8,11 @@ import csv
 import importlib.util
 import sys
 from collections import namedtuple
+from collections.abc import Callable
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Callable
-
+from typing import Any
 
 DEFAULT_OUTPUT = "reports/mgc-lookback-breakout-refine.csv"
 DEFAULT_REPORT_OUTPUT = "reports/mgc-lookback-breakout-refine.md"

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, time
-from typing import Any, Iterable
-
+from typing import Any
 
 DELTA_IMPULSE_STRATEGY_ID = "delta_impulse_continue_10bar_2.5pt_50d"
 _TIMESTAMP_FORMATS = (

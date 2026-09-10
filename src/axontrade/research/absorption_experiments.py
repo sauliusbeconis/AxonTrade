@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Any, Iterable
+from typing import Any
 
 from axontrade.research.trade_outcomes import summarize_trade_outcomes
-
 
 ABSORPTION_REWARD_RISK_SWEEP_HEADER = [
     "schema_version",

@@ -22,7 +22,6 @@ from axontrade.research import (
 )
 from axontrade.research.trade_outcomes import _parse_timestamp
 
-
 SIGNAL_SCALP_ENTRY_AUDIT_HEADER = [
     "schema_version",
     "split_id",

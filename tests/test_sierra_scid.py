@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import date, datetime
 import struct
+from datetime import date, datetime
 
 from axontrade.data.sierra_scid import (
     HEADER_STRUCT,

@@ -16,7 +16,6 @@ from axontrade.research import (
     write_auction_regime_stack_acceptance_report,
 )
 
-
 DEFAULT_AUDIT = "reports/sierra-signal-log-auction-regime-target-r-trade-audit-holdout1-large-sample.csv"
 DEFAULT_REPORT = "reports/sierra-signal-log-auction-regime-target-r-acceptance-holdout1-large-sample.md"
 

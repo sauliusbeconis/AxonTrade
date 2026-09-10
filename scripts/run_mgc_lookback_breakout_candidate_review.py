@@ -16,7 +16,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-
 DEFAULT_OUTPUT = "reports/mgc-lookback-breakout-candidate-review.csv"
 DEFAULT_REPORT_OUTPUT = "reports/mgc-lookback-breakout-candidate-review.md"
 DEFAULT_TRAIN_DATE_COUNTS = "120,180,240"

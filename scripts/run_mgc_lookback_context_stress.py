@@ -10,12 +10,12 @@ import math
 import statistics
 import sys
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, time
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Callable
-
+from typing import Any
 
 DEFAULT_DIAGNOSTIC_OUTPUT = "reports/mgc-lookback-context-stress.csv"
 DEFAULT_EXCLUSION_OUTPUT = "reports/mgc-lookback-context-exclusions.csv"

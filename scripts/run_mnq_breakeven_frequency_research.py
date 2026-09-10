@@ -5,18 +5,16 @@ from __future__ import annotations
 
 import argparse
 import csv
-import math
 import statistics
 import sys
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from datetime import date, datetime, time
 from pathlib import Path
-from typing import Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import run_mnq_eval_pass_wave_rider as wave  # noqa: E402
-
+import run_mnq_eval_pass_wave_rider as wave
 
 DEFAULT_SWEEP_OUTPUT = "reports/mnq-breakeven-frequency-research.csv"
 DEFAULT_TRADE_AUDIT_OUTPUT = "reports/mnq-breakeven-frequency-best-trade-audit.csv"

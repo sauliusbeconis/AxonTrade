@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Any, Iterable
+from typing import Any
 
-from axontrade.research.signal_dynamic_exit_experiments import run_signal_breakeven_stop_sweep
-
+from axontrade.research.signal_dynamic_exit_experiments import (
+    run_signal_breakeven_stop_sweep,
+)
 
 SIGNAL_AUCTION_REGIME_BREAKEVEN_REPORT_HEADER = [
     "schema_version",

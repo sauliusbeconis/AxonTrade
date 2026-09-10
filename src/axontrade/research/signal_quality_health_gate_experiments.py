@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime
 from itertools import product
-from typing import Any, Iterable
+from typing import Any
 
-from axontrade.research.signal_health_gate_experiments import evaluate_signal_health_gate
-
+from axontrade.research.signal_health_gate_experiments import (
+    evaluate_signal_health_gate,
+)
 
 SIGNAL_QUALITY_HEALTH_GATE_WALK_FORWARD_HEADER = [
     "schema_version",

@@ -9,12 +9,12 @@ import importlib.util
 import math
 import statistics
 import sys
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import date, time
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Callable, Iterable
-
+from typing import Any
 
 DEFAULT_DETAIL_OUTPUT = "reports/mgc-lookback-breakout-walk-forward.csv"
 DEFAULT_REPORT_OUTPUT = "reports/mgc-lookback-breakout-walk-forward.md"

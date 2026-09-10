@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Iterable
-
+from typing import Any
 
 SIGNAL_AUCTION_REGIME_DIAGNOSTIC_HEADER = [
     "schema_version",

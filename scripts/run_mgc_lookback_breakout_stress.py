@@ -13,7 +13,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-
 DEFAULT_OUTPUT = "reports/mgc-lookback-breakout-stress.csv"
 DEFAULT_REPORT_OUTPUT = "reports/mgc-lookback-breakout-stress.md"
 FLATTEN_TIME = time(16, 30)

@@ -10,11 +10,10 @@ import math
 import statistics
 import sys
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, time
 from pathlib import Path
-from typing import Iterable
-
 
 DEFAULT_OUTPUT = "reports/mnq-eval-pass-combined-ab.csv"
 DEFAULT_REPORT_OUTPUT = "reports/mnq-eval-pass-combined-ab.md"

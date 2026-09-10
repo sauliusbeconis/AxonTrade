@@ -9,15 +9,14 @@ import random
 import statistics
 import sys
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import date, time
 from pathlib import Path
-from typing import Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import run_mnq_eval_pass_wave_rider as wave  # noqa: E402
-import run_mnq_top_runner_research as runner  # noqa: E402
-import run_mnq_top_runner_validation as validation  # noqa: E402
-
+import run_mnq_eval_pass_wave_rider as wave
+import run_mnq_top_runner_research as runner
+import run_mnq_top_runner_validation as validation
 
 DEFAULT_SUMMARY_OUTPUT = "reports/mnq-top-runner-deep-validation-summary.csv"
 DEFAULT_HOLDOUT_OUTPUT = "reports/mnq-top-runner-deep-validation-holdout.csv"
@@ -969,7 +968,7 @@ def _write_csv(path: str, fieldnames: list[str], rows: Iterable[dict[str, object
         writer.writerows(rows)
 
 
-def _fmt(value: float | int) -> str:
+def _fmt(value: float) -> str:
     return wave._format_number(float(value))
 
 

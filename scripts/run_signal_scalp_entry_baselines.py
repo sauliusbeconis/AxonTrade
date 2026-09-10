@@ -29,7 +29,6 @@ from axontrade.research import (
 )
 from axontrade.research.trade_outcomes import _parse_timestamp
 
-
 DEFAULT_EXPORT_CONFIG = "config/research/sierra_outcome_bar_export.yaml"
 DEFAULT_RANDOM_SEED = 20260628
 DEFAULT_MARKET_START = time(9, 45)

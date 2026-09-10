@@ -17,7 +17,6 @@ from axontrade.research import (
     write_scaled_scalp_acceptance_report,
 )
 
-
 DEFAULT_OUTCOMES = (
     "data/processed/AxonTrade_ES_delta_impulse_3min_large_scaled_outcomes_all_5_10_8_initial.csv"
 )

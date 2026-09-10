@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from itertools import product
-from typing import Any, Iterable
+from typing import Any
 
 from axontrade.research.trade_outcomes import (
     OutcomeBar,
@@ -21,7 +22,6 @@ from axontrade.research.trade_outcomes import (
     _to_float,
     _to_int,
 )
-
 
 SIGNAL_SCALED_SCALP_SWEEP_HEADER = [
     "schema_version",

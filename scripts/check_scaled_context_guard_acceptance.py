@@ -16,7 +16,6 @@ from axontrade.research import (
     write_scaled_context_guard_acceptance_report,
 )
 
-
 DEFAULT_FIXED_GUARDS = (
     "reports/"
     "sierra-signal-log-scalp-entry-baselines-continuous-240d-"

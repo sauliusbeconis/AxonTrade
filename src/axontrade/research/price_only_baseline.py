@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import csv
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, time
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from axontrade.config import ConfigError, load_yaml, require_fields
-from axontrade.research.signal_log import load_signal_log_schema, validate_signal_log_row
-
+from axontrade.research.signal_log import (
+    load_signal_log_schema,
+    validate_signal_log_row,
+)
 
 DEFAULT_PRICE_ONLY_BASELINE_CONFIG = "config/research/price_only_vwap_reclaim.yaml"
 DEFAULT_PRICE_ONLY_LIQUIDITY_SWEEP_CONFIG = (

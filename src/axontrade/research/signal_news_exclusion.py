@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Iterable
-
+from typing import Any
 
 NEWS_EVENT_CSV_HEADER = [
     "schema_version",

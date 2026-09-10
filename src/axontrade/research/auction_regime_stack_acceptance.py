@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from axontrade.config import ConfigError, load_yaml, require_fields
-
 
 DEFAULT_AUCTION_REGIME_STACK_ACCEPTANCE_CONFIG_PATH = (
     "config/research/auction_regime_stack_acceptance_gates.yaml"

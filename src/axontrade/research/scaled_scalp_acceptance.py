@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from axontrade.config import ConfigError, load_yaml, require_fields
-
 
 DEFAULT_SCALED_SCALP_ACCEPTANCE_CONFIG_PATH = (
     "config/research/scaled_scalp_fixed_row_acceptance_gates.yaml"

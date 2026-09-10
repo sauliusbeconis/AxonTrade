@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable
 from datetime import datetime
 from itertools import product
 from math import sqrt
 from statistics import pstdev
-from typing import Any, Iterable
-
+from typing import Any
 
 SCALED_CONTEXT_FILTER_SWEEP_HEADER = [
     "schema_version",

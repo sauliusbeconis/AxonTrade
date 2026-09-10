@@ -18,7 +18,6 @@ from axontrade.research import (
     run_signal_auction_regime_diagnostics,
 )
 
-
 DEFAULT_EXPORT_CONFIG = "config/research/sierra_orderflow_bar_export.yaml"
 
 

@@ -6,16 +6,14 @@ from __future__ import annotations
 import argparse
 import csv
 import sys
-from collections import defaultdict
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import date, time
 from pathlib import Path
-from typing import Callable, Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import run_mnq_eval_pass_wave_rider as wave  # noqa: E402
-import run_mnq_top_runner_research as runner  # noqa: E402
-
+import run_mnq_eval_pass_wave_rider as wave
+import run_mnq_top_runner_research as runner
 
 DEFAULT_OUTPUT = "reports/mnq-top-runner-refine.csv"
 DEFAULT_REPORT_OUTPUT = "reports/mnq-top-runner-refine.md"
@@ -458,8 +456,8 @@ def _and_spec(left: FilterSpec, right: FilterSpec) -> FilterSpec:
     return FilterSpec(
         f"{left.filter_id}__{right.filter_id}",
         f"{left.label}; {right.label}",
-        lambda signal, features, l=left, r=right: (
-            l.keep(signal, features) and r.keep(signal, features)
+        lambda signal, features, lhs=left, rhs=right: (
+            lhs.keep(signal, features) and rhs.keep(signal, features)
         ),
     )
 

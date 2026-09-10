@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Any, Iterable
-
+from typing import Any
 
 SIGNAL_AUCTION_REGIME_GUARD_REPORT_HEADER = [
     "schema_version",

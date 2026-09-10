@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Any, Iterable
+from typing import Any
 
 from axontrade.research.signal_target_experiments import run_signal_target_r_sweep
-
 
 SIGNAL_AUCTION_REGIME_TARGET_R_REPORT_HEADER = [
     "schema_version",

@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable
 from datetime import datetime
 from itertools import product
-from typing import Any, Iterable
+from typing import Any
 
 from axontrade.research.trade_outcomes import (
     evaluate_trade_outcomes,
     summarize_trade_outcomes,
 )
-
 
 SIGNAL_TARGET_R_SWEEP_HEADER = [
     "schema_version",

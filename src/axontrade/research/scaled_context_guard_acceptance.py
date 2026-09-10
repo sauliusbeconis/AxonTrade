@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from axontrade.config import ConfigError, load_yaml, require_fields
-
 
 DEFAULT_SCALED_CONTEXT_GUARD_ACCEPTANCE_CONFIG_PATH = (
     "config/research/scaled_context_guard_acceptance_gates.yaml"

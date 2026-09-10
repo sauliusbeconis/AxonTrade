@@ -4,10 +4,6 @@ from axontrade.reports.price_only_outcome import (
     render_price_only_outcome_report,
     write_price_only_outcome_report,
 )
-from axontrade.reports.signal_log import (
-    render_signal_log_report,
-    write_signal_log_report,
-)
 from axontrade.reports.scaled_scalp_robustness import (
     ScaledScalpRobustnessReportError,
     load_csv_rows,
@@ -15,6 +11,10 @@ from axontrade.reports.scaled_scalp_robustness import (
     load_holiday_calendar_metadata,
     render_scaled_scalp_robustness_report,
     write_scaled_scalp_robustness_report,
+)
+from axontrade.reports.signal_log import (
+    render_signal_log_report,
+    write_signal_log_report,
 )
 
 __all__ = [

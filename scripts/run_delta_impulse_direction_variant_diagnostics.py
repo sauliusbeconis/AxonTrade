@@ -25,7 +25,6 @@ from axontrade.research import (
     validate_signal_entries_against_bars,
 )
 
-
 DEFAULT_EXPORT_CONFIG = "config/research/sierra_outcome_bar_export.yaml"
 DEFAULT_REPORT = "reports/sierra-delta-impulse-direction-variant-diagnostics.md"
 DEFAULT_LOGGED_SWEEP = "reports/sierra-delta-impulse-direction-variant-sweep-logged.csv"

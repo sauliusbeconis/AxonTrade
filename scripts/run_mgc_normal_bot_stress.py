@@ -11,7 +11,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-
 DEFAULT_OUTPUT = "reports/mgc-normal-bot-stress.csv"
 DEFAULT_REPORT_OUTPUT = "reports/mgc-normal-bot-stress.md"
 

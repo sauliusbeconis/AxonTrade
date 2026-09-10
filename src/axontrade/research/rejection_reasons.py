@@ -8,7 +8,6 @@ from typing import Any
 
 from axontrade.config import ConfigError, load_yaml, require_fields
 
-
 DEFAULT_REJECTION_REASON_CATALOG = "config/research/rejection_reason_codes.yaml"
 
 REJECTION_REASON_CATALOG_REQUIRED_FIELDS = (

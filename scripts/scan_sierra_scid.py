@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import time
 from datetime import date, datetime
 from pathlib import Path
-import time
 
 from axontrade.data.sierra_scid import (
     SierraScidError,
@@ -14,7 +14,6 @@ from axontrade.data.sierra_scid import (
     calendar_coverage,
     scan_scid_file,
 )
-
 
 DEFAULT_DATA_DIR = Path("/home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data")
 DEFAULT_CONTRACTS = [

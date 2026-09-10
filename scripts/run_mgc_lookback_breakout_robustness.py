@@ -9,13 +9,11 @@ import importlib.util
 import math
 import statistics
 import sys
-from collections import Counter
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, time
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Callable
-
+from typing import Any
 
 DEFAULT_OUTPUT = "reports/mgc-lookback-breakout-robustness.csv"
 DEFAULT_REPORT_OUTPUT = "reports/mgc-lookback-breakout-robustness.md"

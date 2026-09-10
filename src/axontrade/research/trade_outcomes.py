@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import csv
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from axontrade.config import load_yaml
-
 
 DEFAULT_COST_CONFIG = "config/research/default_costs.yaml"
 DEFAULT_INSTRUMENT_CONFIG_DIR = "config/instruments"

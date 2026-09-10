@@ -10,11 +10,10 @@ import math
 import statistics
 import sys
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Iterable
-
 
 DEFAULT_DETAIL_OUTPUT = "reports/mnq-eval-pass-wave-rider-walk-forward.csv"
 DEFAULT_REPORT_OUTPUT = "reports/mnq-eval-pass-wave-rider-walk-forward.md"

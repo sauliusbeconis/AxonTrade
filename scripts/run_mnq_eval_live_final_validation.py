@@ -9,16 +9,16 @@ import random
 import statistics
 import sys
 from collections import defaultdict
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import run_mnq_eval_pass_wave_rider as wave  # noqa: E402
-
+import run_mnq_eval_pass_wave_rider as wave
 
 STRATEGY_ID = (
     "mnq_vwap_delta_local_fade_80pt_400d_cl0.4_nofri_no11_15"
@@ -1264,7 +1264,7 @@ def _write_csv(path: str, header: list[str], rows: list[dict[str, object]]) -> N
         writer.writerows(rows)
 
 
-def _fmt(value: float | int) -> str:
+def _fmt(value: float) -> str:
     if isinstance(value, int):
         return str(value)
     if abs(value - round(value)) < 1e-9:

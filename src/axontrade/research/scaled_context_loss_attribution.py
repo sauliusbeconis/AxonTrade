@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from math import floor, sqrt
 from statistics import pstdev
-from typing import Any, Iterable
-
+from typing import Any
 
 SCALED_CONTEXT_DAILY_SUMMARY_HEADER = [
     "schema_version",

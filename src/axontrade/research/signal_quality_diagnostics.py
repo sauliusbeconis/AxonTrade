@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from datetime import datetime, time
-from typing import Any, Iterable
-
+from typing import Any
 
 SIGNAL_QUALITY_DIAGNOSTIC_HEADER = [
     "schema_version",

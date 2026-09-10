@@ -3,30 +3,67 @@
 from __future__ import annotations
 
 from collections import Counter, OrderedDict, defaultdict
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from axontrade.research.signal_auction_regime_breakeven_report import (
     _filter_bars_by_dates as _filter_breakeven_bars_by_dates,
+)
+from axontrade.research.signal_auction_regime_breakeven_report import (
     _filter_rows_by_dates as _filter_breakeven_rows_by_dates,
+)
+from axontrade.research.signal_auction_regime_breakeven_report import (
     _normalize_direction_filters as _normalize_breakeven_direction_filters,
+)
+from axontrade.research.signal_auction_regime_breakeven_report import (
     _normalize_positive_grid as _normalize_breakeven_positive_grid,
+)
+from axontrade.research.signal_auction_regime_breakeven_report import (
     _passes_selection as _passes_breakeven_selection,
+)
+from axontrade.research.signal_auction_regime_breakeven_report import (
     _select_best_train_exit_row,
+)
+from axontrade.research.signal_auction_regime_breakeven_report import (
     _selected_train_holdout_pairs as _selected_breakeven_train_holdout_pairs,
+)
+from axontrade.research.signal_auction_regime_breakeven_report import (
     _selection_trade_dates as _breakeven_selection_trade_dates,
+)
+from axontrade.research.signal_auction_regime_breakeven_report import (
     _signals_for_regime_rows as _breakeven_signals_for_regime_rows,
+)
+from axontrade.research.signal_auction_regime_breakeven_report import (
     _sorted_rows as _sort_breakeven_rows,
 )
 from axontrade.research.signal_auction_regime_target_r_report import (
     _filter_bars_by_dates as _filter_target_bars_by_dates,
+)
+from axontrade.research.signal_auction_regime_target_r_report import (
     _filter_rows_by_dates as _filter_target_rows_by_dates,
+)
+from axontrade.research.signal_auction_regime_target_r_report import (
     _normalize_direction_filters as _normalize_target_direction_filters,
+)
+from axontrade.research.signal_auction_regime_target_r_report import (
     _normalize_positive_grid as _normalize_target_positive_grid,
+)
+from axontrade.research.signal_auction_regime_target_r_report import (
     _passes_selection as _passes_target_selection,
+)
+from axontrade.research.signal_auction_regime_target_r_report import (
     _select_best_train_target_row,
+)
+from axontrade.research.signal_auction_regime_target_r_report import (
     _selected_train_holdout_pairs as _selected_target_train_holdout_pairs,
+)
+from axontrade.research.signal_auction_regime_target_r_report import (
     _selection_trade_dates as _target_selection_trade_dates,
+)
+from axontrade.research.signal_auction_regime_target_r_report import (
     _signals_for_regime_rows as _target_signals_for_regime_rows,
+)
+from axontrade.research.signal_auction_regime_target_r_report import (
     _sorted_rows as _sort_target_rows,
 )
 from axontrade.research.signal_dynamic_exit_experiments import (
@@ -38,7 +75,6 @@ from axontrade.research.signal_target_experiments import (
     run_signal_target_r_sweep,
 )
 from axontrade.research.trade_outcomes import evaluate_trade_outcomes
-
 
 SIGNAL_AUCTION_REGIME_TRADE_AUDIT_HEADER = [
     "schema_version",

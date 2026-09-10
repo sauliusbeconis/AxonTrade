@@ -18,7 +18,6 @@ from axontrade.research.delta_impulse_overlay_validation import (
     write_delta_impulse_overlay_validation_report,
 )
 
-
 DEFAULT_EXPORT_CONFIG = "config/research/sierra_delta_impulse_bar_export.yaml"
 DEFAULT_REPORT = "reports/sierra-delta-impulse-overlay-validation.md"
 

@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from math import sqrt
 from statistics import pstdev
-from typing import Any, Iterable
+from typing import Any
 
 from axontrade.research.scaled_context_filter_experiments import (
     scaled_context_row_passes_filter,
 )
-
 
 SCALED_CONTEXT_SELECTED_TRADE_AUDIT_HEADER = [
     "schema_version",

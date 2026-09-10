@@ -41,7 +41,6 @@ from axontrade.research import (
     write_auction_regime_stack_acceptance_report,
 )
 
-
 DEFAULT_EXPORT_CONFIG = "config/research/sierra_orderflow_bar_export.yaml"
 DEFAULT_BARS_EXPORT = (
     "/home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/"

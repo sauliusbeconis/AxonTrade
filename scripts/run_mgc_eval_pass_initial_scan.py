@@ -13,7 +13,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-
 DEFAULT_INPUT = (
     "/home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/"
     "AxonTrade_MGC_OrderflowExport_Expanded.txt"

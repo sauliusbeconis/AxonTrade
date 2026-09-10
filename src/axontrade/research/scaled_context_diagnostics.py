@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from statistics import mean
-from typing import Any, Iterable
-
+from typing import Any
 
 SCALED_CONTEXT_DIAGNOSTIC_HEADER = [
     "schema_version",

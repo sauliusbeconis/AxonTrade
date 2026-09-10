@@ -10,7 +10,6 @@ from typing import Any
 
 from axontrade.config.loader import require_fields
 
-
 FIRM_REQUIRED_FIELDS = (
     "schema_version",
     "profile_id",

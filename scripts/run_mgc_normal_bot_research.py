@@ -10,11 +10,11 @@ import math
 import statistics
 import sys
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import date
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Iterable
-
+from typing import Any
 
 DEFAULT_INPUT = (
     "/home/saulius/WinePrefixes/SierraChart/drive_c/SierraChart/Data/"

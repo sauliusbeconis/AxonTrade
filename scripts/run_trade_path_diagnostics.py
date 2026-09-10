@@ -19,7 +19,6 @@ from axontrade.research import (
     diagnose_trade_paths,
 )
 
-
 DEFAULT_EXPORT_CONFIG = "config/research/sierra_outcome_bar_export.yaml"
 
 

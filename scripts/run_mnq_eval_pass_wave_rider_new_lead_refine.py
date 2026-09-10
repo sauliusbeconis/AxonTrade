@@ -13,7 +13,6 @@ from dataclasses import dataclass
 from datetime import time
 from pathlib import Path
 
-
 DEFAULT_OUTPUT = "reports/mnq-eval-pass-wave-rider-new-lead-refine.csv"
 DEFAULT_REPORT = "reports/mnq-eval-pass-wave-rider-new-lead-refine.md"
 DEFAULT_TRAIN_DATE_COUNTS = "120,180,240"

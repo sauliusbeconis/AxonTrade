@@ -14,7 +14,6 @@ from dataclasses import dataclass
 from datetime import date, time
 from pathlib import Path
 
-
 DEFAULT_OUTPUT = "reports/mnq-eval-pass-wave-rider-trailing-refine.csv"
 DEFAULT_REPORT = "reports/mnq-eval-pass-wave-rider-trailing-refine.md"
 PROFIT_TARGET_USD = 1250.0
